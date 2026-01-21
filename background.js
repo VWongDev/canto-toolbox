@@ -57,11 +57,16 @@ async function lookupWord(word) {
 
   try {
     // Try multiple API endpoints as fallbacks
+    // Note: MDBG API endpoints may not be publicly available
+    // We'll try multiple formats and provide helpful error messages
     const endpoints = [
+      // Try MDBG API (may require different format)
       `https://api.mdbg.net/chinese/dictionary/WordLookup?w=${encodeURIComponent(word)}`,
       `https://www.mdbg.net/chinese/dictionary/WordLookup?w=${encodeURIComponent(word)}`,
-      // Alternative: try a different format
-      `https://api.mdbg.net/chinese/dictionary/word/${encodeURIComponent(word)}`
+      // Alternative formats
+      `https://api.mdbg.net/chinese/dictionary/word/${encodeURIComponent(word)}`,
+      // Try using a CORS proxy as last resort (not recommended for production)
+      // `https://cors-anywhere.herokuapp.com/https://api.mdbg.net/chinese/dictionary/WordLookup?w=${encodeURIComponent(word)}`
     ];
 
     let data = null;
@@ -77,6 +82,7 @@ async function lookupWord(word) {
         
         const response = await fetch(apiUrl, {
           method: 'GET',
+          mode: 'cors', // Explicitly request CORS
           headers: {
             'Accept': 'application/json',
           },
@@ -158,11 +164,20 @@ async function lookupWord(word) {
     // Provide user-friendly error message
     let errorMsg = error.message || 'Unknown error';
     if (error.message.includes('Failed to fetch')) {
-      errorMsg = 'Network error: Cannot reach dictionary API. Check internet connection and extension permissions.';
+      errorMsg = `Network error: Cannot reach dictionary API. 
+      
+This usually means:
+1. The API endpoint doesn't exist or isn't publicly accessible
+2. Check the Service Worker console (chrome://extensions → Inspect views: service worker) for detailed errors
+3. The MDBG API may require authentication or have changed
+
+The word "${word}" was detected, but definition lookup failed.`;
     } else if (error.message.includes('timeout')) {
       errorMsg = 'Request timeout: API took too long to respond.';
     } else if (error.message.includes('CORS')) {
       errorMsg = 'CORS error: API blocked the request. Check host_permissions in manifest.';
+    } else if (error.message.includes('HTTP')) {
+      errorMsg = `API returned error: ${error.message}. The endpoint may not exist or may require authentication.`;
     }
     
     // Return a basic structure even on error - at least show the word
