@@ -7,6 +7,8 @@ const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
 let hoverTimer = null;
 let lastHoveredWord = null;
 let currentPopup = null;
+let currentSelection = null; // Track current selection for popup
+let selectionPopupTimer = null;
 
 // Initialize on page load
 if (document.readyState === 'loading') {
