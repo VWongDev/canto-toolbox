@@ -97,6 +97,12 @@ function injectStyles() {
       color: #555;
       line-height: 1.6;
     }
+    .popup-definition-item {
+      margin-bottom: 6px;
+    }
+    .popup-definition-item:last-child {
+      margin-bottom: 0;
+    }
     @media (prefers-color-scheme: dark) {
       .chinese-hover-popup {
         background: #2d2d2d;
@@ -116,6 +122,12 @@ function injectStyles() {
       }
       .popup-definition {
         color: #ccc;
+      }
+      .popup-definition-item {
+        margin-bottom: 6px;
+      }
+      .popup-definition-item:last-child {
+        margin-bottom: 0;
       }
     }
   `;
@@ -512,18 +524,32 @@ function showPopup(word, definition, x, y) {
   popup.className = 'chinese-hover-popup';
   popup.dataset.word = word; // Store original word for comparison
   
+  // Format definitions - split by semicolon and display each on a new line
+  const formatDefinitions = (defText) => {
+    if (!defText || defText === 'Not found' || defText === 'N/A') {
+      return escapeHtml(defText || 'Not found');
+    }
+    // Split by semicolon and create separate lines
+    const definitions = defText.split(';').map(d => d.trim()).filter(d => d.length > 0);
+    if (definitions.length === 1) {
+      return escapeHtml(definitions[0]);
+    }
+    // Multiple definitions - display each on a new line
+    return definitions.map(def => `<div class="popup-definition-item">${escapeHtml(def)}</div>`).join('');
+  };
+
   // Build popup content
   popup.innerHTML = `
     <div class="popup-word">${escapeHtml(displayWord)}</div>
     <div class="popup-section">
       <div class="popup-label">Mandarin</div>
       <div class="popup-pinyin">${escapeHtml(definition.mandarin.pinyin || 'N/A')}</div>
-      <div class="popup-definition">${escapeHtml(definition.mandarin.definition || 'Not found')}</div>
+      <div class="popup-definition">${formatDefinitions(definition.mandarin.definition)}</div>
     </div>
     <div class="popup-section">
       <div class="popup-label">Cantonese</div>
       <div class="popup-jyutping">${escapeHtml(definition.cantonese.jyutping || 'N/A')}</div>
-      <div class="popup-definition">${escapeHtml(definition.cantonese.definition || 'Not found')}</div>
+      <div class="popup-definition">${formatDefinitions(definition.cantonese.definition)}</div>
     </div>
   `;
 
