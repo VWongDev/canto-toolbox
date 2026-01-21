@@ -1,7 +1,10 @@
-// background.js - Service worker for dictionary API and statistics tracking
+// background.js - Service worker for dictionary lookup and statistics tracking
 
-// Cache for API responses to reduce API calls
-const apiCache = new Map();
+// Import dictionary loader
+importScripts('dictionary-loader.js');
+
+// Cache for dictionary lookups
+const lookupCache = new Map();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // Listen for messages from content script
@@ -42,165 +45,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
- * Lookup Chinese word in dictionary API
- * Uses MDBG Chinese Dictionary API
+ * Lookup Chinese word in local dictionary files
+ * Uses CC-CEDICT (Mandarin) and CC-CANTO (Cantonese) dictionaries from submodules
  */
 async function lookupWord(word) {
   // Check cache first
-  const cached = apiCache.get(word);
+  const cached = lookupCache.get(word);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log('[API] Using cached definition for:', word);
+    console.log('[Dict] Using cached definition for:', word);
     return cached.data;
   }
 
-  console.log('[API] Looking up word:', word);
+  console.log('[Dict] Looking up word in local dictionaries:', word);
 
   try {
-    // Try multiple API endpoints as fallbacks
-    // Note: Many Chinese dictionary APIs are not publicly accessible
-    // We'll try multiple services and formats
-    const endpoints = [
-      // Try MDBG web API (may not be publicly accessible)
-      `https://api.mdbg.net/chinese/dictionary/WordLookup?w=${encodeURIComponent(word)}`,
-      // Try alternative MDBG format
-      `https://www.mdbg.net/chinese/dictionary/WordLookup?w=${encodeURIComponent(word)}`,
-      // Try using MDBG's actual website API format
-      `https://www.mdbg.net/chindict/api/v1/search?q=${encodeURIComponent(word)}`,
-      // Alternative format
-      `https://api.mdbg.net/chinese/dictionary/word/${encodeURIComponent(word)}`,
-    ];
-
-    let data = null;
-    let lastError = null;
-
-    for (const apiUrl of endpoints) {
-      try {
-        console.log('[API] Trying endpoint:', apiUrl);
-        
-        // Create timeout manually (AbortSignal.timeout may not be supported)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        // Try with no-cors mode first (if CORS fails), then fallback to cors
-        let response;
-        try {
-          response = await fetch(apiUrl, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-              'Accept': 'application/json',
-            },
-            signal: controller.signal
-          });
-        } catch (corsError) {
-          // If CORS fails, try no-cors (but this won't let us read response)
-          console.log('[API] CORS failed, trying no-cors mode (limited functionality)');
-          response = await fetch(apiUrl, {
-            method: 'GET',
-            mode: 'no-cors',
-            signal: controller.signal
-          });
-          // no-cors mode doesn't allow reading response, so this won't work
-          throw new Error('CORS blocked: API does not allow cross-origin requests');
-        }
-        
-        clearTimeout(timeoutId);
-        
-        console.log('[API] Response status:', response.status, response.statusText);
-        console.log('[API] Response headers:', Object.fromEntries(response.headers.entries()));
-
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => '');
-          console.log('[API] Endpoint failed with status:', response.status);
-          console.log('[API] Error response body:', errorText.substring(0, 200));
-          lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
-          continue; // Try next endpoint
-        }
-
-        const contentType = response.headers.get('content-type');
-        console.log('[API] Content-Type:', contentType);
-        
-        if (contentType && contentType.includes('application/json')) {
-          data = await response.json();
-        } else {
-          // Try to parse as JSON anyway
-          const text = await response.text();
-          console.log('[API] Response text (first 500 chars):', text.substring(0, 500));
-          try {
-            data = JSON.parse(text);
-          } catch (parseError) {
-            console.error('[API] JSON parse error:', parseError);
-            lastError = new Error(`Invalid JSON response from API`);
-            continue;
-          }
-        }
-        
-        console.log('[API] Success! Response data:', JSON.stringify(data).substring(0, 500));
-        break; // Success, exit loop
-      } catch (fetchError) {
-        console.error('[API] Endpoint error:', fetchError);
-        console.error('[API] Error name:', fetchError.name);
-        console.error('[API] Error message:', fetchError.message);
-        console.error('[API] Error stack:', fetchError.stack);
-        
-        // Provide more specific error messages
-        if (fetchError.name === 'AbortError') {
-          lastError = new Error('Request timeout (5s)');
-        } else if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
-          lastError = new Error('Network error: Failed to fetch. Check host_permissions and CORS.');
-        } else {
-          lastError = fetchError;
-        }
-        continue; // Try next endpoint
-      }
-    }
-
-    if (!data) {
-      throw lastError || new Error('All API endpoints failed');
-    }
-    
-    // Parse API response format
-    const definition = parseMDBGResponse(data, word);
-    console.log('[API] Parsed definition:', definition);
+    // Use local dictionary lookup
+    const definition = await lookupWordInDictionaries(word);
+    console.log('[Dict] Found definition:', definition);
     
     // Cache the result
-    apiCache.set(word, {
+    lookupCache.set(word, {
       data: definition,
       timestamp: Date.now()
     });
     
     return definition;
   } catch (error) {
-    console.error('[API] Dictionary lookup failed:', error);
-    console.error('[API] Error name:', error.name);
-    console.error('[API] Error message:', error.message);
-    console.error('[API] Error stack:', error.stack);
+    console.error('[Dict] Dictionary lookup failed:', error);
+    console.error('[Dict] Error details:', error.message, error.stack);
     
-    // Since the API is not accessible, provide a helpful message
-    // but still return a structure so the popup shows
-    console.warn('[API] All dictionary API endpoints failed. Using fallback response.');
-    
-    // Return a structure that at least shows the word was detected
-    // The user will see that hover detection works, but definitions are unavailable
+    // Return a fallback structure
     return {
       word: word,
       mandarin: { 
-        definition: `⚠️ Dictionary API unavailable
-
-The Chinese dictionary API is not publicly accessible. 
-Word "${word}" was detected successfully.
-
-To enable definitions, you would need:
-• A publicly accessible Chinese dictionary API
-• Or integrate a local dictionary file
-• Or use a different API service
-
-Hover detection is working correctly.`,
-        pinyin: 'N/A' 
+        definition: 'Dictionary files not loaded. Please ensure dictionaries submodules are initialized.',
+        pinyin: '' 
       },
       cantonese: { 
-        definition: 'Dictionary API not available',
-        jyutping: 'N/A' 
+        definition: 'Dictionary files not loaded',
+        jyutping: '' 
       }
     };
   }
