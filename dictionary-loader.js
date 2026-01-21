@@ -190,6 +190,10 @@ async function lookupWordInDictionaries(word) {
   // Ensure dictionaries are loaded
   await loadDictionaries();
 
+  console.log('[Dict] Looking up word:', word);
+  console.log('[Dict] Mandarin dict loaded:', !!mandarinDict, mandarinDict ? Object.keys(mandarinDict).length + ' entries' : 'no');
+  console.log('[Dict] Cantonese dict loaded:', !!cantoneseDict, cantoneseDict ? Object.keys(cantoneseDict).length + ' entries' : 'no');
+
   const result = {
     word: word,
     mandarin: { definition: '', pinyin: '' },
@@ -202,6 +206,7 @@ async function lookupWordInDictionaries(word) {
     let entry = mandarinDict[word];
     
     if (entry) {
+      console.log('[Dict] Found Mandarin entry for', word, ':', entry);
       result.mandarin.pinyin = entry.pinyin || '';
       if (entry.definitions && entry.definitions.length > 0) {
         result.mandarin.definition = entry.definitions.join('; ');
@@ -209,12 +214,35 @@ async function lookupWordInDictionaries(word) {
         result.mandarin.definition = String(entry.definition);
       }
     } else {
-      // Try searching for partial matches or character-by-character
-      // For multi-character words, try to find entries that contain the word
-      for (const [key, value] of Object.entries(mandarinDict)) {
-        if (key.includes(word) || word.includes(key)) {
-          entry = value;
-          break;
+      // Try searching for exact character matches first
+      // Check if any dictionary key exactly matches the word
+      const keys = Object.keys(mandarinDict);
+      const exactMatch = keys.find(key => key === word);
+      
+      if (exactMatch) {
+        entry = mandarinDict[exactMatch];
+        console.log('[Dict] Found exact Mandarin match for', word);
+      } else {
+        // Try searching for entries that start with or contain the word
+        // For multi-character words, try each character
+        for (let i = 0; i < word.length; i++) {
+          const char = word[i];
+          if (mandarinDict[char]) {
+            entry = mandarinDict[char];
+            console.log('[Dict] Found Mandarin entry for character', char, 'in word', word);
+            break;
+          }
+        }
+        
+        // If still not found, try substring matches
+        if (!entry) {
+          for (const [key, value] of Object.entries(mandarinDict)) {
+            if (key === word || word.includes(key) || key.includes(word)) {
+              entry = value;
+              console.log('[Dict] Found Mandarin partial match:', key, 'for word', word);
+              break;
+            }
+          }
         }
       }
       
@@ -223,6 +251,8 @@ async function lookupWordInDictionaries(word) {
         if (entry.definitions && entry.definitions.length > 0) {
           result.mandarin.definition = entry.definitions.join('; ');
         }
+      } else {
+        console.log('[Dict] No Mandarin entry found for', word);
       }
     }
   }
@@ -232,16 +262,39 @@ async function lookupWordInDictionaries(word) {
     let entry = cantoneseDict[word];
     
     if (entry) {
+      console.log('[Dict] Found Cantonese entry for', word, ':', entry);
       result.cantonese.jyutping = entry.jyutping || '';
       if (entry.definitions && entry.definitions.length > 0) {
         result.cantonese.definition = entry.definitions.join('; ');
       }
     } else {
-      // Try searching for partial matches
-      for (const [key, value] of Object.entries(cantoneseDict)) {
-        if (key.includes(word) || word.includes(key)) {
-          entry = value;
-          break;
+      // Try exact character matches
+      const keys = Object.keys(cantoneseDict);
+      const exactMatch = keys.find(key => key === word);
+      
+      if (exactMatch) {
+        entry = cantoneseDict[exactMatch];
+        console.log('[Dict] Found exact Cantonese match for', word);
+      } else {
+        // Try character-by-character lookup
+        for (let i = 0; i < word.length; i++) {
+          const char = word[i];
+          if (cantoneseDict[char]) {
+            entry = cantoneseDict[char];
+            console.log('[Dict] Found Cantonese entry for character', char, 'in word', word);
+            break;
+          }
+        }
+        
+        // Try substring matches
+        if (!entry) {
+          for (const [key, value] of Object.entries(cantoneseDict)) {
+            if (key === word || word.includes(key) || key.includes(word)) {
+              entry = value;
+              console.log('[Dict] Found Cantonese partial match:', key, 'for word', word);
+              break;
+            }
+          }
         }
       }
       
@@ -250,6 +303,8 @@ async function lookupWordInDictionaries(word) {
         if (entry.definitions && entry.definitions.length > 0) {
           result.cantonese.definition = entry.definitions.join('; ');
         }
+      } else {
+        console.log('[Dict] No Cantonese entry found for', word);
       }
     }
   }
