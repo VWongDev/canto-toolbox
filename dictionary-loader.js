@@ -23,9 +23,14 @@ async function loadDictionaries() {
 
     for (const path of mandarinPaths) {
       try {
-        const response = await fetch(chrome.runtime.getURL(path));
+        const url = chrome.runtime.getURL(path);
+        console.log('[Dict] Attempting to load Mandarin dictionary from:', url);
+        const response = await fetch(url);
+        console.log('[Dict] Response status:', response.status, response.statusText);
+        
         if (response.ok) {
           const text = await response.text();
+          console.log('[Dict] Loaded text, length:', text.length, 'chars');
           // The JS files are ES6 modules with export default
           // Format: export default [["traditional","simplified","pinyin","definition",...],...]
           try {
