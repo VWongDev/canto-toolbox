@@ -7,6 +7,38 @@ importScripts('dictionary-loader.js');
 const lookupCache = new Map();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
+// Pre-load dictionaries when service worker starts (non-blocking)
+// This improves performance by loading dictionaries in the background
+let dictionariesLoading = false;
+let dictionariesLoadPromise = null;
+
+function preloadDictionaries() {
+  if (dictionariesLoadPromise) {
+    return dictionariesLoadPromise;
+  }
+  
+  if (dictionariesLoading) {
+    return Promise.resolve();
+  }
+  
+  dictionariesLoading = true;
+  dictionariesLoadPromise = loadDictionaries()
+    .then(() => {
+      console.log('[Background] Dictionaries pre-loaded successfully');
+      dictionariesLoading = false;
+    })
+    .catch(error => {
+      console.error('[Background] Failed to pre-load dictionaries:', error);
+      dictionariesLoading = false;
+      dictionariesLoadPromise = null; // Allow retry
+    });
+  
+  return dictionariesLoadPromise;
+}
+
+// Start loading dictionaries immediately when service worker starts
+preloadDictionaries();
+
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Background] Received message:', message.type, message);
@@ -66,8 +98,8 @@ async function lookupWord(word) {
     let definition = null;
     let matchedWord = word;
     
-    // Ensure dictionaries are loaded first
-    await loadDictionaries();
+    // Ensure dictionaries are loaded (use pre-loaded if available)
+    await preloadDictionaries();
     
     // Try exact match first (highest priority)
     definition = await lookupWordInDictionaries(word);

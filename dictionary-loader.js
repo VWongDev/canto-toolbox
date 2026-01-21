@@ -78,22 +78,39 @@ async function loadDictionaries() {
             
             // Convert array format to dictionary object
             // Format: [traditional, simplified, pinyin, definition, ...]
+            // Use batch processing to avoid blocking
+            console.log('[Dict] Processing', dataArray.length, 'Mandarin entries...');
             mandarinDict = {};
-            for (const entry of dataArray) {
-              if (Array.isArray(entry) && entry.length >= 4) {
-                const [traditional, simplified, pinyin, definition] = entry;
-                const definitions = Array.isArray(definition) ? definition : [definition];
-                
-                const dictEntry = {
-                  traditional,
-                  simplified,
-                  pinyin: pinyin || '',
-                  definitions: definitions.filter(d => d && String(d).trim().length > 0)
-                };
-                
-                // Index by both simplified and traditional
-                if (simplified) mandarinDict[simplified] = dictEntry;
-                if (traditional && traditional !== simplified) mandarinDict[traditional] = dictEntry;
+            
+            // Process in batches to avoid blocking the main thread
+            const BATCH_SIZE = 1000;
+            let processed = 0;
+            
+            for (let i = 0; i < dataArray.length; i += BATCH_SIZE) {
+              const batch = dataArray.slice(i, i + BATCH_SIZE);
+              
+              for (const entry of batch) {
+                if (Array.isArray(entry) && entry.length >= 4) {
+                  const [traditional, simplified, pinyin, definition] = entry;
+                  const definitions = Array.isArray(definition) ? definition : [definition];
+                  
+                  const dictEntry = {
+                    traditional,
+                    simplified,
+                    pinyin: pinyin || '',
+                    definitions: definitions.filter(d => d && String(d).trim().length > 0)
+                  };
+                  
+                  // Index by both simplified and traditional
+                  if (simplified) mandarinDict[simplified] = dictEntry;
+                  if (traditional && traditional !== simplified) mandarinDict[traditional] = dictEntry;
+                }
+              }
+              
+              processed += batch.length;
+              // Yield to event loop every batch to keep UI responsive
+              if (i + BATCH_SIZE < dataArray.length) {
+                await new Promise(resolve => setTimeout(resolve, 0));
               }
             }
             
@@ -124,7 +141,8 @@ async function loadDictionaries() {
         const response = await fetch(chrome.runtime.getURL(path));
         if (response.ok) {
           const text = await response.text();
-          cantoneseDict = parseCedictFormat(text);
+          console.log('[Dict] Parsing Cantonese dictionary from', path, '...');
+          cantoneseDict = await parseCedictFormat(text);
           console.log('[Dict] Loaded Cantonese dictionary from', path, ':', Object.keys(cantoneseDict).length, 'entries');
           break;
         }
@@ -152,68 +170,83 @@ async function loadDictionaries() {
  * 1. Traditional Simplified [pinyin] /definition1/definition2/
  * 2. Traditional Simplified [pinyin] {jyutping} /definition1/definition2/ (CC-CANTO)
  * 3. Traditional Simplified [pinyin] {jyutping} (readings only, no definitions)
+ * Optimized with batch processing for large files
  */
-function parseCedictFormat(text) {
+async function parseCedictFormat(text) {
   const dict = {};
   const lines = text.split('\n');
   
-  for (const line of lines) {
-    if (!line || line.startsWith('#') || line.trim().length === 0) {
-      continue;
+  // Process in batches to avoid blocking
+  const BATCH_SIZE = 1000;
+  let processed = 0;
+  
+  for (let i = 0; i < lines.length; i += BATCH_SIZE) {
+    const batch = lines.slice(i, i + BATCH_SIZE);
+    
+    for (const line of batch) {
+      if (!line || line.startsWith('#') || line.trim().length === 0) {
+        continue;
+      }
+      
+      // Try format with definitions: Traditional Simplified [pinyin] {jyutping} /def1/def2/
+      let match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\{([^}]+)\}\s+\/(.+)\/$/);
+      if (match) {
+        const [, traditional, simplified, pinyin, jyutping, definitions] = match;
+        const defs = definitions.split('/').filter(d => d.trim().length > 0);
+        
+        const entry = {
+          traditional,
+          simplified,
+          pinyin,
+          jyutping,
+          definitions: defs
+        };
+        
+        dict[simplified] = entry;
+        if (traditional !== simplified) dict[traditional] = entry;
+        continue;
+      }
+      
+      // Try format without jyutping: Traditional Simplified [pinyin] /def1/def2/
+      match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.+)\/$/);
+      if (match) {
+        const [, traditional, simplified, pinyin, definitions] = match;
+        const defs = definitions.split('/').filter(d => d.trim().length > 0);
+        
+        const entry = {
+          traditional,
+          simplified,
+          pinyin,
+          definitions: defs
+        };
+        
+        dict[simplified] = entry;
+        if (traditional !== simplified) dict[traditional] = entry;
+        continue;
+      }
+      
+      // Try format with jyutping but no definitions: Traditional Simplified [pinyin] {jyutping}
+      match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\{([^}]+)\}$/);
+      if (match) {
+        const [, traditional, simplified, pinyin, jyutping] = match;
+        
+        const entry = {
+          traditional,
+          simplified,
+          pinyin,
+          jyutping,
+          definitions: [] // No definitions in this file
+        };
+        
+        dict[simplified] = entry;
+        if (traditional !== simplified) dict[traditional] = entry;
+      }
     }
     
-    // Try format with definitions: Traditional Simplified [pinyin] {jyutping} /def1/def2/
-    let match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\{([^}]+)\}\s+\/(.+)\/$/);
-    if (match) {
-      const [, traditional, simplified, pinyin, jyutping, definitions] = match;
-      const defs = definitions.split('/').filter(d => d.trim().length > 0);
-      
-      const entry = {
-        traditional,
-        simplified,
-        pinyin,
-        jyutping,
-        definitions: defs
-      };
-      
-      dict[simplified] = entry;
-      if (traditional !== simplified) dict[traditional] = entry;
-      continue;
-    }
-    
-    // Try format without jyutping: Traditional Simplified [pinyin] /def1/def2/
-    match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.+)\/$/);
-    if (match) {
-      const [, traditional, simplified, pinyin, definitions] = match;
-      const defs = definitions.split('/').filter(d => d.trim().length > 0);
-      
-      const entry = {
-        traditional,
-        simplified,
-        pinyin,
-        definitions: defs
-      };
-      
-      dict[simplified] = entry;
-      if (traditional !== simplified) dict[traditional] = entry;
-      continue;
-    }
-    
-    // Try format with jyutping but no definitions: Traditional Simplified [pinyin] {jyutping}
-    match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\{([^}]+)\}$/);
-    if (match) {
-      const [, traditional, simplified, pinyin, jyutping] = match;
-      
-      const entry = {
-        traditional,
-        simplified,
-        pinyin,
-        jyutping,
-        definitions: [] // No definitions in this file
-      };
-      
-      dict[simplified] = entry;
-      if (traditional !== simplified) dict[traditional] = entry;
+    processed += batch.length;
+    // Yield to event loop every batch
+    if (i + BATCH_SIZE < lines.length) {
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
   }
   
