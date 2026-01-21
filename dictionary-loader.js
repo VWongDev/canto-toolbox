@@ -26,21 +26,43 @@ async function loadDictionaries() {
         const response = await fetch(chrome.runtime.getURL(path));
         if (response.ok) {
           const text = await response.text();
-          // The JS files are CommonJS modules, we need to extract the data
-          // They export an object with dictionary entries
-          // We'll use eval in a safe way or parse the module
+          // The JS files are ES6 modules with export default
+          // Format: export default [["traditional","simplified","pinyin","definition",...],...]
           try {
-            // Create a function to execute the module code
-            const moduleExports = {};
-            const module = { exports: moduleExports };
-            const exports = moduleExports;
+            // Extract the data array from the export default statement
+            // Remove "export default " prefix and parse as JSON
+            let dataText = text.trim();
+            if (dataText.startsWith('export default ')) {
+              dataText = dataText.substring('export default '.length);
+            }
             
-            // Execute the module code
-            const func = new Function('module', 'exports', text);
-            func(module, exports);
+            // Parse the array
+            const dataArray = eval('(' + dataText + ')');
             
-            mandarinDict = module.exports || moduleExports;
-            console.log('[Dict] Loaded Mandarin dictionary from', path);
+            // Convert array format to dictionary object
+            // Format: [traditional, simplified, pinyin, definition, ...]
+            mandarinDict = {};
+            if (Array.isArray(dataArray)) {
+              for (const entry of dataArray) {
+                if (Array.isArray(entry) && entry.length >= 4) {
+                  const [traditional, simplified, pinyin, definition] = entry;
+                  const definitions = Array.isArray(definition) ? definition : [definition];
+                  
+                  const dictEntry = {
+                    traditional,
+                    simplified,
+                    pinyin: pinyin || '',
+                    definitions: definitions.filter(d => d && String(d).trim().length > 0)
+                  };
+                  
+                  // Index by both simplified and traditional
+                  if (simplified) mandarinDict[simplified] = dictEntry;
+                  if (traditional && traditional !== simplified) mandarinDict[traditional] = dictEntry;
+                }
+              }
+            }
+            
+            console.log('[Dict] Loaded Mandarin dictionary from', path, ':', Object.keys(mandarinDict).length, 'entries');
             break;
           } catch (parseError) {
             console.warn('[Dict] Failed to parse JS module:', parseError);
@@ -48,6 +70,7 @@ async function loadDictionaries() {
           }
         }
       } catch (e) {
+        console.warn('[Dict] Failed to load', path, ':', e);
         continue;
       }
     }
@@ -88,7 +111,10 @@ async function loadDictionaries() {
 
 /**
  * Parse CC-CEDICT format text file
- * Format: Traditional Simplified [pinyin] /definition1/definition2/
+ * Format variations:
+ * 1. Traditional Simplified [pinyin] /definition1/definition2/
+ * 2. Traditional Simplified [pinyin] {jyutping} /definition1/definition2/ (CC-CANTO)
+ * 3. Traditional Simplified [pinyin] {jyutping} (readings only, no definitions)
  */
 function parseCedictFormat(text) {
   const dict = {};
@@ -99,13 +125,31 @@ function parseCedictFormat(text) {
       continue;
     }
     
-    // Parse CC-CEDICT format: Traditional Simplified [pinyin] /def1/def2/
-    const match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.+)\/$/);
+    // Try format with definitions: Traditional Simplified [pinyin] {jyutping} /def1/def2/
+    let match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\{([^}]+)\}\s+\/(.+)\/$/);
+    if (match) {
+      const [, traditional, simplified, pinyin, jyutping, definitions] = match;
+      const defs = definitions.split('/').filter(d => d.trim().length > 0);
+      
+      const entry = {
+        traditional,
+        simplified,
+        pinyin,
+        jyutping,
+        definitions: defs
+      };
+      
+      dict[simplified] = entry;
+      if (traditional !== simplified) dict[traditional] = entry;
+      continue;
+    }
+    
+    // Try format without jyutping: Traditional Simplified [pinyin] /def1/def2/
+    match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.+)\/$/);
     if (match) {
       const [, traditional, simplified, pinyin, definitions] = match;
       const defs = definitions.split('/').filter(d => d.trim().length > 0);
       
-      // Store by simplified and traditional
       const entry = {
         traditional,
         simplified,
@@ -114,7 +158,25 @@ function parseCedictFormat(text) {
       };
       
       dict[simplified] = entry;
-      dict[traditional] = entry;
+      if (traditional !== simplified) dict[traditional] = entry;
+      continue;
+    }
+    
+    // Try format with jyutping but no definitions: Traditional Simplified [pinyin] {jyutping}
+    match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\{([^}]+)\}$/);
+    if (match) {
+      const [, traditional, simplified, pinyin, jyutping] = match;
+      
+      const entry = {
+        traditional,
+        simplified,
+        pinyin,
+        jyutping,
+        definitions: [] // No definitions in this file
+      };
+      
+      dict[simplified] = entry;
+      if (traditional !== simplified) dict[traditional] = entry;
     }
   }
   
@@ -135,58 +197,60 @@ async function lookupWordInDictionaries(word) {
   };
 
   // Search in Mandarin dictionary (CC-CEDICT format from edvardsr/cc-cedict)
-  if (mandarinDict) {
-    // The cc-cedict library exports functions, but the data files might have the raw data
-    // Try to find the word in the dictionary object
-    let entry = null;
-    
-    if (typeof mandarinDict === 'object') {
-      // Try direct lookup
-      if (mandarinDict[word]) {
-        entry = mandarinDict[word];
-      } else {
-        // Search in all entries
-        for (const [key, value] of Object.entries(mandarinDict)) {
-          if (key === word || (typeof value === 'object' && (value.simplified === word || value.traditional === word))) {
-            entry = value;
-            break;
-          }
-        }
-      }
-    }
+  if (mandarinDict && typeof mandarinDict === 'object') {
+    // Try direct lookup by word
+    let entry = mandarinDict[word];
     
     if (entry) {
-      // Handle different entry formats
-      if (Array.isArray(entry)) {
-        // Multiple entries, take first
-        entry = entry[0];
+      result.mandarin.pinyin = entry.pinyin || '';
+      if (entry.definitions && entry.definitions.length > 0) {
+        result.mandarin.definition = entry.definitions.join('; ');
+      } else if (entry.definition) {
+        result.mandarin.definition = String(entry.definition);
+      }
+    } else {
+      // Try searching for partial matches or character-by-character
+      // For multi-character words, try to find entries that contain the word
+      for (const [key, value] of Object.entries(mandarinDict)) {
+        if (key.includes(word) || word.includes(key)) {
+          entry = value;
+          break;
+        }
       }
       
-      if (typeof entry === 'object') {
-        result.mandarin.pinyin = entry.pinyin || entry.reading || '';
-        
-        if (entry.definitions) {
-          result.mandarin.definition = Array.isArray(entry.definitions)
-            ? entry.definitions.join('; ')
-            : String(entry.definitions);
-        } else if (entry.english) {
-          result.mandarin.definition = Array.isArray(entry.english)
-            ? entry.english.join('; ')
-            : String(entry.english);
+      if (entry) {
+        result.mandarin.pinyin = entry.pinyin || '';
+        if (entry.definitions && entry.definitions.length > 0) {
+          result.mandarin.definition = entry.definitions.join('; ');
         }
       }
     }
   }
 
   // Search in Cantonese dictionary (CC-CANTO format)
-  if (cantoneseDict) {
-    if (cantoneseDict[word]) {
-      const entry = cantoneseDict[word];
-      // Extract jyutping from pinyin field (CC-CANTO format may have jyutping in pinyin field)
-      result.cantonese.jyutping = entry.pinyin || entry.jyutping || '';
-      result.cantonese.definition = Array.isArray(entry.definitions)
-        ? entry.definitions.join('; ')
-        : String(entry.definitions);
+  if (cantoneseDict && typeof cantoneseDict === 'object') {
+    let entry = cantoneseDict[word];
+    
+    if (entry) {
+      result.cantonese.jyutping = entry.jyutping || '';
+      if (entry.definitions && entry.definitions.length > 0) {
+        result.cantonese.definition = entry.definitions.join('; ');
+      }
+    } else {
+      // Try searching for partial matches
+      for (const [key, value] of Object.entries(cantoneseDict)) {
+        if (key.includes(word) || word.includes(key)) {
+          entry = value;
+          break;
+        }
+      }
+      
+      if (entry) {
+        result.cantonese.jyutping = entry.jyutping || '';
+        if (entry.definitions && entry.definitions.length > 0) {
+          result.cantonese.definition = entry.definitions.join('; ');
+        }
+      }
     }
   }
 
