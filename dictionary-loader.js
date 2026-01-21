@@ -29,48 +29,67 @@ async function loadDictionaries() {
           // The JS files are ES6 modules with export default
           // Format: export default [["traditional","simplified","pinyin","definition",...],...]
           try {
-            // Extract the data array from the export default statement
-            // Remove "export default " prefix and parse as JSON
+            // Extract the data from the export default statement
+            // Format: export default {"all":[...]} or export default [...]
             let dataText = text.trim();
             if (dataText.startsWith('export default ')) {
               dataText = dataText.substring('export default '.length);
             }
             
-            // Parse the array
-            const dataArray = eval('(' + dataText + ')');
+            // Parse the data (could be object with "all" key or direct array)
+            const parsedData = eval('(' + dataText + ')');
+            
+            // Handle different structures: {"all": [...]} or [...]
+            let dataArray = null;
+            if (parsedData && typeof parsedData === 'object') {
+              if (Array.isArray(parsedData)) {
+                dataArray = parsedData;
+              } else if (parsedData.all && Array.isArray(parsedData.all)) {
+                dataArray = parsedData.all;
+              } else if (parsedData.simplified && Array.isArray(parsedData.simplified)) {
+                dataArray = parsedData.simplified;
+              } else if (parsedData.traditional && Array.isArray(parsedData.traditional)) {
+                dataArray = parsedData.traditional;
+              }
+            }
+            
+            if (!dataArray) {
+              console.warn('[Dict] Could not find array data in', path);
+              continue;
+            }
             
             // Convert array format to dictionary object
             // Format: [traditional, simplified, pinyin, definition, ...]
             mandarinDict = {};
-            if (Array.isArray(dataArray)) {
-              for (const entry of dataArray) {
-                if (Array.isArray(entry) && entry.length >= 4) {
-                  const [traditional, simplified, pinyin, definition] = entry;
-                  const definitions = Array.isArray(definition) ? definition : [definition];
-                  
-                  const dictEntry = {
-                    traditional,
-                    simplified,
-                    pinyin: pinyin || '',
-                    definitions: definitions.filter(d => d && String(d).trim().length > 0)
-                  };
-                  
-                  // Index by both simplified and traditional
-                  if (simplified) mandarinDict[simplified] = dictEntry;
-                  if (traditional && traditional !== simplified) mandarinDict[traditional] = dictEntry;
-                }
+            for (const entry of dataArray) {
+              if (Array.isArray(entry) && entry.length >= 4) {
+                const [traditional, simplified, pinyin, definition] = entry;
+                const definitions = Array.isArray(definition) ? definition : [definition];
+                
+                const dictEntry = {
+                  traditional,
+                  simplified,
+                  pinyin: pinyin || '',
+                  definitions: definitions.filter(d => d && String(d).trim().length > 0)
+                };
+                
+                // Index by both simplified and traditional
+                if (simplified) mandarinDict[simplified] = dictEntry;
+                if (traditional && traditional !== simplified) mandarinDict[traditional] = dictEntry;
               }
             }
             
             console.log('[Dict] Loaded Mandarin dictionary from', path, ':', Object.keys(mandarinDict).length, 'entries');
             break;
           } catch (parseError) {
-            console.warn('[Dict] Failed to parse JS module:', parseError);
+            console.error('[Dict] Failed to parse JS module from', path, ':', parseError);
+            console.error('[Dict] Parse error details:', parseError.message, parseError.stack);
             continue;
           }
         }
       } catch (e) {
-        console.warn('[Dict] Failed to load', path, ':', e);
+        console.error('[Dict] Failed to load', path, ':', e);
+        console.error('[Dict] Error details:', e.message, e.stack);
         continue;
       }
     }
