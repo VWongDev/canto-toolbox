@@ -176,40 +176,31 @@ async function lookupWord(word) {
     console.error('[API] Error message:', error.message);
     console.error('[API] Error stack:', error.stack);
     
-    // Provide user-friendly error message
-    let errorMsg = error.message || 'Unknown error';
-    if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
-      errorMsg = `⚠️ Dictionary API is not accessible.
-
-The Chinese dictionary API endpoints are not publicly available or require authentication.
-
-Word detected: "${word}"
-
-To fix this, you would need:
-1. A publicly accessible Chinese dictionary API with CORS support
-2. Or use a local dictionary file
-3. Or implement a different API service
-
-For now, the extension can detect Chinese words but cannot fetch definitions.`;
-    } else if (error.message.includes('timeout')) {
-      errorMsg = 'Request timeout: API took too long to respond.';
-    } else if (error.message.includes('CORS')) {
-      errorMsg = 'CORS error: The API does not allow cross-origin requests from extensions.';
-    } else if (error.message.includes('HTTP')) {
-      errorMsg = `API returned error: ${error.message}. The endpoint may not exist or may require authentication.`;
-    }
+    // Since the API is not accessible, provide a helpful message
+    // but still return a structure so the popup shows
+    console.warn('[API] All dictionary API endpoints failed. Using fallback response.');
     
-    // Return a basic structure even on error - at least show the word
-    // This ensures the popup still appears
+    // Return a structure that at least shows the word was detected
+    // The user will see that hover detection works, but definitions are unavailable
     return {
       word: word,
       mandarin: { 
-        definition: `⚠️ ${errorMsg}`, 
-        pinyin: '' 
+        definition: `⚠️ Dictionary API unavailable
+
+The Chinese dictionary API is not publicly accessible. 
+Word "${word}" was detected successfully.
+
+To enable definitions, you would need:
+• A publicly accessible Chinese dictionary API
+• Or integrate a local dictionary file
+• Or use a different API service
+
+Hover detection is working correctly.`,
+        pinyin: 'N/A' 
       },
       cantonese: { 
-        definition: 'Not available', 
-        jyutping: '' 
+        definition: 'Dictionary API not available',
+        jyutping: 'N/A' 
       }
     };
   }
