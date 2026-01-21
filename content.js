@@ -25,6 +25,8 @@ function init() {
   
   // Add selection listener for multi-word searches
   document.addEventListener('mouseup', handleSelection, true);
+  // Track mouse movement to hide popup when cursor moves away from selection
+  document.addEventListener('mousemove', handleMouseMove, true);
   
   // Debug: log initialization
   console.log('Chinese Word Hover extension initialized');
@@ -162,12 +164,24 @@ function handleMouseOver(event) {
 
 /**
  * Handle text selection for multi-word searches
+ * Preserves default highlight behavior and shows popup
  */
 function handleSelection(event) {
   const selection = window.getSelection();
   const selectedText = selection.toString().trim();
   
   if (!selectedText || selectedText.length === 0) {
+    // Selection cleared - hide popup if it was from selection
+    if (currentSelection) {
+      currentSelection = null;
+      // Don't hide immediately, wait to see if user is moving to popup
+      clearTimeout(selectionPopupTimer);
+      selectionPopupTimer = setTimeout(() => {
+        if (!currentSelection) {
+          hidePopup();
+        }
+      }, 200);
+    }
     return;
   }
 
@@ -192,15 +206,71 @@ function handleSelection(event) {
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
   
+  // Store selection info for tracking
+  currentSelection = {
+    word: word,
+    range: range.cloneRange(), // Clone range to preserve it
+    rect: {
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height
+    }
+  };
+  
   console.log('Found selected Chinese text:', word);
   
   // Lookup and show popup
   lookupAndShowWord(word, rect.left + rect.width / 2, rect.top - 10);
+}
+
+/**
+ * Handle mouse movement to track when cursor leaves selection area
+ */
+function handleMouseMove(event) {
+  if (!currentSelection) {
+    return;
+  }
   
-  // Clear selection after a delay to allow user to see the popup
-  setTimeout(() => {
-    selection.removeAllRanges();
-  }, 100);
+  // Check if mouse is still over the selection area or popup
+  const mouseX = event.clientX;
+  const mouseY = event.clientY;
+  const rect = currentSelection.rect;
+  const popup = document.getElementById('chinese-hover-popup');
+  
+  // Check if mouse is over selection area (with some padding)
+  const padding = 10;
+  const isOverSelection = mouseX >= rect.left - padding && 
+                         mouseX <= rect.right + padding &&
+                         mouseY >= rect.top - padding && 
+                         mouseY <= rect.bottom + padding;
+  
+  // Check if mouse is over popup
+  const isOverPopup = popup && (
+    mouseX >= popup.offsetLeft && 
+    mouseX <= popup.offsetLeft + popup.offsetWidth &&
+    mouseY >= popup.offsetTop && 
+    mouseY <= popup.offsetTop + popup.offsetHeight
+  );
+  
+  // If mouse is not over selection or popup, hide popup after delay
+  if (!isOverSelection && !isOverPopup) {
+    clearTimeout(selectionPopupTimer);
+    selectionPopupTimer = setTimeout(() => {
+      // Double-check selection still exists and mouse is still away
+      const selection = window.getSelection();
+      if (!selection.toString().trim() || 
+          (!isOverSelection && !isOverPopup)) {
+        currentSelection = null;
+        hidePopup();
+      }
+    }, 300); // Small delay to allow moving to popup
+  } else {
+    // Mouse is over selection or popup, cancel any pending hide
+    clearTimeout(selectionPopupTimer);
+  }
 }
 
 /**
@@ -210,7 +280,12 @@ function handleMouseOut(event) {
   // Clear hover timer
   clearTimeout(hoverTimer);
   
-  // Hide popup if mouse leaves the word area
+  // Don't hide popup if it's from a selection (handleMouseMove handles that)
+  if (currentSelection) {
+    return;
+  }
+  
+  // Hide popup if mouse leaves the word area (for hover, not selection)
   if (!event.relatedTarget || !event.relatedTarget.closest('#chinese-hover-popup')) {
     // Don't hide immediately, give a small delay
     setTimeout(() => {
