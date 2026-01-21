@@ -150,18 +150,34 @@ function handleMouseOver(event) {
 
   // Find single Chinese word/character at cursor position
   const word = extractSingleChineseWord(text, offset, event);
-  if (!word || word === lastHoveredWord) return;
+  if (!word) return;
+
+  // If it's the same word, don't do anything (already showing)
+  if (word === lastHoveredWord) return;
+
+  // Check if this is a different word from the previous one
+  const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
 
   // Debug logging
-  console.log('Found Chinese word:', word);
+  console.log('Found Chinese word:', word, '(previous:', lastHoveredWord, ')');
 
+  // Update last hovered word immediately
   lastHoveredWord = word;
 
-  // Debounce hover events
+  // Clear any pending hover timer
   clearTimeout(hoverTimer);
-  hoverTimer = setTimeout(() => {
+
+  // If moving to a different word, update immediately (no debounce for word changes)
+  // Only debounce for the first word or rapid movements
+  if (isDifferentWord) {
+    // Different word - update immediately for smooth transitions
     lookupAndShowWord(word, event.clientX, event.clientY);
-  }, 300); // 300ms delay
+  } else {
+    // First word - use small debounce
+    hoverTimer = setTimeout(() => {
+      lookupAndShowWord(word, event.clientX, event.clientY);
+    }, 150); // Reduced delay for faster response
+  }
 }
 
 /**
@@ -432,6 +448,13 @@ function extractChineseWordSimple(text) {
  * Lookup word and show popup
  */
 function lookupAndShowWord(word, x, y) {
+  // Don't lookup if we're already showing this word (unless forced)
+  if (currentPopup && currentPopup.dataset.word === word) {
+    // Same word already showing, just update position
+    positionPopup(x, y);
+    return;
+  }
+
   // Send message to background script
   chrome.runtime.sendMessage(
     { type: 'lookup_word', word: word },
@@ -480,6 +503,7 @@ function showPopup(word, definition, x, y) {
   const popup = document.createElement('div');
   popup.id = 'chinese-hover-popup';
   popup.className = 'chinese-hover-popup';
+  popup.dataset.word = word; // Store word for comparison
   
   // Build popup content
   popup.innerHTML = `
