@@ -5,10 +5,12 @@ const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
 
 // Debounce timer
 let hoverTimer = null;
+let hideTimer = null; // Timer for hiding popup
 let lastHoveredWord = null;
 let currentPopup = null;
 let currentSelection = null; // Track current selection for popup
 let selectionPopupTimer = null;
+let isHoveringChinese = false; // Track if currently hovering over Chinese text
 
 // Initialize on page load
 if (document.readyState === 'loading') {
@@ -141,8 +143,10 @@ function injectStyles() {
 function handleMouseOver(event) {
   const target = event.target;
   
-  // Skip if hovering over our popup
+  // Skip if hovering over our popup - keep it visible
   if (target.closest('#chinese-hover-popup')) {
+    clearTimeout(hideTimer); // Cancel any pending hide
+    isHoveringChinese = true;
     return;
   }
 
@@ -158,14 +162,27 @@ function handleMouseOver(event) {
 
   // Get text content and cursor position from the element
   const { text, offset } = getTextAtPoint(target, event);
-  if (!text || text.trim().length === 0) return;
+  if (!text || text.trim().length === 0) {
+    // Not over text - cancel any pending hide but don't hide immediately
+    return;
+  }
 
   // Find single Chinese word/character at cursor position
   const word = extractSingleChineseWord(text, offset, event);
-  if (!word) return;
+  if (!word) {
+    // Not over Chinese text
+    isHoveringChinese = false;
+    return;
+  }
+
+  // We're hovering over Chinese text
+  isHoveringChinese = true;
+  clearTimeout(hideTimer); // Cancel any pending hide
 
   // If it's the same word, don't do anything (already showing)
-  if (word === lastHoveredWord) return;
+  if (word === lastHoveredWord) {
+    return;
+  }
 
   // Check if this is a different word from the previous one
   const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
@@ -188,7 +205,7 @@ function handleMouseOver(event) {
     // First word - use small debounce
     hoverTimer = setTimeout(() => {
       lookupAndShowWord(word, event.clientX, event.clientY);
-    }, 150); // Reduced delay for faster response
+    }, 100); // Reduced delay for faster response
   }
 }
 
@@ -307,23 +324,32 @@ function handleMouseMove(event) {
  * Handle mouseout events
  */
 function handleMouseOut(event) {
-  // Clear hover timer
-  clearTimeout(hoverTimer);
-  
   // Don't hide popup if it's from a selection (handleMouseMove handles that)
   if (currentSelection) {
     return;
   }
   
-  // Hide popup if mouse leaves the word area (for hover, not selection)
-  if (!event.relatedTarget || !event.relatedTarget.closest('#chinese-hover-popup')) {
-    // Don't hide immediately, give a small delay
-    setTimeout(() => {
-      if (currentPopup && !currentPopup.matches(':hover') && !document.querySelector('#chinese-hover-popup:hover')) {
-        hidePopup();
-      }
-    }, 100);
+  // Check if moving to popup
+  const relatedTarget = event.relatedTarget;
+  if (relatedTarget && relatedTarget.closest('#chinese-hover-popup')) {
+    // Moving to popup - don't hide
+    clearTimeout(hideTimer);
+    return;
   }
+  
+  // Check if moving to another element that might have Chinese text
+  // Give a delay to allow moving to popup or another Chinese word
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => {
+    // Only hide if we're not hovering over Chinese text and not over popup
+    if (!isHoveringChinese && currentPopup) {
+      const popup = document.getElementById('chinese-hover-popup');
+      if (!popup || !popup.matches(':hover')) {
+        hidePopup();
+        lastHoveredWord = null; // Reset so we can show popup again if hovering same word
+      }
+    }
+  }, 300); // Longer delay to allow moving to popup
 }
 
 /**
@@ -514,6 +540,9 @@ function showErrorPopup(word, x, y, error) {
 function showPopup(word, definition, x, y) {
   // Remove existing popup
   hidePopup();
+  
+  // Clear any pending hide timer
+  clearTimeout(hideTimer);
 
   // Use the matched word from definition if available (for accurate display)
   const displayWord = definition.word || word;
@@ -523,6 +552,21 @@ function showPopup(word, definition, x, y) {
   popup.id = 'chinese-hover-popup';
   popup.className = 'chinese-hover-popup';
   popup.dataset.word = word; // Store original word for comparison
+  
+  // Add mouseenter/mouseleave to popup to keep it visible
+  popup.addEventListener('mouseenter', () => {
+    clearTimeout(hideTimer);
+    isHoveringChinese = true;
+  });
+  
+  popup.addEventListener('mouseleave', () => {
+    // When leaving popup, check if we're still over Chinese text
+    hideTimer = setTimeout(() => {
+      if (!isHoveringChinese) {
+        hidePopup();
+      }
+    }, 200);
+  });
   
   // Format definitions - split by semicolon and display each on a new line
   const formatDefinitions = (defText) => {
