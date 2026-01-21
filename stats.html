@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chinese Word Statistics</title>
+  <link rel="stylesheet" href="stats.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Chinese Word Statistics</h1>
+      <p class="subtitle">Track your most frequently hovered Chinese words</p>
+    </header>
+
+    <div class="controls">
+      <button id="clear-btn" class="btn btn-danger">Clear Statistics</button>
+      <span class="word-count" id="word-count">0 words tracked</span>
+    </div>
+
+    <div class="stats-container">
+      <div id="loading" class="loading">Loading statistics...</div>
+      <div id="empty-state" class="empty-state" style="display: none;">
+        <p>No statistics yet. Start hovering over Chinese words on web pages to track them!</p>
+      </div>
+      <div id="stats-list" class="stats-list" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script src="stats.js"></script>
+</body>
+</html>
