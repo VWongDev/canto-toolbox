@@ -1,0 +1,6 @@
+[submodule "dictionaries/mandarin"]
+	path = dictionaries/mandarin
+	url = https://github.com/edvardsr/cc-cedict.git
+[submodule "dictionaries/cantonese"]
+	path = dictionaries/cantonese
+	url = https://github.com/amadeusine/cc-canto-data.git
