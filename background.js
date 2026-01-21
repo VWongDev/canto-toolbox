@@ -69,42 +69,37 @@ async function lookupWord(word) {
     // Ensure dictionaries are loaded first
     await loadDictionaries();
     
-    // If word is a single character, try to find the longest word starting with it
-    if (word.length === 1) {
-      // For single character, we'll try the character itself first
-      definition = await lookupWordInDictionaries(word);
-      
-      // If found, return it (single character lookup)
-      if (definition && 
-          definition.mandarin.definition && 
-          !definition.mandarin.definition.includes('not found') &&
-          !definition.mandarin.definition.includes('not loaded')) {
-        matchedWord = word;
-      } else {
-        // Single character not found - return not found
-        definition = null;
-      }
-    } else {
-      // Multi-character word (from selection): try full word first, then shorter substrings
-      definition = await lookupWordInDictionaries(word);
-      
-      // If not found or has no definition, try progressively shorter substrings
-      if (!definition || (!definition.mandarin.definition || definition.mandarin.definition.includes('not found'))) {
-        // Try shorter substrings: word.length-1, word.length-2, etc., down to 1 character
-        for (let len = word.length - 1; len >= 1; len--) {
-          const substring = word.substring(0, len);
-          const subDefinition = await lookupWordInDictionaries(substring);
-          
-          // Check if this substring has a valid definition
-          if (subDefinition && 
-              subDefinition.mandarin.definition && 
-              !subDefinition.mandarin.definition.includes('not found') &&
-              !subDefinition.mandarin.definition.includes('not loaded')) {
-            definition = subDefinition;
-            matchedWord = substring;
-            console.log('[Dict] Found shorter match:', substring, 'for word', word);
-            break;
-          }
+    // Try exact match first (highest priority)
+    definition = await lookupWordInDictionaries(word);
+    
+    // Check if exact match was found
+    const hasValidDefinition = definition && 
+      definition.mandarin.definition && 
+      !definition.mandarin.definition.includes('not found') &&
+      !definition.mandarin.definition.includes('not loaded') &&
+      definition.mandarin.definition.trim().length > 0;
+    
+    if (hasValidDefinition) {
+      // Exact match found - use it
+      matchedWord = word;
+      console.log('[Dict] Found exact match for:', word);
+    } else if (word.length > 1) {
+      // For multi-character words, try progressively shorter substrings as fallback
+      // Only if exact match doesn't exist
+      for (let len = word.length - 1; len >= 1; len--) {
+        const substring = word.substring(0, len);
+        const subDefinition = await lookupWordInDictionaries(substring);
+        
+        // Check if this substring has a valid exact definition
+        if (subDefinition && 
+            subDefinition.mandarin.definition && 
+            !subDefinition.mandarin.definition.includes('not found') &&
+            !subDefinition.mandarin.definition.includes('not loaded') &&
+            subDefinition.mandarin.definition.trim().length > 0) {
+          definition = subDefinition;
+          matchedWord = substring;
+          console.log('[Dict] Found shorter exact match:', substring, 'for word', word);
+          break;
         }
       }
     }
