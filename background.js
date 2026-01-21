@@ -57,16 +57,17 @@ async function lookupWord(word) {
 
   try {
     // Try multiple API endpoints as fallbacks
-    // Note: MDBG API endpoints may not be publicly available
-    // We'll try multiple formats and provide helpful error messages
+    // Note: Many Chinese dictionary APIs are not publicly accessible
+    // We'll try multiple services and formats
     const endpoints = [
-      // Try MDBG API (may require different format)
+      // Try MDBG web API (may not be publicly accessible)
       `https://api.mdbg.net/chinese/dictionary/WordLookup?w=${encodeURIComponent(word)}`,
+      // Try alternative MDBG format
       `https://www.mdbg.net/chinese/dictionary/WordLookup?w=${encodeURIComponent(word)}`,
-      // Alternative formats
+      // Try using MDBG's actual website API format
+      `https://www.mdbg.net/chindict/api/v1/search?q=${encodeURIComponent(word)}`,
+      // Alternative format
       `https://api.mdbg.net/chinese/dictionary/word/${encodeURIComponent(word)}`,
-      // Try using a CORS proxy as last resort (not recommended for production)
-      // `https://cors-anywhere.herokuapp.com/https://api.mdbg.net/chinese/dictionary/WordLookup?w=${encodeURIComponent(word)}`
     ];
 
     let data = null;
@@ -80,14 +81,28 @@ async function lookupWord(word) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
         
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          mode: 'cors', // Explicitly request CORS
-          headers: {
-            'Accept': 'application/json',
-          },
-          signal: controller.signal
-        });
+        // Try with no-cors mode first (if CORS fails), then fallback to cors
+        let response;
+        try {
+          response = await fetch(apiUrl, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+              'Accept': 'application/json',
+            },
+            signal: controller.signal
+          });
+        } catch (corsError) {
+          // If CORS fails, try no-cors (but this won't let us read response)
+          console.log('[API] CORS failed, trying no-cors mode (limited functionality)');
+          response = await fetch(apiUrl, {
+            method: 'GET',
+            mode: 'no-cors',
+            signal: controller.signal
+          });
+          // no-cors mode doesn't allow reading response, so this won't work
+          throw new Error('CORS blocked: API does not allow cross-origin requests');
+        }
         
         clearTimeout(timeoutId);
         
@@ -163,19 +178,23 @@ async function lookupWord(word) {
     
     // Provide user-friendly error message
     let errorMsg = error.message || 'Unknown error';
-    if (error.message.includes('Failed to fetch')) {
-      errorMsg = `Network error: Cannot reach dictionary API. 
-      
-This usually means:
-1. The API endpoint doesn't exist or isn't publicly accessible
-2. Check the Service Worker console (chrome://extensions → Inspect views: service worker) for detailed errors
-3. The MDBG API may require authentication or have changed
+    if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
+      errorMsg = `⚠️ Dictionary API is not accessible.
 
-The word "${word}" was detected, but definition lookup failed.`;
+The Chinese dictionary API endpoints are not publicly available or require authentication.
+
+Word detected: "${word}"
+
+To fix this, you would need:
+1. A publicly accessible Chinese dictionary API with CORS support
+2. Or use a local dictionary file
+3. Or implement a different API service
+
+For now, the extension can detect Chinese words but cannot fetch definitions.`;
     } else if (error.message.includes('timeout')) {
       errorMsg = 'Request timeout: API took too long to respond.';
     } else if (error.message.includes('CORS')) {
-      errorMsg = 'CORS error: API blocked the request. Check host_permissions in manifest.';
+      errorMsg = 'CORS error: The API does not allow cross-origin requests from extensions.';
     } else if (error.message.includes('HTTP')) {
       errorMsg = `API returned error: ${error.message}. The endpoint may not exist or may require authentication.`;
     }
