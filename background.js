@@ -6,16 +6,25 @@ const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('[Background] Received message:', message.type, message);
+  
   if (message.type === 'lookup_word') {
+    console.log('[Background] Looking up word:', message.word);
     lookupWord(message.word)
       .then(definition => {
+        console.log('[Background] Lookup successful, definition:', definition);
         // Track statistics
         updateStatistics(message.word);
         sendResponse({ success: true, definition });
       })
       .catch(error => {
-        console.error('Lookup error:', error);
-        sendResponse({ success: false, error: error.message });
+        console.error('[Background] Lookup error:', error);
+        console.error('[Background] Error details:', error.name, error.message, error.stack);
+        sendResponse({ 
+          success: false, 
+          error: error.message || 'Unknown error',
+          errorName: error.name
+        });
       });
     return true; // Indicates we will send a response asynchronously
   }
@@ -26,6 +35,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     return true;
   }
+  
+  // Log unhandled message types
+  console.warn('[Background] Unhandled message type:', message.type);
+  return false;
 });
 
 /**
@@ -58,29 +71,65 @@ async function lookupWord(word) {
       try {
         console.log('[API] Trying endpoint:', apiUrl);
         
+        // Create timeout manually (AbortSignal.timeout may not be supported)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
         const response = await fetch(apiUrl, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
           },
-          // Add timeout
-          signal: AbortSignal.timeout(5000) // 5 second timeout
+          signal: controller.signal
         });
         
+        clearTimeout(timeoutId);
+        
         console.log('[API] Response status:', response.status, response.statusText);
+        console.log('[API] Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
+          const errorText = await response.text().catch(() => '');
           console.log('[API] Endpoint failed with status:', response.status);
-          lastError = new Error(`API error: ${response.status} ${response.statusText}`);
+          console.log('[API] Error response body:', errorText.substring(0, 200));
+          lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
           continue; // Try next endpoint
         }
 
-        data = await response.json();
+        const contentType = response.headers.get('content-type');
+        console.log('[API] Content-Type:', contentType);
+        
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          // Try to parse as JSON anyway
+          const text = await response.text();
+          console.log('[API] Response text (first 500 chars):', text.substring(0, 500));
+          try {
+            data = JSON.parse(text);
+          } catch (parseError) {
+            console.error('[API] JSON parse error:', parseError);
+            lastError = new Error(`Invalid JSON response from API`);
+            continue;
+          }
+        }
+        
         console.log('[API] Success! Response data:', JSON.stringify(data).substring(0, 500));
         break; // Success, exit loop
       } catch (fetchError) {
-        console.log('[API] Endpoint error:', fetchError.message);
-        lastError = fetchError;
+        console.error('[API] Endpoint error:', fetchError);
+        console.error('[API] Error name:', fetchError.name);
+        console.error('[API] Error message:', fetchError.message);
+        console.error('[API] Error stack:', fetchError.stack);
+        
+        // Provide more specific error messages
+        if (fetchError.name === 'AbortError') {
+          lastError = new Error('Request timeout (5s)');
+        } else if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
+          lastError = new Error('Network error: Failed to fetch. Check host_permissions and CORS.');
+        } else {
+          lastError = fetchError;
+        }
         continue; // Try next endpoint
       }
     }
@@ -102,14 +151,26 @@ async function lookupWord(word) {
     return definition;
   } catch (error) {
     console.error('[API] Dictionary lookup failed:', error);
-    console.error('[API] Error details:', error.message, error.stack);
+    console.error('[API] Error name:', error.name);
+    console.error('[API] Error message:', error.message);
+    console.error('[API] Error stack:', error.stack);
+    
+    // Provide user-friendly error message
+    let errorMsg = error.message || 'Unknown error';
+    if (error.message.includes('Failed to fetch')) {
+      errorMsg = 'Network error: Cannot reach dictionary API. Check internet connection and extension permissions.';
+    } else if (error.message.includes('timeout')) {
+      errorMsg = 'Request timeout: API took too long to respond.';
+    } else if (error.message.includes('CORS')) {
+      errorMsg = 'CORS error: API blocked the request. Check host_permissions in manifest.';
+    }
     
     // Return a basic structure even on error - at least show the word
     // This ensures the popup still appears
     return {
       word: word,
       mandarin: { 
-        definition: `Error: ${error.message}. Please check console for details.`, 
+        definition: `⚠️ ${errorMsg}`, 
         pinyin: '' 
       },
       cantonese: { 
