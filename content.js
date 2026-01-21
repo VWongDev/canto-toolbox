@@ -19,9 +19,12 @@ function init() {
   // Inject CSS styles
   injectStyles();
   
-  // Add mouseover listener to document
+  // Add mouseover listener to document (for single word hover)
   document.addEventListener('mouseover', handleMouseOver, true);
   document.addEventListener('mouseout', handleMouseOut, true);
+  
+  // Add selection listener for multi-word searches
+  document.addEventListener('mouseup', handleSelection, true);
   
   // Debug: log initialization
   console.log('Chinese Word Hover extension initialized');
@@ -116,7 +119,8 @@ function injectStyles() {
 }
 
 /**
- * Handle mouseover events to detect Chinese words
+ * Handle mouseover events to detect single Chinese words
+ * Only detects individual words/characters, not multi-word phrases
  */
 function handleMouseOver(event) {
   const target = event.target;
@@ -126,17 +130,22 @@ function handleMouseOver(event) {
     return;
   }
 
+  // Skip if there's a text selection (user is highlighting)
+  if (window.getSelection().toString().trim().length > 0) {
+    return;
+  }
+
   // Skip script, style, and other non-text elements
   if (target.tagName === 'SCRIPT' || target.tagName === 'STYLE' || target.tagName === 'NOSCRIPT') {
     return;
   }
 
-  // Get text content from the element
-  const text = getTextAtPoint(target, event);
+  // Get text content and cursor position from the element
+  const { text, offset } = getTextAtPoint(target, event);
   if (!text || text.trim().length === 0) return;
 
-  // Find Chinese word at cursor position
-  const word = extractChineseWord(text, event);
+  // Find single Chinese word/character at cursor position
+  const word = extractSingleChineseWord(text, offset, event);
   if (!word || word === lastHoveredWord) return;
 
   // Debug logging
@@ -149,6 +158,49 @@ function handleMouseOver(event) {
   hoverTimer = setTimeout(() => {
     lookupAndShowWord(word, event.clientX, event.clientY);
   }, 300); // 300ms delay
+}
+
+/**
+ * Handle text selection for multi-word searches
+ */
+function handleSelection(event) {
+  const selection = window.getSelection();
+  const selectedText = selection.toString().trim();
+  
+  if (!selectedText || selectedText.length === 0) {
+    return;
+  }
+
+  // Check if selection contains Chinese characters
+  if (!/[\u4e00-\u9fff]/.test(selectedText)) {
+    return;
+  }
+
+  // Extract Chinese words from selection
+  const chineseRegex = /[\u4e00-\u9fff]+/g;
+  const matches = selectedText.match(chineseRegex);
+  
+  if (!matches || matches.length === 0) {
+    return;
+  }
+
+  // Use the first Chinese word sequence found in selection
+  // Or combine all if they form a phrase
+  const word = matches.length === 1 ? matches[0] : matches.join('');
+  
+  // Get selection position for popup placement
+  const range = selection.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
+  
+  console.log('Found selected Chinese text:', word);
+  
+  // Lookup and show popup
+  lookupAndShowWord(word, rect.left + rect.width / 2, rect.top - 10);
+  
+  // Clear selection after a delay to allow user to see the popup
+  setTimeout(() => {
+    selection.removeAllRanges();
+  }, 100);
 }
 
 /**
@@ -170,11 +222,14 @@ function handleMouseOut(event) {
 }
 
 /**
- * Get text content at the mouse point
+ * Get text content and cursor position at the mouse point
+ * Returns {text, offset} where offset is the character position in the text
  */
 function getTextAtPoint(element, event) {
   // Try to get text from text nodes using caretRangeFromPoint
   let range = null;
+  let textOffset = 0;
+  
   if (document.caretRangeFromPoint) {
     range = document.caretRangeFromPoint(event.clientX, event.clientY);
   } else if (document.caretPositionFromPoint) {
@@ -189,7 +244,10 @@ function getTextAtPoint(element, event) {
   if (range) {
     const textNode = range.startContainer;
     if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-      return textNode.textContent;
+      const text = textNode.textContent;
+      // Calculate offset in the text node
+      textOffset = range.startOffset;
+      return { text, offset: textOffset };
     }
     // If we have a range, try to get the parent element's text
     if (range.commonAncestorContainer) {
@@ -197,26 +255,81 @@ function getTextAtPoint(element, event) {
         ? range.commonAncestorContainer.parentElement 
         : range.commonAncestorContainer;
       if (container) {
-        return container.textContent || container.innerText || '';
+        const text = container.textContent || container.innerText || '';
+        // Calculate offset in the full text
+        const walker = document.createTreeWalker(
+          container,
+          NodeFilter.SHOW_TEXT,
+          null
+        );
+        let node;
+        let offset = 0;
+        while ((node = walker.nextNode())) {
+          if (node === range.startContainer) {
+            offset += range.startOffset;
+            break;
+          }
+          offset += node.textContent.length;
+        }
+        return { text, offset };
       }
     }
   }
 
-  // Fallback: get text from element
-  return element.textContent || element.innerText || '';
+  // Fallback: get text from element (no precise offset)
+  const text = element.textContent || element.innerText || '';
+  return { text, offset: -1 };
 }
 
 /**
- * Extract Chinese word at cursor position
- * Tries to find word boundaries intelligently
+ * Extract single Chinese word/character at cursor position
+ * For hover: only returns the word/character directly under the cursor
+ * Does not try to find longest matches - that's for selection
  */
-function extractChineseWord(text, event) {
+function extractSingleChineseWord(text, cursorOffset, event) {
   if (!text) return null;
 
-  // Create new regex instance to avoid state issues
+  // If we don't have a precise cursor offset, fall back to simple extraction
+  if (cursorOffset < 0) {
+    return extractChineseWordSimple(text);
+  }
+
+  // Find the Chinese character sequence containing the cursor position
   const regex = /[\u4e00-\u9fff]+/g;
-  
-  // Find all Chinese character sequences
+  let match;
+  let containingSequence = null;
+  let sequenceStart = -1;
+
+  while ((match = regex.exec(text)) !== null) {
+    const start = match.index;
+    const end = start + match[0].length;
+    
+    if (cursorOffset >= start && cursorOffset < end) {
+      containingSequence = match[0];
+      sequenceStart = start;
+      break;
+    }
+  }
+
+  if (!containingSequence) {
+    return null;
+  }
+
+  // Calculate relative position within the Chinese sequence
+  const relativeOffset = cursorOffset - sequenceStart;
+
+  // For hover, only return the single character under the cursor
+  // The background script will try to find the longest matching word starting from this character
+  return containingSequence[relativeOffset];
+}
+
+/**
+ * Simple Chinese word extraction (fallback when cursor position is unknown)
+ */
+function extractChineseWordSimple(text) {
+  if (!text) return null;
+
+  const regex = /[\u4e00-\u9fff]+/g;
   const matches = [];
   let match;
   while ((match = regex.exec(text)) !== null) {
@@ -231,7 +344,7 @@ function extractChineseWord(text, event) {
     return preferredWords[0];
   }
 
-  // Fallback: return the longest word (likely a compound word)
+  // Fallback: return the longest word
   return matches.reduce((longest, word) => 
     word.length > longest.length ? word : longest, 
     matches[0]

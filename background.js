@@ -46,6 +46,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 /**
  * Lookup Chinese word in local dictionary files
+ * Tries to find the longest matching word by checking progressively shorter substrings
  * Uses CC-CEDICT (Mandarin) and CC-CANTO (Cantonese) dictionaries from submodules
  */
 async function lookupWord(word) {
@@ -59,17 +60,81 @@ async function lookupWord(word) {
   console.log('[Dict] Looking up word in local dictionaries:', word);
 
   try {
-    // Use local dictionary lookup
-    const definition = await lookupWordInDictionaries(word);
-    console.log('[Dict] Found definition:', definition);
+    // Try to find the longest matching word
+    // For single character hover: try progressively longer words starting from that character
+    // For multi-character selection: try the full selection, then shorter substrings
+    let definition = null;
+    let matchedWord = word;
     
-    // Cache the result
-    lookupCache.set(word, {
-      data: definition,
-      timestamp: Date.now()
-    });
+    // Ensure dictionaries are loaded first
+    await loadDictionaries();
     
-    return definition;
+    // If word is a single character, try to find the longest word starting with it
+    if (word.length === 1) {
+      // For single character, we'll try the character itself first
+      definition = await lookupWordInDictionaries(word);
+      
+      // If found, return it (single character lookup)
+      if (definition && 
+          definition.mandarin.definition && 
+          !definition.mandarin.definition.includes('not found') &&
+          !definition.mandarin.definition.includes('not loaded')) {
+        matchedWord = word;
+      } else {
+        // Single character not found - return not found
+        definition = null;
+      }
+    } else {
+      // Multi-character word (from selection): try full word first, then shorter substrings
+      definition = await lookupWordInDictionaries(word);
+      
+      // If not found or has no definition, try progressively shorter substrings
+      if (!definition || (!definition.mandarin.definition || definition.mandarin.definition.includes('not found'))) {
+        // Try shorter substrings: word.length-1, word.length-2, etc., down to 1 character
+        for (let len = word.length - 1; len >= 1; len--) {
+          const substring = word.substring(0, len);
+          const subDefinition = await lookupWordInDictionaries(substring);
+          
+          // Check if this substring has a valid definition
+          if (subDefinition && 
+              subDefinition.mandarin.definition && 
+              !subDefinition.mandarin.definition.includes('not found') &&
+              !subDefinition.mandarin.definition.includes('not loaded')) {
+            definition = subDefinition;
+            matchedWord = substring;
+            console.log('[Dict] Found shorter match:', substring, 'for word', word);
+            break;
+          }
+        }
+      }
+    }
+    
+    if (definition) {
+      // Update the word in the result to reflect what was actually matched
+      definition.word = matchedWord;
+      console.log('[Dict] Found definition for:', matchedWord);
+      
+      // Cache the result
+      lookupCache.set(word, {
+        data: definition,
+        timestamp: Date.now()
+      });
+      
+      return definition;
+    }
+    
+    // No match found
+    return {
+      word: word,
+      mandarin: { 
+        definition: 'Word not found in dictionary',
+        pinyin: '' 
+      },
+      cantonese: { 
+        definition: 'Not found',
+        jyutping: '' 
+      }
+    };
   } catch (error) {
     console.error('[Dict] Dictionary lookup failed:', error);
     console.error('[Dict] Error details:', error.message, error.stack);
