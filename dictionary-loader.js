@@ -3,6 +3,7 @@
 // Dictionary data will be loaded from submodules
 let mandarinDict = null;
 let cantoneseDict = null;
+let cantoneseReadingsDict = null; // Separate dict for readings-only file
 let dictionariesLoaded = false;
 
 /**
@@ -130,25 +131,60 @@ async function loadDictionaries() {
     }
 
     // Load CC-CANTO (Cantonese) dictionary
-    // The cc-canto-data repository has text files in CC-CEDICT format
-    const cantonesePaths = [
-      'dictionaries/cantonese/cccanto-webdist.txt',
-      'dictionaries/cantonese/cccedict-canto-readings.txt'
-    ];
-
-    for (const path of cantonesePaths) {
-      try {
-        const response = await fetch(chrome.runtime.getURL(path));
-        if (response.ok) {
-          const text = await response.text();
-          console.log('[Dict] Parsing Cantonese dictionary from', path, '...');
-          cantoneseDict = await parseCedictFormat(text);
-          console.log('[Dict] Loaded Cantonese dictionary from', path, ':', Object.keys(cantoneseDict).length, 'entries');
-          break;
-        }
-      } catch (e) {
-        continue;
+    // The cc-canto-data repository has two files:
+    // 1. cccanto-webdist.txt - has definitions and jyutping
+    // 2. cccedict-canto-readings.txt - has readings (jyutping) only
+    // We load both and merge them
+    
+    // Load main dictionary with definitions
+    try {
+      const mainPath = 'dictionaries/cantonese/cccanto-webdist.txt';
+      const response = await fetch(chrome.runtime.getURL(mainPath));
+      if (response.ok) {
+        const text = await response.text();
+        console.log('[Dict] Parsing Cantonese dictionary from', mainPath, '...');
+        cantoneseDict = await parseCedictFormat(text);
+        console.log('[Dict] Loaded Cantonese dictionary from', mainPath, ':', Object.keys(cantoneseDict).length, 'entries');
       }
+    } catch (e) {
+      console.warn('[Dict] Failed to load main Cantonese dictionary:', e);
+    }
+    
+    // Load readings-only dictionary and merge with main dictionary
+    try {
+      const readingsPath = 'dictionaries/cantonese/cccedict-canto-readings.txt';
+      const response = await fetch(chrome.runtime.getURL(readingsPath));
+      if (response.ok) {
+        const text = await response.text();
+        console.log('[Dict] Parsing Cantonese readings from', readingsPath, '...');
+        cantoneseReadingsDict = await parseCedictFormat(text);
+        console.log('[Dict] Loaded Cantonese readings from', readingsPath, ':', Object.keys(cantoneseReadingsDict).length, 'entries');
+        
+        // Merge readings into main dictionary (add jyutping to entries that don't have it)
+        if (cantoneseDict && cantoneseReadingsDict) {
+          let mergedCount = 0;
+          for (const [word, readingEntry] of Object.entries(cantoneseReadingsDict)) {
+            if (cantoneseDict[word]) {
+              // Entry exists in main dict, add jyutping if missing
+              if (!cantoneseDict[word].jyutping && readingEntry.jyutping) {
+                cantoneseDict[word].jyutping = readingEntry.jyutping;
+                mergedCount++;
+              }
+            } else {
+              // Entry only in readings dict, add it to main dict
+              cantoneseDict[word] = readingEntry;
+              mergedCount++;
+            }
+          }
+          console.log('[Dict] Merged', mergedCount, 'readings into Cantonese dictionary');
+        } else if (!cantoneseDict && cantoneseReadingsDict) {
+          // If main dict failed to load, use readings dict as fallback
+          cantoneseDict = cantoneseReadingsDict;
+          console.log('[Dict] Using readings dictionary as Cantonese dictionary');
+        }
+      }
+    } catch (e) {
+      console.warn('[Dict] Failed to load Cantonese readings dictionary:', e);
     }
 
     dictionariesLoaded = true;
@@ -293,7 +329,7 @@ async function lookupWordInDictionaries(word) {
   // Only use exact matches - no partial matching
   if (cantoneseDict && typeof cantoneseDict === 'object') {
     // Try exact lookup by word
-    const entry = cantoneseDict[word];
+    let entry = cantoneseDict[word];
     
     if (entry) {
       console.log('[Dict] Found exact Cantonese entry for', word, ':', entry);
@@ -302,7 +338,18 @@ async function lookupWordInDictionaries(word) {
         result.cantonese.definition = entry.definitions.join('; ');
       }
     } else {
-      console.log('[Dict] No exact Cantonese entry found for', word);
+      // Try readings-only dictionary as fallback for jyutping
+      if (cantoneseReadingsDict && cantoneseReadingsDict[word]) {
+        const readingEntry = cantoneseReadingsDict[word];
+        console.log('[Dict] Found Cantonese reading for', word, ':', readingEntry);
+        result.cantonese.jyutping = readingEntry.jyutping || '';
+        // Use definition from Mandarin if available
+        if (!result.cantonese.definition && result.mandarin.definition) {
+          result.cantonese.definition = result.mandarin.definition;
+        }
+      } else {
+        console.log('[Dict] No exact Cantonese entry found for', word);
+      }
     }
   }
 
