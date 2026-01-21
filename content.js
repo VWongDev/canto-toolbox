@@ -375,9 +375,10 @@ function getTextAtPoint(element, event) {
 }
 
 /**
- * Extract single Chinese word/character at cursor position
- * For hover: only returns the word/character directly under the cursor
- * Does not try to find longest matches - that's for selection
+ * Extract Chinese word at cursor position with lookahead
+ * For hover: tries up to 4 characters ahead from cursor position
+ * Returns the longest possible substring (up to 4 chars) starting from cursor
+ * Background script will check for exact matches
  */
 function extractSingleChineseWord(text, cursorOffset, event) {
   if (!text) return null;
@@ -411,9 +412,10 @@ function extractSingleChineseWord(text, cursorOffset, event) {
   // Calculate relative position within the Chinese sequence
   const relativeOffset = cursorOffset - sequenceStart;
 
-  // For hover, only return the single character under the cursor
-  // The background script will try to find the longest matching word starting from this character
-  return containingSequence[relativeOffset];
+  // Extract up to 4 characters starting from the cursor position
+  // The background script will try to find the longest exact match
+  const maxLength = Math.min(4, containingSequence.length - relativeOffset);
+  return containingSequence.substring(relativeOffset, relativeOffset + maxLength);
 }
 
 /**
