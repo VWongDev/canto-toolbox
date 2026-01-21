@@ -451,7 +451,7 @@ function lookupAndShowWord(word, x, y) {
   // Don't lookup if we're already showing this word (unless forced)
   if (currentPopup && currentPopup.dataset.word === word) {
     // Same word already showing, just update position
-    positionPopup(x, y);
+    positionPopup(currentPopup, x, y);
     return;
   }
 
