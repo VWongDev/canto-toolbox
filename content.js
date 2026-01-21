@@ -469,7 +469,9 @@ function lookupAndShowWord(word, x, y) {
       }
 
       if (response && response.success && response.definition) {
-        showPopup(word, response.definition, x, y);
+        // Use the matched word from definition if available, otherwise use original word
+        const displayWord = response.definition.word || word;
+        showPopup(displayWord, response.definition, x, y);
       } else {
         console.error('Lookup failed:', response?.error);
         // Show error popup even on failure
@@ -501,15 +503,18 @@ function showPopup(word, definition, x, y) {
   // Remove existing popup
   hidePopup();
 
+  // Use the matched word from definition if available (for accurate display)
+  const displayWord = definition.word || word;
+
   // Create popup element
   const popup = document.createElement('div');
   popup.id = 'chinese-hover-popup';
   popup.className = 'chinese-hover-popup';
-  popup.dataset.word = word; // Store word for comparison
+  popup.dataset.word = word; // Store original word for comparison
   
   // Build popup content
   popup.innerHTML = `
-    <div class="popup-word">${escapeHtml(word)}</div>
+    <div class="popup-word">${escapeHtml(displayWord)}</div>
     <div class="popup-section">
       <div class="popup-label">Mandarin</div>
       <div class="popup-pinyin">${escapeHtml(definition.mandarin.pinyin || 'N/A')}</div>
