@@ -4,15 +4,7 @@
   "version": "1.0.0",
   "description": "Hover over Chinese words to see definitions in Mandarin and Cantonese with pronunciations",
   "permissions": [
-    "storage",
-    "activeTab",
-    "scripting"
-  ],
-  "host_permissions": [
-    "https://api.mdbg.net/*",
-    "https://cc-cedict.org/*",
-    "https://www.mdbg.net/*",
-    "https://hanzicraft.com/*"
+    "storage"
   ],
   "background": {
     "service_worker": "background.js"
