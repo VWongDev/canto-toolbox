@@ -22,6 +22,9 @@ function init() {
   // Add mouseover listener to document
   document.addEventListener('mouseover', handleMouseOver, true);
   document.addEventListener('mouseout', handleMouseOut, true);
+  
+  // Debug: log initialization
+  console.log('Chinese Word Hover extension initialized');
 }
 
 /**
@@ -123,13 +126,21 @@ function handleMouseOver(event) {
     return;
   }
 
+  // Skip script, style, and other non-text elements
+  if (target.tagName === 'SCRIPT' || target.tagName === 'STYLE' || target.tagName === 'NOSCRIPT') {
+    return;
+  }
+
   // Get text content from the element
   const text = getTextAtPoint(target, event);
-  if (!text) return;
+  if (!text || text.trim().length === 0) return;
 
   // Find Chinese word at cursor position
   const word = extractChineseWord(text, event);
   if (!word || word === lastHoveredWord) return;
+
+  // Debug logging
+  console.log('Found Chinese word:', word);
 
   lastHoveredWord = word;
 
@@ -162,15 +173,32 @@ function handleMouseOut(event) {
  * Get text content at the mouse point
  */
 function getTextAtPoint(element, event) {
-  // Try to get text from text nodes
-  const range = document.caretRangeFromPoint ? 
-    document.caretRangeFromPoint(event.clientX, event.clientY) :
-    null;
+  // Try to get text from text nodes using caretRangeFromPoint
+  let range = null;
+  if (document.caretRangeFromPoint) {
+    range = document.caretRangeFromPoint(event.clientX, event.clientY);
+  } else if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(event.clientX, event.clientY);
+    if (pos) {
+      range = document.createRange();
+      range.setStart(pos.offsetNode, pos.offset);
+      range.setEnd(pos.offsetNode, pos.offset);
+    }
+  }
   
   if (range) {
     const textNode = range.startContainer;
-    if (textNode.nodeType === Node.TEXT_NODE) {
+    if (textNode && textNode.nodeType === Node.TEXT_NODE) {
       return textNode.textContent;
+    }
+    // If we have a range, try to get the parent element's text
+    if (range.commonAncestorContainer) {
+      const container = range.commonAncestorContainer.nodeType === Node.TEXT_NODE 
+        ? range.commonAncestorContainer.parentElement 
+        : range.commonAncestorContainer;
+      if (container) {
+        return container.textContent || container.innerText || '';
+      }
     }
   }
 
@@ -183,35 +211,30 @@ function getTextAtPoint(element, event) {
  * Tries to find word boundaries intelligently
  */
 function extractChineseWord(text, event) {
-  if (!text || !CHINESE_REGEX.test(text)) {
-    return null;
-  }
+  if (!text) return null;
 
+  // Create new regex instance to avoid state issues
+  const regex = /[\u4e00-\u9fff]+/g;
+  
   // Find all Chinese character sequences
-  const matches = text.matchAll(CHINESE_REGEX);
-  const words = Array.from(matches);
+  const matches = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    matches.push(match[0]);
+  }
   
-  if (words.length === 0) return null;
+  if (matches.length === 0) return null;
 
-  // For simplicity, return the first Chinese word found
-  // In a more sophisticated implementation, we could:
-  // 1. Calculate cursor position relative to text
-  // 2. Find the word closest to cursor
-  // 3. Handle multi-character words intelligently
-  
-  // Get the first significant Chinese word (2-4 characters preferred)
-  for (const match of words) {
-    const word = match[0];
-    // Prefer words of 2-4 characters, but accept any length
-    if (word.length >= 1) {
-      return word;
-    }
+  // Prefer 2-4 character words (common Chinese word lengths)
+  const preferredWords = matches.filter(word => word.length >= 2 && word.length <= 4);
+  if (preferredWords.length > 0) {
+    return preferredWords[0];
   }
 
-  // Return the longest word found
-  return words.reduce((longest, match) => 
-    match[0].length > longest.length ? match[0] : longest, 
-    words[0][0]
+  // Fallback: return the longest word (likely a compound word)
+  return matches.reduce((longest, word) => 
+    word.length > longest.length ? word : longest, 
+    matches[0]
   );
 }
 
@@ -225,6 +248,8 @@ function lookupAndShowWord(word, x, y) {
     (response) => {
       if (chrome.runtime.lastError) {
         console.error('Extension error:', chrome.runtime.lastError);
+        // Show error popup
+        showErrorPopup(word, x, y, chrome.runtime.lastError.message);
         return;
       }
 
@@ -232,9 +257,26 @@ function lookupAndShowWord(word, x, y) {
         showPopup(word, response.definition, x, y);
       } else {
         console.error('Lookup failed:', response?.error);
+        // Show error popup even on failure
+        const errorDef = {
+          mandarin: { definition: response?.error || 'Lookup failed', pinyin: '' },
+          cantonese: { definition: 'Not available', jyutping: '' }
+        };
+        showPopup(word, errorDef, x, y);
       }
     }
   );
+}
+
+/**
+ * Show error popup
+ */
+function showErrorPopup(word, x, y, error) {
+  const errorDef = {
+    mandarin: { definition: `Error: ${error}`, pinyin: '' },
+    cantonese: { definition: 'Not available', jyutping: '' }
+  };
+  showPopup(word, errorDef, x, y);
 }
 
 /**

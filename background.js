@@ -40,17 +40,29 @@ async function lookupWord(word) {
   }
 
   try {
-    // MDBG API endpoint
-    const apiUrl = `https://api.mdbg.net/chinese/dictionary/WordLookup?w=${encodeURIComponent(word)}`;
-    const response = await fetch(apiUrl);
+    // Try MDBG API endpoint - multiple possible formats
+    let apiUrl = `https://api.mdbg.net/chinese/dictionary/WordLookup?w=${encodeURIComponent(word)}`;
+    let response = await fetch(apiUrl);
+    
+    // If that fails, try alternative endpoint format
+    if (!response.ok) {
+      apiUrl = `https://api.mdbg.net/chinese/dictionary/word/${encodeURIComponent(word)}`;
+      response = await fetch(apiUrl);
+    }
     
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      // Try CC-CEDICT format as fallback
+      apiUrl = `https://cc-cedict.org/wiki/${encodeURIComponent(word)}`;
+      response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
     }
 
     const data = await response.json();
     
-    // Parse MDBG response format
+    // Parse API response format
     const definition = parseMDBGResponse(data, word);
     
     // Cache the result
@@ -62,11 +74,11 @@ async function lookupWord(word) {
     return definition;
   } catch (error) {
     console.error('Dictionary lookup failed:', error);
-    // Return a basic structure even on error
+    // Return a basic structure even on error - at least show the word
     return {
       word: word,
-      mandarin: { definition: 'Not found', pinyin: '' },
-      cantonese: { definition: 'Not found', jyutping: '' }
+      mandarin: { definition: 'Definition not available', pinyin: '' },
+      cantonese: { definition: 'Not available', jyutping: '' }
     };
   }
 }
