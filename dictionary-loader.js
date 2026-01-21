@@ -41,8 +41,21 @@ async function loadDictionaries() {
               dataText = dataText.substring('export default '.length);
             }
             
-            // Parse the data (could be object with "all" key or direct array)
-            const parsedData = eval('(' + dataText + ')');
+            // Service workers can't use eval, so we need to parse as JSON
+            // The data should be valid JSON (object or array)
+            let parsedData;
+            try {
+              parsedData = JSON.parse(dataText);
+            } catch (jsonError) {
+              // If JSON.parse fails, the data might have trailing content or comments
+              // Try to extract just the JSON part
+              const jsonMatch = dataText.match(/^(\{.*\}|\[.*\])/s);
+              if (jsonMatch) {
+                parsedData = JSON.parse(jsonMatch[1]);
+              } else {
+                throw jsonError;
+              }
+            }
             
             // Handle different structures: {"all": [...]} or [...]
             let dataArray = null;
