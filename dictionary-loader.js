@@ -343,19 +343,11 @@ async function lookupWordInDictionaries(word) {
         const readingEntry = cantoneseReadingsDict[word];
         console.log('[Dict] Found Cantonese reading for', word, ':', readingEntry);
         result.cantonese.jyutping = readingEntry.jyutping || '';
-        // Use definition from Mandarin if available
-        if (!result.cantonese.definition && result.mandarin.definition) {
-          result.cantonese.definition = result.mandarin.definition;
-        }
+        // Don't use Mandarin definition - keep Cantonese separate
       } else {
         console.log('[Dict] No exact Cantonese entry found for', word);
       }
     }
-  }
-
-  // If no Cantonese definition found, use Mandarin as fallback
-  if (!result.cantonese.definition && result.mandarin.definition) {
-    result.cantonese.definition = result.mandarin.definition;
   }
 
   // If no definitions found at all
