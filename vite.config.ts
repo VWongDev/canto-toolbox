@@ -12,7 +12,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        // Entry points - crx plugin will handle manifest and file copying
+        // TypeScript entry points
         background: 'src/scripts/background.ts',
         content: 'src/scripts/content.ts',
         dictionaryLoader: 'src/scripts/dictionary-loader.ts',

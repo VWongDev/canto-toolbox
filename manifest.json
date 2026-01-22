@@ -7,12 +7,13 @@
     "storage"
   ],
   "background": {
-    "service_worker": "src/scripts/background.js"
+    "service_worker": "src/scripts/background.ts",
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/scripts/content.js"],
+      "js": ["src/scripts/content.ts"],
       "run_at": "document_idle"
     }
   ],
