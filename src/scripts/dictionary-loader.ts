@@ -123,6 +123,30 @@ function formatEntries(entries: DictionaryEntry[], pronunciationKey: 'pinyin' | 
 }
 
 /**
+ * Filter out definitions marked as Cantonese from Mandarin entries
+ * Definitions containing "(Cantonese)" are considered Cantonese-specific
+ */
+function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): DictionaryEntry[] {
+  const filteredEntries: DictionaryEntry[] = [];
+  
+  for (const entry of mandarinEntries) {
+    const filteredDefs = (entry.definitions || []).filter(
+      def => !def.toLowerCase().includes('(cantonese)')
+    );
+    
+    // Only include entry if it still has definitions after filtering
+    if (filteredDefs.length > 0) {
+      filteredEntries.push({
+        ...entry,
+        definitions: filteredDefs
+      });
+    }
+  }
+
+  return filteredEntries;
+}
+
+/**
  * Search for a word in the dictionaries
  */
 export async function lookupWordInDictionaries(word: string): Promise<DefinitionResult> {
@@ -137,21 +161,28 @@ export async function lookupWordInDictionaries(word: string): Promise<Definition
     cantonese: { definition: '', jyutping: '' }
   };
 
-  // Lookup in Mandarin dictionary (unified approach)
+  // Lookup in Mandarin dictionary
   const mandarinEntries = lookupInDict(mandarinDict, word);
+
+  // Process Mandarin entries, filtering out definitions marked as Cantonese
   if (mandarinEntries) {
-    console.log('[Dict] Found', mandarinEntries.length, 'Mandarin entry/entries for', word);
-    const formatted = formatEntries(mandarinEntries, 'pinyin');
-    result.mandarin = {
-      definition: formatted.definition,
-      pinyin: formatted.pinyin || '',
-      entries: formatted.entries
-    };
+    const filteredMandarinEntries = filterOutCantoneseDefinitions(mandarinEntries);
+    console.log('[Dict] Found', mandarinEntries.length, 'Mandarin entry/entries for', word, 
+      '(', filteredMandarinEntries.length, 'after filtering Cantonese definitions)');
+    
+    if (filteredMandarinEntries.length > 0) {
+      const formatted = formatEntries(filteredMandarinEntries, 'pinyin');
+      result.mandarin = {
+        definition: formatted.definition,
+        pinyin: formatted.pinyin || '',
+        entries: formatted.entries
+      };
+    }
   } else {
     console.log('[Dict] No exact Mandarin entry found for', word);
   }
 
-  // Lookup in Cantonese dictionary (unified approach)
+  // Lookup in Cantonese dictionary
   const cantoneseEntries = lookupInDict(cantoneseDict, word);
   if (cantoneseEntries) {
     console.log('[Dict] Found', cantoneseEntries.length, 'Cantonese entry/entries for', word);
