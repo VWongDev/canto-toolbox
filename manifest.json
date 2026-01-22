@@ -7,17 +7,17 @@
     "storage"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/scripts/background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["src/scripts/content.js"],
       "run_at": "document_idle"
     }
   ],
   "action": {
-    "default_popup": "stats.html",
+    "default_popup": "src/html/stats.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
