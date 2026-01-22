@@ -1,21 +1,40 @@
 // stats.js - Statistics page logic
 
-document.addEventListener('DOMContentLoaded', () => {
+console.log('[Stats] Script loaded');
+
+// Popups might load before DOMContentLoaded, so also try immediate execution
+function init() {
+  console.log('[Stats] Initializing...');
   loadStatistics();
   setupClearButton();
-});
+}
+
+// Try both DOMContentLoaded and immediate execution
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  // DOM is already ready
+  init();
+}
 
 /**
  * Load and display statistics
  */
 function loadStatistics() {
+  console.log('[Stats] loadStatistics called');
   const loadingEl = document.getElementById('loading');
   const emptyStateEl = document.getElementById('empty-state');
   const statsListEl = document.getElementById('stats-list');
   const wordCountEl = document.getElementById('word-count');
 
+  if (!loadingEl || !emptyStateEl || !statsListEl || !wordCountEl) {
+    console.error('[Stats] Required DOM elements not found!', { loadingEl, emptyStateEl, statsListEl, wordCountEl });
+    return;
+  }
+
   // Get statistics from background script
   console.log('[Stats] Requesting statistics from background script...');
+  console.log('[Stats] chrome.runtime available:', !!chrome.runtime);
   chrome.runtime.sendMessage({ type: 'get_statistics' }, (response) => {
     console.log('[Stats] Received response:', response);
     
