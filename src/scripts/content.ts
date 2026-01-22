@@ -490,7 +490,9 @@ function handleMouseOut(event: MouseEvent): void {
   }
   
   // Hide popup immediately when moving away from Chinese text
-  clearTimeout(hideTimer);
+  if (hideTimer) {
+    clearTimeout(hideTimer);
+  }
   if (!isHoveringChinese && currentPopup) {
     // Use cached popup element if available
     const popup = cachedPopupElement || document.getElementById('chinese-hover-popup');
@@ -719,7 +721,9 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
   hidePopup();
   
   // Clear any pending hide timer
-  clearTimeout(hideTimer);
+  if (hideTimer) {
+    clearTimeout(hideTimer);
+  }
 
   // Use the matched word from definition if available (for accurate display)
   const displayWord = definition.word || word;
