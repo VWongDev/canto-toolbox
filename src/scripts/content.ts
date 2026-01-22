@@ -510,7 +510,7 @@ function handleMouseOut(event: MouseEvent): void {
  * Returns {text, offset} where offset is the character position in the text
  * Optimized for performance
  */
-function getTextAtPoint(element, event) {
+function getTextAtPoint(element: Element, event: MouseEvent): { text: string; offset: number } | null {
   // Try to get text from text nodes using caretRangeFromPoint
   let range = null;
   
@@ -679,7 +679,7 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
       if (chrome.runtime.lastError) {
         console.error('Extension error:', chrome.runtime.lastError);
         // Show error popup
-        showErrorPopup(word, x, y, chrome.runtime.lastError.message);
+        showErrorPopup(word, x, y, chrome.runtime.lastError.message || 'Unknown error');
         return;
       }
 
@@ -910,8 +910,8 @@ function hidePopup(): void {
 /**
  * Escape HTML to prevent XSS
  */
-function escapeHtml(text) {
+function escapeHtml(text: string | undefined): string {
   const div = document.createElement('div');
-  div.textContent = text;
+  div.textContent = text || '';
   return div.innerHTML;
 }
