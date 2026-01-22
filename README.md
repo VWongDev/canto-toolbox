@@ -102,7 +102,7 @@ This extension uses high-quality, open-source dictionary data:
 
 ## Inspiration
 
-The hover detection mechanism in this extension is inspired by [Zhongwen](https://github.com/crimsonchinese/zhongwen), a popular Chinese-English popup dictionary extension. This extension adapts and extends that approach to support both Mandarin and Cantonese dictionaries.
+The hover detection mechanism in this extension is inspired by [Zhongwen](https://github.com/cschiller/zhongwen), a popular Chinese-English popup dictionary extension. This extension adapts and extends that approach to support both Mandarin and Cantonese dictionaries.
 
 ## License
 
