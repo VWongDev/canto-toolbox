@@ -777,13 +777,13 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
     
     // Multiple pronunciations - display each separately
     const entries = mandarinData.entries;
-    const byPinyin = {};
+    const byPinyin: Record<string, string[]> = {};
     for (const entry of entries) {
       const pinyin = entry.pinyin || '';
       if (!byPinyin[pinyin]) {
         byPinyin[pinyin] = [];
       }
-      const defs = entry.definitions || (entry.definition ? [entry.definition] : []);
+      const defs = entry.definitions || [];
       byPinyin[pinyin].push(...defs.filter(d => d && String(d).trim().length > 0));
     }
     
@@ -801,7 +801,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
   };
 
   // Format Cantonese with multiple pronunciations
-  const formatCantonese = (cantoneseData) => {
+  const formatCantonese = (cantoneseData: DefinitionResult['cantonese']): string => {
     if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
       // Single pronunciation or no entries
       return `
@@ -813,7 +813,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
     
     // Multiple pronunciations - display each separately
     const entries = cantoneseData.entries;
-    const byJyutping = {};
+    const byJyutping: Record<string, string[]> = {};
     for (const entry of entries) {
       const jyutping = entry.jyutping || '';
       if (!byJyutping[jyutping]) {
