@@ -63,14 +63,19 @@ function injectStyles() {
       padding: 16px;
       min-width: 280px;
       max-width: 400px;
+      width: auto;
+      height: auto;
       max-height: 80vh;
       overflow-y: auto;
       overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       font-size: 14px;
       line-height: 1.5;
       color: #333;
       pointer-events: auto;
+      box-sizing: border-box;
     }
     .popup-word {
       font-size: 24px;
@@ -83,6 +88,8 @@ function injectStyles() {
     }
     .popup-section {
       margin-bottom: 12px;
+      flex-shrink: 0;
+      min-height: 0;
     }
     .popup-section:last-child {
       margin-bottom: 0;
@@ -107,6 +114,9 @@ function injectStyles() {
       font-size: 13px;
       color: #555;
       line-height: 1.6;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      max-width: 100%;
     }
     .popup-definition-item {
       margin-bottom: 6px;
