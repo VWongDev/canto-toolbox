@@ -172,17 +172,24 @@ function handleMouseOver(event) {
   // Get text content and cursor position from the element
   const { text, offset } = getTextAtPoint(target, event);
   if (!text || text.trim().length === 0) {
-    // Not over text - cancel any pending hide but don't hide immediately
+    // Not over text - hide popup immediately
+    clearTimeout(hideTimer);
+    hidePopup();
+    isHoveringChinese = false;
+    lastHoveredElement = null;
+    lastHoveredOffset = -1;
     return;
   }
 
   // Find single Chinese word/character at cursor position
   const word = extractSingleChineseWord(text, offset, event);
   if (!word) {
-    // Not over Chinese text
+    // Not over Chinese text - hide popup immediately
     isHoveringChinese = false;
     lastHoveredElement = null;
     lastHoveredOffset = -1;
+    clearTimeout(hideTimer);
+    hidePopup();
     return;
   }
 
@@ -383,7 +390,12 @@ function handleMouseMoveThrottled(event) {
   // Get current text content and cursor position
   const { text, offset } = getTextAtPoint(target, event);
   if (!text || text.trim().length === 0 || offset < 0) {
-    // Can't determine precise position, fall back to mouseover handling
+    // Can't determine precise position - hide popup immediately
+    isHoveringChinese = false;
+    lastHoveredElement = null;
+    lastHoveredOffset = -1;
+    clearTimeout(hideTimer);
+    hidePopup();
     return;
   }
   
@@ -398,10 +410,12 @@ function handleMouseMoveThrottled(event) {
   // Find Chinese word/character at new cursor position
   const word = extractSingleChineseWord(text, offset, event);
   if (!word) {
-    // No longer over Chinese text
+    // No longer over Chinese text - hide popup immediately
     isHoveringChinese = false;
     lastHoveredElement = null;
     lastHoveredOffset = -1;
+    clearTimeout(hideTimer);
+    hidePopup();
     return;
   }
   
@@ -434,22 +448,18 @@ function handleMouseOut(event) {
     return;
   }
   
-  // Check if moving to another element that might have Chinese text
-  // Give a delay to allow moving to popup or another Chinese word
+  // Hide popup immediately when moving away from Chinese text
   clearTimeout(hideTimer);
-  hideTimer = setTimeout(() => {
-    // Only hide if we're not hovering over Chinese text and not over popup
-    if (!isHoveringChinese && currentPopup) {
-      // Use cached popup element if available
-      const popup = cachedPopupElement || document.getElementById('chinese-hover-popup');
-      if (!popup || !popup.matches(':hover')) {
-        hidePopup();
-        lastHoveredWord = null; // Reset so we can show popup again if hovering same word
-        lastHoveredElement = null;
-        lastHoveredOffset = -1;
-      }
+  if (!isHoveringChinese && currentPopup) {
+    // Use cached popup element if available
+    const popup = cachedPopupElement || document.getElementById('chinese-hover-popup');
+    if (!popup || !popup.matches(':hover')) {
+      hidePopup();
+      lastHoveredWord = null; // Reset so we can show popup again if hovering same word
+      lastHoveredElement = null;
+      lastHoveredOffset = -1;
     }
-  }, 200); // Reduced delay for faster response
+  }
 }
 
 /**
@@ -673,12 +683,10 @@ function showPopup(word, definition, x, y) {
   });
   
   popup.addEventListener('mouseleave', () => {
-    // When leaving popup, check if we're still over Chinese text
-    hideTimer = setTimeout(() => {
-      if (!isHoveringChinese) {
-        hidePopup();
-      }
-    }, 200);
+    // When leaving popup, hide immediately if not over Chinese text
+    if (!isHoveringChinese) {
+      hidePopup();
+    }
   });
   
   // Format definitions - split by semicolon and display each on a new line
@@ -717,15 +725,6 @@ function showPopup(word, definition, x, y) {
 
   // Position popup near cursor
   positionPopup(popup, x, y);
-
-  // Add event listeners to keep popup visible when hovering over it
-  popup.addEventListener('mouseenter', () => {
-    clearTimeout(hoverTimer);
-  });
-
-  popup.addEventListener('mouseleave', () => {
-    setTimeout(() => hidePopup(), 200);
-  });
 }
 
 /**
