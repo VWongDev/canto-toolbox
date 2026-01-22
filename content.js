@@ -271,6 +271,23 @@ function handleMouseOver(event) {
     }
   }
 
+  // First verify that the character at the exact cursor position is Chinese
+  // This prevents triggering when hovering over non-Chinese text in elements that contain Chinese
+  // Check both the character at the offset and the one before it (cursor might be between chars)
+  const charAtCursor = text.charAt(Math.floor(offset));
+  const charBeforeCursor = offset > 0 ? text.charAt(Math.floor(offset) - 1) : '';
+  const isOverChinese = /[\u4e00-\u9fff]/.test(charAtCursor) || /[\u4e00-\u9fff]/.test(charBeforeCursor);
+  
+  if (!isOverChinese) {
+    // Not directly over a Chinese character - hide popup immediately
+    isHoveringChinese = false;
+    lastHoveredElement = null;
+    lastHoveredOffset = -1;
+    clearTimeout(hideTimer);
+    hidePopup();
+    return;
+  }
+
   // Find single Chinese word/character at cursor position
   const word = extractSingleChineseWord(text, offset, event);
   if (!word) {
