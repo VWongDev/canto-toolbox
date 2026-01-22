@@ -48,8 +48,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     lookupWord(message.word)
       .then(definition => {
         console.log('[Background] Lookup successful, definition:', definition);
-        // Track statistics
-        updateStatistics(message.word);
+        // Track statistics using the matched word from definition, or original word if not available
+        const wordToTrack = definition?.word || message.word;
+        updateStatistics(wordToTrack).catch(error => {
+          console.error('[Background] Failed to track statistics:', error);
+        });
         sendResponse({ success: true, definition });
       })
       .catch(error => {
