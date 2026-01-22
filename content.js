@@ -195,63 +195,9 @@ function handleMouseOver(event) {
     }
   }
   
-  // If we have a text node, use it directly for precise detection
-  if (range && range.startContainer.nodeType === Node.TEXT_NODE) {
-    const textNode = range.startContainer;
-    const nodeText = textNode.textContent;
-    const nodeOffset = range.startOffset;
-    const charAtCursor = nodeText.charAt(nodeOffset);
-    
-    // Only proceed if cursor is directly over a Chinese character
-    if (!/[\u4e00-\u9fff]/.test(charAtCursor)) {
-      // Not over Chinese text - hide popup immediately
-      clearTimeout(hideTimer);
-      hidePopup();
-      isHoveringChinese = false;
-      lastHoveredElement = null;
-      lastHoveredOffset = -1;
-      return;
-    }
-    
-    // Extract word from text node at precise position
-    const word = extractSingleChineseWord(nodeText, nodeOffset, event);
-    if (!word) {
-      clearTimeout(hideTimer);
-      hidePopup();
-      isHoveringChinese = false;
-      lastHoveredElement = null;
-      lastHoveredOffset = -1;
-      return;
-    }
-    
-    // We're hovering over Chinese text
-    isHoveringChinese = true;
-    clearTimeout(hideTimer);
-    cachedSelection = false;
-    
-    // Store element and offset for mousemove tracking
-    lastHoveredElement = target;
-    lastHoveredOffset = nodeOffset;
-    
-    if (word !== lastHoveredWord) {
-      const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
-      lastHoveredWord = word;
-      clearTimeout(hoverTimer);
-      if (isDifferentWord) {
-        lookupAndShowWord(word, event.clientX, event.clientY);
-      } else {
-        hoverTimer = setTimeout(() => {
-          lookupAndShowWord(word, event.clientX, event.clientY);
-        }, 50);
-      }
-    }
-    return;
-  }
-
-  // Fallback: use getTextAtPoint if we can't get text node directly
-  const { text, offset } = getTextAtPoint(target, event);
-  if (!text || text.trim().length === 0) {
-    // Not over text - hide popup immediately
+  // ONLY proceed if we can get a text node directly - this ensures precise detection
+  if (!range || range.startContainer.nodeType !== Node.TEXT_NODE) {
+    // Can't get text node - don't trigger to avoid false positives
     clearTimeout(hideTimer);
     hidePopup();
     isHoveringChinese = false;
@@ -260,79 +206,59 @@ function handleMouseOver(event) {
     return;
   }
 
-  // If we don't have a precise offset, don't proceed (we already tried text node above)
-  if (offset < 0) {
-    // Can't determine precise position - don't trigger to avoid false positives
-    clearTimeout(hideTimer);
-    hidePopup();
-    isHoveringChinese = false;
-    lastHoveredElement = null;
-    lastHoveredOffset = -1;
-    return;
-  }
-
-  // First verify that the character at the exact cursor position is Chinese
-  // This prevents triggering when hovering over non-Chinese text in elements that contain Chinese
-  // Check both the character at the offset and the one before it (cursor might be between chars)
-  const charAtCursor = text.charAt(Math.floor(offset));
-  const charBeforeCursor = offset > 0 ? text.charAt(Math.floor(offset) - 1) : '';
+  const textNode = range.startContainer;
+  const nodeText = textNode.textContent;
+  const nodeOffset = range.startOffset;
+  
+  // Check the exact character at the cursor position
+  const charAtCursor = nodeText.charAt(nodeOffset);
+  // Also check character before cursor (in case cursor is between characters)
+  const charBeforeCursor = nodeOffset > 0 ? nodeText.charAt(nodeOffset - 1) : '';
+  
+  // Only proceed if cursor is directly over a Chinese character
   const isOverChinese = /[\u4e00-\u9fff]/.test(charAtCursor) || /[\u4e00-\u9fff]/.test(charBeforeCursor);
   
   if (!isOverChinese) {
-    // Not directly over a Chinese character - hide popup immediately
-    isHoveringChinese = false;
-    lastHoveredElement = null;
-    lastHoveredOffset = -1;
-    clearTimeout(hideTimer);
-    hidePopup();
-    return;
-  }
-
-  // Find single Chinese word/character at cursor position
-  const word = extractSingleChineseWord(text, offset, event);
-  if (!word) {
     // Not over Chinese text - hide popup immediately
+    clearTimeout(hideTimer);
+    hidePopup();
     isHoveringChinese = false;
     lastHoveredElement = null;
     lastHoveredOffset = -1;
-    clearTimeout(hideTimer);
-    hidePopup();
     return;
   }
-
+  
+  // Extract word from text node at precise position
+  const word = extractSingleChineseWord(nodeText, nodeOffset, event);
+  if (!word) {
+    clearTimeout(hideTimer);
+    hidePopup();
+    isHoveringChinese = false;
+    lastHoveredElement = null;
+    lastHoveredOffset = -1;
+    return;
+  }
+  
   // We're hovering over Chinese text
   isHoveringChinese = true;
-  clearTimeout(hideTimer); // Cancel any pending hide
-  cachedSelection = false; // Reset selection cache when hovering
-
+  clearTimeout(hideTimer);
+  cachedSelection = false;
+  
   // Store element and offset for mousemove tracking
   lastHoveredElement = target;
-  lastHoveredOffset = offset;
-
-  // If it's the same word, don't do anything (already showing)
-  if (word === lastHoveredWord) {
-    return;
-  }
-
-  // Check if this is a different word from the previous one
-  const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
-
-  // Update last hovered word immediately
-  lastHoveredWord = word;
-
-  // Clear any pending hover timer
-  clearTimeout(hoverTimer);
-
-  // If moving to a different word, update immediately (no debounce for word changes)
-  // Only debounce for the first word
-  if (isDifferentWord) {
-    // Different word - update immediately for smooth transitions
-    lookupAndShowWord(word, event.clientX, event.clientY);
-  } else {
-    // First word - use minimal debounce for faster response
-    hoverTimer = setTimeout(() => {
+  lastHoveredOffset = nodeOffset;
+  
+  if (word !== lastHoveredWord) {
+    const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
+    lastHoveredWord = word;
+    clearTimeout(hoverTimer);
+    if (isDifferentWord) {
       lookupAndShowWord(word, event.clientX, event.clientY);
-    }, 50); // Reduced delay for faster response
+    } else {
+      hoverTimer = setTimeout(() => {
+        lookupAndShowWord(word, event.clientX, event.clientY);
+      }, 50);
+    }
   }
 }
 
