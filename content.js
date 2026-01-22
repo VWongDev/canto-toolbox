@@ -744,6 +744,7 @@ function showPopup(word, definition, x, y) {
 
 /**
  * Position popup near cursor, ensuring it stays within viewport
+ * Positioned above cursor by default to avoid blocking horizontal movement
  */
 function positionPopup(popup, x, y) {
   const popupRect = popup.getBoundingClientRect();
@@ -751,22 +752,27 @@ function positionPopup(popup, x, y) {
   const viewportHeight = window.innerHeight;
   const offset = 15; // Offset from cursor
 
+  // Position horizontally - prefer right side, but adjust if needed
   let left = x + offset;
-  let top = y + offset;
-
-  // Adjust if popup would go off right edge
   if (left + popupRect.width > viewportWidth) {
+    // If popup would go off right edge, position to the left of cursor
     left = x - popupRect.width - offset;
   }
 
-  // Adjust if popup would go off bottom edge
-  if (top + popupRect.height > viewportHeight) {
-    top = y - popupRect.height - offset;
+  // Position vertically - always above cursor by default
+  let top = y - popupRect.height - offset;
+
+  // If popup would go off top edge, position below cursor instead
+  if (top < 10) {
+    top = y + offset;
+    // If it still doesn't fit below, constrain to viewport
+    if (top + popupRect.height > viewportHeight) {
+      top = Math.max(10, viewportHeight - popupRect.height - 10);
+    }
   }
 
-  // Ensure popup doesn't go off left or top edges
-  left = Math.max(10, left);
-  top = Math.max(10, top);
+  // Ensure popup doesn't go off left or right edges
+  left = Math.max(10, Math.min(left, viewportWidth - popupRect.width - 10));
 
   popup.style.left = `${left}px`;
   popup.style.top = `${top}px`;
