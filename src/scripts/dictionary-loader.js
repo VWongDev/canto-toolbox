@@ -9,7 +9,7 @@ let dictionariesLoaded = false;
 /**
  * Load dictionary files from the dictionaries submodules
  */
-async function loadDictionaries() {
+export async function loadDictionaries() {
   if (dictionariesLoaded) {
     return { mandarinDict, cantoneseDict };
   }
@@ -340,7 +340,7 @@ async function parseCedictFormat(text) {
 /**
  * Search for a word in the dictionaries
  */
-async function lookupWordInDictionaries(word) {
+export async function lookupWordInDictionaries(word) {
   // Ensure dictionaries are loaded
   await loadDictionaries();
 

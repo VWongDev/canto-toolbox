@@ -1,8 +1,7 @@
 // background.js - Service worker for dictionary lookup and statistics tracking
 
-// Import dictionary loader
-// Path is relative to extension root (not service worker location)
-importScripts('src/scripts/dictionary-loader.js');
+// Import dictionary loader functions
+import { loadDictionaries, lookupWordInDictionaries } from './dictionary-loader.js';
 
 // Cache for dictionary lookups
 const lookupCache = new Map();
