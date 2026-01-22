@@ -157,58 +157,71 @@ function injectStyles() {
 
 /**
  * Get the Chinese character/word at the exact cursor position
+ * Inspired by Zhongwen's approach: check character first, then extract word
  * Returns {word, textNode, offset} or null if not over Chinese text
  */
 function getChineseWordAtCursor(event) {
-  // Get the text node at cursor position
-  let range = null;
+  // Get the text node at cursor position using the most reliable method
+  let textNode = null;
+  let offset = -1;
+  
   if (document.caretRangeFromPoint) {
-    range = document.caretRangeFromPoint(event.clientX, event.clientY);
+    const range = document.caretRangeFromPoint(event.clientX, event.clientY);
+    if (range && range.startContainer.nodeType === Node.TEXT_NODE) {
+      textNode = range.startContainer;
+      offset = range.startOffset;
+    }
   } else if (document.caretPositionFromPoint) {
     const pos = document.caretPositionFromPoint(event.clientX, event.clientY);
-    if (pos) {
-      range = document.createRange();
-      range.setStart(pos.offsetNode, pos.offset);
-      range.setEnd(pos.offsetNode, pos.offset);
+    if (pos && pos.offsetNode.nodeType === Node.TEXT_NODE) {
+      textNode = pos.offsetNode;
+      offset = pos.offset;
     }
   }
   
-  // Must have a text node
-  if (!range || range.startContainer.nodeType !== Node.TEXT_NODE) {
+  // Must have a valid text node with valid offset
+  if (!textNode || offset < 0) {
     return null;
   }
   
-  const textNode = range.startContainer;
   const text = textNode.textContent;
-  const offset = range.startOffset;
   
-  // Check character at exact cursor position
-  const char = text.charAt(offset);
+  // CRITICAL: Check the exact character at cursor position FIRST
+  // This is the key insight - we must verify the character is Chinese before doing anything else
+  const charAtOffset = text.charAt(offset);
+  const charBeforeOffset = offset > 0 ? text.charAt(offset - 1) : '';
   
-  // Only proceed if character is Chinese
-  if (!/[\u4e00-\u9fff]/.test(char)) {
+  // Check if we're directly over a Chinese character (at offset or just before)
+  const isOverChinese = /[\u4e00-\u9fff]/.test(charAtOffset) || 
+                        (offset > 0 && /[\u4e00-\u9fff]/.test(charBeforeOffset));
+  
+  if (!isOverChinese) {
     return null;
   }
   
-  // Extract Chinese word starting from cursor position
-  // Find the Chinese character sequence containing this position
+  // Now find the Chinese character sequence containing this position
+  // Use the character we confirmed is Chinese
+  const actualChar = /[\u4e00-\u9fff]/.test(charAtOffset) ? charAtOffset : charBeforeOffset;
+  const actualOffset = /[\u4e00-\u9fff]/.test(charAtOffset) ? offset : offset - 1;
+  
+  // Find the Chinese sequence containing this character
   const chineseRegex = /[\u4e00-\u9fff]+/g;
   let match;
   while ((match = chineseRegex.exec(text)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
     
-    // Check if cursor is within this Chinese sequence
-    if (offset >= start && offset < end) {
-      // Extract up to 4 characters starting from cursor position
-      const relativeOffset = offset - start;
+    // Check if our confirmed Chinese character is within this sequence
+    if (actualOffset >= start && actualOffset < end) {
+      // Extract up to 4 characters starting from the actual Chinese character position
+      const relativeOffset = actualOffset - start;
       const maxLength = Math.min(4, match[0].length - relativeOffset);
       const word = match[0].substring(relativeOffset, relativeOffset + maxLength);
       
       return {
         word: word,
         textNode: textNode,
-        offset: offset
+        offset: actualOffset
       };
     }
   }
