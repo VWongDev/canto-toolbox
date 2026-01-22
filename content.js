@@ -730,15 +730,52 @@ function showPopup(word, definition, x, y) {
       if (!byPinyin[pinyin]) {
         byPinyin[pinyin] = [];
       }
-      byPinyin[pinyin].push(...(entry.definitions || []));
+      const defs = entry.definitions || (entry.definition ? [entry.definition] : []);
+      byPinyin[pinyin].push(...defs.filter(d => d && String(d).trim().length > 0));
     }
     
     let html = '<div class="popup-label">Mandarin</div>';
     for (const [pinyin, defs] of Object.entries(byPinyin)) {
-      const defsStr = defs.filter(d => d && String(d).trim().length > 0).join('; ');
+      const defsStr = defs.join('; ');
       html += `
         <div class="popup-pronunciation-group">
           <div class="popup-pinyin">${escapeHtml(pinyin)}</div>
+          <div class="popup-definition">${formatDefinitions(defsStr)}</div>
+        </div>
+      `;
+    }
+    return html;
+  };
+
+  // Format Cantonese with multiple pronunciations
+  const formatCantonese = (cantoneseData) => {
+    if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
+      // Single pronunciation or no entries
+      return `
+        <div class="popup-label">Cantonese</div>
+        <div class="popup-jyutping">${escapeHtml(cantoneseData?.jyutping || 'N/A')}</div>
+        <div class="popup-definition">${formatDefinitions(cantoneseData?.definition)}</div>
+      `;
+    }
+    
+    // Multiple pronunciations - display each separately
+    const entries = cantoneseData.entries;
+    const byJyutping = {};
+    for (const entry of entries) {
+      const jyutping = entry.jyutping || '';
+      if (!byJyutping[jyutping]) {
+        byJyutping[jyutping] = [];
+      }
+      const defs = entry.definitions || [];
+      byJyutping[jyutping].push(...defs.filter(d => d && String(d).trim().length > 0));
+    }
+    
+    let html = '<div class="popup-label">Cantonese</div>';
+    for (const [jyutping, defs] of Object.entries(byJyutping)) {
+      const defsStr = defs.join('; ');
+      html += `
+        <div class="popup-pronunciation-group">
+          <div class="popup-jyutping">${escapeHtml(jyutping)}</div>
           <div class="popup-definition">${formatDefinitions(defsStr)}</div>
         </div>
       `;
@@ -754,9 +791,7 @@ function showPopup(word, definition, x, y) {
         ${formatMandarin(definition.mandarin)}
       </div>
       <div class="popup-section">
-        <div class="popup-label">Cantonese</div>
-        <div class="popup-jyutping">${escapeHtml(definition.cantonese.jyutping || 'N/A')}</div>
-        <div class="popup-definition">${formatDefinitions(definition.cantonese.definition)}</div>
+        ${formatCantonese(definition.cantonese)}
       </div>
     </div>
   `;

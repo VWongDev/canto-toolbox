@@ -175,17 +175,26 @@ async function loadDictionaries() {
         // Merge readings into main dictionary (add jyutping to entries that don't have it)
         if (cantoneseDict && cantoneseReadingsDict) {
           let mergedCount = 0;
-          for (const [word, readingEntry] of Object.entries(cantoneseReadingsDict)) {
-            if (cantoneseDict[word]) {
+          for (const [word, readingEntries] of Object.entries(cantoneseReadingsDict)) {
+            const readingEntryArray = Array.isArray(readingEntries) ? readingEntries : [readingEntries];
+            const mainEntries = cantoneseDict[word];
+            const mainEntryArray = Array.isArray(mainEntries) ? mainEntries : (mainEntries ? [mainEntries] : []);
+            
+            if (mainEntryArray.length > 0) {
               // Entry exists in main dict, add jyutping if missing
-              if (!cantoneseDict[word].jyutping && readingEntry.jyutping) {
-                cantoneseDict[word].jyutping = readingEntry.jyutping;
-                mergedCount++;
+              for (const readingEntry of readingEntryArray) {
+                for (const mainEntry of mainEntryArray) {
+                  if (!mainEntry.jyutping && readingEntry.jyutping) {
+                    mainEntry.jyutping = readingEntry.jyutping;
+                    mergedCount++;
+                  }
+                }
               }
+              cantoneseDict[word] = mainEntryArray;
             } else {
               // Entry only in readings dict, add it to main dict
-              cantoneseDict[word] = readingEntry;
-              mergedCount++;
+              cantoneseDict[word] = readingEntryArray;
+              mergedCount += readingEntryArray.length;
             }
           }
           console.log('[Dict] Merged', mergedCount, 'readings into Cantonese dictionary');
@@ -250,8 +259,17 @@ async function parseCedictFormat(text) {
           definitions: defs
         };
         
-        dict[simplified] = entry;
-        if (traditional !== simplified) dict[traditional] = entry;
+        // Store as arrays to support multiple pronunciations per word
+        if (!dict[simplified]) {
+          dict[simplified] = [];
+        }
+        dict[simplified].push(entry);
+        if (traditional !== simplified) {
+          if (!dict[traditional]) {
+            dict[traditional] = [];
+          }
+          dict[traditional].push(entry);
+        }
         continue;
       }
       
@@ -268,8 +286,17 @@ async function parseCedictFormat(text) {
           definitions: defs
         };
         
-        dict[simplified] = entry;
-        if (traditional !== simplified) dict[traditional] = entry;
+        // Store as arrays to support multiple pronunciations per word
+        if (!dict[simplified]) {
+          dict[simplified] = [];
+        }
+        dict[simplified].push(entry);
+        if (traditional !== simplified) {
+          if (!dict[traditional]) {
+            dict[traditional] = [];
+          }
+          dict[traditional].push(entry);
+        }
         continue;
       }
       
@@ -286,8 +313,17 @@ async function parseCedictFormat(text) {
           definitions: [] // No definitions in this file
         };
         
-        dict[simplified] = entry;
-        if (traditional !== simplified) dict[traditional] = entry;
+        // Store as arrays to support multiple pronunciations per word
+        if (!dict[simplified]) {
+          dict[simplified] = [];
+        }
+        dict[simplified].push(entry);
+        if (traditional !== simplified) {
+          if (!dict[traditional]) {
+            dict[traditional] = [];
+          }
+          dict[traditional].push(entry);
+        }
       }
     }
     
@@ -375,20 +411,56 @@ async function lookupWordInDictionaries(word) {
 
   // Search in Cantonese dictionary (CC-CANTO format)
   // Only use exact matches - no partial matching
+  // Support multiple entries per word (different pronunciations)
   if (cantoneseDict && typeof cantoneseDict === 'object') {
-    // Try exact lookup by word
-    let entry = cantoneseDict[word];
+    // Try exact lookup by word - may return array of entries
+    const entries = cantoneseDict[word];
     
-    if (entry) {
-      console.log('[Dict] Found exact Cantonese entry for', word, ':', entry);
-      result.cantonese.jyutping = entry.jyutping || '';
-      if (entry.definitions && entry.definitions.length > 0) {
-        result.cantonese.definition = entry.definitions.join('; ');
+    if (entries) {
+      // Handle both array (multiple pronunciations) and single entry (backward compatibility)
+      const entryArray = Array.isArray(entries) ? entries : [entries];
+      
+      if (entryArray.length > 0) {
+        console.log('[Dict] Found', entryArray.length, 'Cantonese entry/entries for', word);
+        
+        // Store all entries for detailed display
+        result.cantonese.entries = entryArray;
+        
+        // If multiple pronunciations, group by jyutping
+        if (entryArray.length > 1) {
+          const byJyutping = {};
+          for (const entry of entryArray) {
+            const jyutping = entry.jyutping || '';
+            if (!byJyutping[jyutping]) {
+              byJyutping[jyutping] = [];
+            }
+            const defs = entry.definitions || [];
+            byJyutping[jyutping].push(...defs.filter(d => d && String(d).trim().length > 0));
+          }
+          
+          result.cantonese.jyutping = Object.keys(byJyutping).join(', ');
+          const formatted = Object.entries(byJyutping)
+            .map(([jyutping, defs]) => {
+              const defsStr = defs.join('; ');
+              return `${jyutping}: ${defsStr}`;
+            })
+            .join(' | ');
+          result.cantonese.definition = formatted;
+        } else {
+          // Single entry
+          const entry = entryArray[0];
+          result.cantonese.jyutping = entry.jyutping || '';
+          if (entry.definitions && entry.definitions.length > 0) {
+            result.cantonese.definition = entry.definitions.join('; ');
+          }
+        }
       }
     } else {
       // Try readings-only dictionary as fallback for jyutping
       if (cantoneseReadingsDict && cantoneseReadingsDict[word]) {
-        const readingEntry = cantoneseReadingsDict[word];
+        const readingEntries = cantoneseReadingsDict[word];
+        const readingEntryArray = Array.isArray(readingEntries) ? readingEntries : [readingEntries];
+        const readingEntry = readingEntryArray[0];
         console.log('[Dict] Found Cantonese reading for', word, ':', readingEntry);
         result.cantonese.jyutping = readingEntry.jyutping || '';
         // Don't use Mandarin definition - keep Cantonese separate
