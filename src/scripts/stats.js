@@ -105,6 +105,11 @@ function loadStatistics() {
 function createStatItem(word, stat) {
   const item = document.createElement('div');
   item.className = 'stat-item';
+  item.dataset.word = word;
+
+  const header = document.createElement('div');
+  header.className = 'stat-header';
+  header.style.cursor = 'pointer';
 
   const wordEl = document.createElement('div');
   wordEl.className = 'stat-word';
@@ -121,13 +126,185 @@ function createStatItem(word, stat) {
   labelEl.className = 'stat-label';
   labelEl.textContent = 'Hover Count';
 
+  const expandIcon = document.createElement('div');
+  expandIcon.className = 'stat-expand-icon';
+  expandIcon.textContent = '▶';
+
   detailsEl.appendChild(countEl);
   detailsEl.appendChild(labelEl);
+  detailsEl.appendChild(expandIcon);
 
-  item.appendChild(wordEl);
-  item.appendChild(detailsEl);
+  header.appendChild(wordEl);
+  header.appendChild(detailsEl);
+
+  // Expanded content container (initially hidden)
+  const expandedContent = document.createElement('div');
+  expandedContent.className = 'stat-expanded';
+  expandedContent.style.display = 'none';
+
+  item.appendChild(header);
+  item.appendChild(expandedContent);
+
+  // Add click handler to toggle expansion
+  header.addEventListener('click', () => {
+    toggleExpansion(item, word, expandedContent, expandIcon);
+  });
 
   return item;
+}
+
+/**
+ * Toggle expansion of a stat item
+ */
+function toggleExpansion(item, word, expandedContent, expandIcon) {
+  const isExpanded = expandedContent.style.display !== 'none';
+  
+  if (isExpanded) {
+    // Collapse
+    expandedContent.style.display = 'none';
+    expandIcon.textContent = '▶';
+    item.classList.remove('expanded');
+  } else {
+    // Expand
+    if (!expandedContent.dataset.loaded) {
+      // Load definitions
+      loadDefinition(word, expandedContent);
+    } else {
+      expandedContent.style.display = 'block';
+    }
+    expandIcon.textContent = '▼';
+    item.classList.add('expanded');
+  }
+}
+
+/**
+ * Load definition for a word
+ */
+function loadDefinition(word, container) {
+  container.innerHTML = '<div class="stat-loading">Loading definition...</div>';
+  container.style.display = 'block';
+
+  chrome.runtime.sendMessage({ type: 'lookup_word', word: word }, (response) => {
+    if (chrome.runtime.lastError) {
+      container.innerHTML = `<div class="stat-error">Error: ${chrome.runtime.lastError.message}</div>`;
+      return;
+    }
+
+    if (!response || !response.success || !response.definition) {
+      container.innerHTML = '<div class="stat-error">Definition not found</div>';
+      return;
+    }
+
+    const definition = response.definition;
+    container.innerHTML = createDefinitionHTML(word, definition);
+    container.dataset.loaded = 'true';
+  });
+}
+
+/**
+ * Create HTML for definition display
+ */
+function createDefinitionHTML(word, definition) {
+  const displayWord = definition.word || word;
+  
+  const formatDefinitions = (defText) => {
+    if (!defText || defText === 'Not found' || defText === 'N/A') {
+      return defText || 'Not found';
+    }
+    const definitions = defText.split(';').map(d => d.trim()).filter(d => d.length > 0);
+    if (definitions.length === 1) {
+      return definitions[0];
+    }
+    return definitions.map(def => `<div class="definition-item">${escapeHtml(def)}</div>`).join('');
+  };
+
+  const formatMandarin = (mandarinData) => {
+    if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
+      return `
+        <div class="definition-section">
+          <div class="definition-label">Mandarin</div>
+          <div class="definition-pinyin">${escapeHtml(mandarinData?.pinyin || 'N/A')}</div>
+          <div class="definition-text">${formatDefinitions(mandarinData?.definition)}</div>
+        </div>
+      `;
+    }
+    
+    const entries = mandarinData.entries;
+    const byPinyin = {};
+    for (const entry of entries) {
+      const pinyin = entry.pinyin || '';
+      if (!byPinyin[pinyin]) {
+        byPinyin[pinyin] = [];
+      }
+      const defs = entry.definitions || (entry.definition ? [entry.definition] : []);
+      byPinyin[pinyin].push(...defs.filter(d => d && String(d).trim().length > 0));
+    }
+    
+    let html = '<div class="definition-section"><div class="definition-label">Mandarin</div>';
+    for (const [pinyin, defs] of Object.entries(byPinyin)) {
+      const defsStr = defs.join('; ');
+      html += `
+        <div class="pronunciation-group">
+          <div class="definition-pinyin">${escapeHtml(pinyin)}</div>
+          <div class="definition-text">${formatDefinitions(defsStr)}</div>
+        </div>
+      `;
+    }
+    html += '</div>';
+    return html;
+  };
+
+  const formatCantonese = (cantoneseData) => {
+    if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
+      return `
+        <div class="definition-section">
+          <div class="definition-label">Cantonese</div>
+          <div class="definition-jyutping">${escapeHtml(cantoneseData?.jyutping || 'N/A')}</div>
+          <div class="definition-text">${formatDefinitions(cantoneseData?.definition)}</div>
+        </div>
+      `;
+    }
+    
+    const entries = cantoneseData.entries;
+    const byJyutping = {};
+    for (const entry of entries) {
+      const jyutping = entry.jyutping || '';
+      if (!byJyutping[jyutping]) {
+        byJyutping[jyutping] = [];
+      }
+      const defs = entry.definitions || [];
+      byJyutping[jyutping].push(...defs.filter(d => d && String(d).trim().length > 0));
+    }
+    
+    let html = '<div class="definition-section"><div class="definition-label">Cantonese</div>';
+    for (const [jyutping, defs] of Object.entries(byJyutping)) {
+      const defsStr = defs.join('; ');
+      html += `
+        <div class="pronunciation-group">
+          <div class="definition-jyutping">${escapeHtml(jyutping)}</div>
+          <div class="definition-text">${formatDefinitions(defsStr)}</div>
+        </div>
+      `;
+    }
+    html += '</div>';
+    return html;
+  };
+
+  const escapeHtml = (text) => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
+
+  return `
+    <div class="definition-container">
+      <div class="definition-word">${escapeHtml(displayWord)}</div>
+      <div class="definition-sections">
+        ${formatMandarin(definition.mandarin)}
+        ${formatCantonese(definition.cantonese)}
+      </div>
+    </div>
+  `;
 }
 
 /**
