@@ -551,13 +551,13 @@ function getTextAtPoint(element, event) {
             NodeFilter.SHOW_TEXT,
             null
           );
-          let node;
+          let node: Node | null;
           while ((node = walker.nextNode())) {
             if (node === range.startContainer) {
               offset += range.startOffset;
               break;
             }
-            offset += node.textContent.length;
+            offset += (node.textContent?.length || 0);
           }
           return { text, offset };
         }
