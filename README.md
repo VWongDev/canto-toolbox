@@ -15,6 +15,20 @@ A Chrome extension that displays Chinese word definitions in both Mandarin and C
 - **Offline Dictionary**: Uses local dictionary files - no API calls required
 - **Fast Lookups**: Pre-processed dictionaries for instant results
 
+## Screenshots
+
+### Hover Popup
+![Hover popup showing word definition](screenshots/hover-popup.png)
+*Hover over Chinese text to see Mandarin and Cantonese definitions*
+
+### Word Statistics
+![Statistics page](screenshots/statistics.png)
+*Track your most frequently looked-up words*
+
+### Dark Mode
+![Dark mode support](screenshots/dark-mode.png)
+*Automatically adapts to your system theme*
+
 ## Building and Installation
 
 ### Prerequisites
