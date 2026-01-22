@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [
     crx({ manifest })
   ],
+  base: './', // Use relative paths for Chrome extension
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -15,7 +16,8 @@ export default defineConfig({
         background: 'src/scripts/background.js',
         content: 'src/scripts/content.js',
         dictionaryLoader: 'src/scripts/dictionary-loader.js',
-        stats: 'src/html/stats.html'
+        stats: 'src/html/stats.html',
+        'stats-script': 'src/scripts/stats.js'
       }
     },
     copyPublicDir: false
