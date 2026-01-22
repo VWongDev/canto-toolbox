@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Chinese Word Hover",
+  "name": "Canto Toolbox",
   "version": "1.0.0",
   "description": "Hover over Chinese words to see definitions in Mandarin and Cantonese with pronunciations",
   "permissions": [

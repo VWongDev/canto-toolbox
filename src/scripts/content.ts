@@ -43,7 +43,7 @@ function init(): void {
   document.addEventListener('mouseup', handleSelection, true);
   
   // Debug: log initialization
-  console.log('Chinese Word Hover extension initialized');
+  console.log('Canto Toolbox extension initialized');
 }
 
 /**
@@ -706,9 +706,10 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
  * Show error popup
  */
 function showErrorPopup(word: string, x: number, y: number, error: string): void {
-  const errorDef = {
-    mandarin: { definition: `Error: ${error}`, pinyin: '' },
-    cantonese: { definition: 'Not available', jyutping: '' }
+  const errorDef: DefinitionResult = {
+    word: word,
+    mandarin: { definition: `Error: ${error}`, pinyin: '', entries: [] },
+    cantonese: { definition: 'Not available', jyutping: '', entries: [] }
   };
   showPopup(word, errorDef, x, y);
 }
@@ -764,7 +765,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
   };
 
   // Format Mandarin with multiple pronunciations
-  const formatMandarin = (mandarinData) => {
+  const formatMandarin = (mandarinData: DefinitionResult['mandarin']): string => {
     if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
       // Single pronunciation or no entries
       return `
