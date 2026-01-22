@@ -13,6 +13,10 @@ let currentSelection = null; // Track current selection for popup
 let selectionPopupTimer = null;
 let isHoveringChinese = false; // Track if currently hovering over Chinese text
 let lastHoveredElement = null; // Track last element we were hovering over
+let mousemoveThrottle = null; // Throttle mousemove handler
+let lastMouseMoveTime = 0; // Track last mousemove execution time
+let cachedSelection = null; // Cache selection check
+let cachedPopupElement = null; // Cache popup element reference
 
 // Initialize on page load
 if (document.readyState === 'loading') {
@@ -152,8 +156,11 @@ function handleMouseOver(event) {
     return;
   }
 
-  // Skip if there's a text selection (user is highlighting)
-  if (window.getSelection().toString().trim().length > 0) {
+  // Skip if there's a text selection (user is highlighting) - cache check
+  if (cachedSelection === null) {
+    cachedSelection = window.getSelection().toString().trim().length > 0;
+  }
+  if (cachedSelection) {
     return;
   }
 
@@ -182,6 +189,7 @@ function handleMouseOver(event) {
   // We're hovering over Chinese text
   isHoveringChinese = true;
   clearTimeout(hideTimer); // Cancel any pending hide
+  cachedSelection = false; // Reset selection cache when hovering
 
   // Store element and offset for mousemove tracking
   lastHoveredElement = target;
@@ -195,9 +203,6 @@ function handleMouseOver(event) {
   // Check if this is a different word from the previous one
   const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
 
-  // Debug logging
-  console.log('Found Chinese word:', word, '(previous:', lastHoveredWord, ')');
-
   // Update last hovered word immediately
   lastHoveredWord = word;
 
@@ -205,15 +210,15 @@ function handleMouseOver(event) {
   clearTimeout(hoverTimer);
 
   // If moving to a different word, update immediately (no debounce for word changes)
-  // Only debounce for the first word or rapid movements
+  // Only debounce for the first word
   if (isDifferentWord) {
     // Different word - update immediately for smooth transitions
     lookupAndShowWord(word, event.clientX, event.clientY);
   } else {
-    // First word - use small debounce
+    // First word - use minimal debounce for faster response
     hoverTimer = setTimeout(() => {
       lookupAndShowWord(word, event.clientX, event.clientY);
-    }, 100); // Reduced delay for faster response
+    }, 50); // Reduced delay for faster response
   }
 }
 
@@ -224,9 +229,11 @@ function handleMouseOver(event) {
 function handleSelection(event) {
   const selection = window.getSelection();
   const selectedText = selection.toString().trim();
+  cachedSelection = selectedText.length > 0; // Update cache
   
   if (!selectedText || selectedText.length === 0) {
     // Selection cleared - hide popup if it was from selection
+    cachedSelection = false; // Update cache
     if (currentSelection) {
       currentSelection = null;
       // Don't hide immediately, wait to see if user is moving to popup
@@ -275,8 +282,6 @@ function handleSelection(event) {
     }
   };
   
-  console.log('Found selected Chinese text:', word);
-  
   // Lookup and show popup
   lookupAndShowWord(word, rect.left + rect.width / 2, rect.top - 10);
 }
@@ -284,8 +289,26 @@ function handleSelection(event) {
 /**
  * Handle mouse movement to track when cursor leaves selection area
  * Also handles horizontal movement detection for hover updates
+ * Throttled for performance
  */
 function handleMouseMove(event) {
+  // Throttle mousemove handler to max 60fps (16ms intervals)
+  const now = Date.now();
+  if (now - lastMouseMoveTime < 16) {
+    if (!mousemoveThrottle) {
+      mousemoveThrottle = requestAnimationFrame(() => {
+        handleMouseMoveThrottled(event);
+        mousemoveThrottle = null;
+        lastMouseMoveTime = Date.now();
+      });
+    }
+    return;
+  }
+  lastMouseMoveTime = now;
+  handleMouseMoveThrottled(event);
+}
+
+function handleMouseMoveThrottled(event) {
   const target = event.target;
   
   // Handle selection tracking
@@ -294,7 +317,12 @@ function handleMouseMove(event) {
     const mouseX = event.clientX;
     const mouseY = event.clientY;
     const rect = currentSelection.rect;
-    const popup = document.getElementById('chinese-hover-popup');
+    
+    // Cache popup element reference
+    if (!cachedPopupElement) {
+      cachedPopupElement = document.getElementById('chinese-hover-popup');
+    }
+    const popup = cachedPopupElement;
     
     // Check if mouse is over selection area (with some padding)
     const padding = 10;
@@ -316,9 +344,10 @@ function handleMouseMove(event) {
       clearTimeout(selectionPopupTimer);
       selectionPopupTimer = setTimeout(() => {
         // Double-check selection still exists and mouse is still away
-        const selection = window.getSelection();
-        if (!selection.toString().trim() || 
-            (!isOverSelection && !isOverPopup)) {
+        if (cachedSelection === null) {
+          cachedSelection = window.getSelection().toString().trim().length > 0;
+        }
+        if (!cachedSelection || (!isOverSelection && !isOverPopup)) {
           currentSelection = null;
           hidePopup();
         }
@@ -336,8 +365,8 @@ function handleMouseMove(event) {
     return;
   }
   
-  // Skip if there's a text selection
-  if (window.getSelection().toString().trim().length > 0) {
+  // Skip if there's a text selection - use cached value
+  if (cachedSelection) {
     return;
   }
   
@@ -361,7 +390,7 @@ function handleMouseMove(event) {
   // Check if cursor position has changed significantly (moved to a different character)
   // Use a threshold to avoid updating on tiny movements
   const offsetDiff = Math.abs(offset - lastHoveredOffset);
-  if (offsetDiff < 0.5) {
+  if (offsetDiff < 0.8) {
     // Cursor hasn't moved enough to be on a different character
     return;
   }
@@ -411,7 +440,8 @@ function handleMouseOut(event) {
   hideTimer = setTimeout(() => {
     // Only hide if we're not hovering over Chinese text and not over popup
     if (!isHoveringChinese && currentPopup) {
-      const popup = document.getElementById('chinese-hover-popup');
+      // Use cached popup element if available
+      const popup = cachedPopupElement || document.getElementById('chinese-hover-popup');
       if (!popup || !popup.matches(':hover')) {
         hidePopup();
         lastHoveredWord = null; // Reset so we can show popup again if hovering same word
@@ -419,17 +449,17 @@ function handleMouseOut(event) {
         lastHoveredOffset = -1;
       }
     }
-  }, 300); // Longer delay to allow moving to popup
+  }, 200); // Reduced delay for faster response
 }
 
 /**
  * Get text content and cursor position at the mouse point
  * Returns {text, offset} where offset is the character position in the text
+ * Optimized for performance
  */
 function getTextAtPoint(element, event) {
   // Try to get text from text nodes using caretRangeFromPoint
   let range = null;
-  let textOffset = 0;
   
   if (document.caretRangeFromPoint) {
     range = document.caretRangeFromPoint(event.clientX, event.clientY);
@@ -447,32 +477,37 @@ function getTextAtPoint(element, event) {
     if (textNode && textNode.nodeType === Node.TEXT_NODE) {
       const text = textNode.textContent;
       // Calculate offset in the text node
-      textOffset = range.startOffset;
+      const textOffset = range.startOffset;
       return { text, offset: textOffset };
     }
     // If we have a range, try to get the parent element's text
-    if (range.commonAncestorContainer) {
-      const container = range.commonAncestorContainer.nodeType === Node.TEXT_NODE 
-        ? range.commonAncestorContainer.parentElement 
-        : range.commonAncestorContainer;
-      if (container) {
-        const text = container.textContent || container.innerText || '';
-        // Calculate offset in the full text
-        const walker = document.createTreeWalker(
-          container,
-          NodeFilter.SHOW_TEXT,
-          null
-        );
-        let node;
-        let offset = 0;
-        while ((node = walker.nextNode())) {
-          if (node === range.startContainer) {
-            offset += range.startOffset;
-            break;
+    // Optimize: only walk tree if we have a valid container
+    const container = range.commonAncestorContainer;
+    if (container) {
+      const actualContainer = container.nodeType === Node.TEXT_NODE 
+        ? container.parentElement 
+        : container;
+      if (actualContainer && actualContainer.nodeType === Node.ELEMENT_NODE) {
+        const text = actualContainer.textContent || '';
+        // Optimize: only walk tree if startContainer is not the text node itself
+        if (range.startContainer.nodeType === Node.TEXT_NODE) {
+          // Fast path: calculate offset by walking only if necessary
+          let offset = 0;
+          const walker = document.createTreeWalker(
+            actualContainer,
+            NodeFilter.SHOW_TEXT,
+            null
+          );
+          let node;
+          while ((node = walker.nextNode())) {
+            if (node === range.startContainer) {
+              offset += range.startOffset;
+              break;
+            }
+            offset += node.textContent.length;
           }
-          offset += node.textContent.length;
+          return { text, offset };
         }
-        return { text, offset };
       }
     }
   }
@@ -497,10 +532,14 @@ function extractSingleChineseWord(text, cursorOffset, event) {
   }
 
   // Find the Chinese character sequence containing the cursor position
+  // Optimize: use lastIndex to avoid re-scanning from start
   const regex = /[\u4e00-\u9fff]+/g;
   let match;
   let containingSequence = null;
   let sequenceStart = -1;
+  
+  // Reset regex lastIndex for fresh search
+  regex.lastIndex = 0;
 
   while ((match = regex.exec(text)) !== null) {
     const start = match.index;
@@ -509,6 +548,10 @@ function extractSingleChineseWord(text, cursorOffset, event) {
     if (cursorOffset >= start && cursorOffset < end) {
       containingSequence = match[0];
       sequenceStart = start;
+      break;
+    }
+    // Early exit if we've passed the cursor position
+    if (start > cursorOffset) {
       break;
     }
   }
@@ -670,6 +713,7 @@ function showPopup(word, definition, x, y) {
   // Add popup to page
   document.body.appendChild(popup);
   currentPopup = popup;
+  cachedPopupElement = popup; // Cache popup reference
 
   // Position popup near cursor
   positionPopup(popup, x, y);
@@ -721,6 +765,7 @@ function hidePopup() {
   if (currentPopup) {
     currentPopup.remove();
     currentPopup = null;
+    cachedPopupElement = null; // Clear cached reference
     lastHoveredWord = null;
     lastHoveredElement = null;
     lastHoveredOffset = -1;
