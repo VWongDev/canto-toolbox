@@ -623,6 +623,17 @@ function lookupAndShowWord(word, x, y) {
   if (currentPopup && currentPopup.dataset.word === word) {
     // Same word already showing, just update position
     positionPopup(currentPopup, x, y);
+    // Still track statistics even if popup is already showing
+    chrome.runtime.sendMessage(
+      { type: 'track_word', word: word },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn('[Content] Statistics tracking error:', chrome.runtime.lastError);
+        } else if (response && !response.success) {
+          console.warn('[Content] Statistics tracking failed:', response.error);
+        }
+      }
+    );
     return;
   }
 

@@ -32,9 +32,7 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "dictionaries/**/*.json",
-        "dictionaries/**/*.js",
-        "dictionaries/**/*.txt"
+        "src/data/*.json"
       ],
       "matches": ["<all_urls>"]
     }

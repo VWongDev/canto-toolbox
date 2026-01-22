@@ -17,8 +17,9 @@ export default defineConfig({
         dictionaryLoader: 'src/scripts/dictionary-loader.js',
         stats: 'src/html/stats.html'
       }
-    }
+    },
+    copyPublicDir: false
   },
-  publicDir: false // We'll copy static assets manually via the plugin
+  publicDir: 'src/data' // Pre-processed dictionary files
 });
 

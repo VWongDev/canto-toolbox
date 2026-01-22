@@ -71,6 +71,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
+  if (message.type === 'track_word') {
+    // Track statistics without doing a lookup
+    updateStatistics(message.word)
+      .then(() => {
+        sendResponse({ success: true });
+      })
+      .catch(error => {
+        console.error('[Background] Failed to track statistics:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Indicates we will send a response asynchronously
+  }
+  
   // Log unhandled message types
   console.warn('[Background] Unhandled message type:', message.type);
   return false;
@@ -189,6 +202,11 @@ async function lookupWord(word) {
  * Update word statistics in Chrome sync storage
  */
 async function updateStatistics(word) {
+  if (!word || typeof word !== 'string' || word.trim().length === 0) {
+    console.warn('[Background] Invalid word for statistics:', word);
+    return;
+  }
+
   try {
     const result = await chrome.storage.sync.get(['wordStatistics']);
     const stats = result.wordStatistics || {};
@@ -205,8 +223,9 @@ async function updateStatistics(word) {
     stats[word].lastSeen = Date.now();
     
     await chrome.storage.sync.set({ wordStatistics: stats });
+    console.log('[Background] Updated statistics for word:', word, 'count:', stats[word].count);
   } catch (error) {
-    console.error('Failed to update statistics:', error);
+    console.error('[Background] Failed to update statistics in sync storage:', error);
     // Fallback to local storage if sync fails
     try {
       const result = await chrome.storage.local.get(['wordStatistics']);
@@ -217,8 +236,10 @@ async function updateStatistics(word) {
       stats[word].count += 1;
       stats[word].lastSeen = Date.now();
       await chrome.storage.local.set({ wordStatistics: stats });
+      console.log('[Background] Updated statistics in local storage for word:', word, 'count:', stats[word].count);
     } catch (localError) {
-      console.error('Failed to update local statistics:', localError);
+      console.error('[Background] Failed to update local statistics:', localError);
+      throw localError;
     }
   }
 }
