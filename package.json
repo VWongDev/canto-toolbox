@@ -1,0 +1,30 @@
+{
+  "name": "canto-toolbox",
+  "version": "1.0.0",
+  "description": "Hover over Chinese words to see definitions in Mandarin and Cantonese with pronunciations",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "chrome-extension",
+    "chinese",
+    "dictionary",
+    "mandarin",
+    "cantonese"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.25",
+    "vite": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}
+
