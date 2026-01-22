@@ -8,18 +8,26 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Load and display statistics
  */
-async function loadStatistics() {
+function loadStatistics() {
   const loadingEl = document.getElementById('loading');
   const emptyStateEl = document.getElementById('empty-state');
   const statsListEl = document.getElementById('stats-list');
   const wordCountEl = document.getElementById('word-count');
 
-  try {
-    // Get statistics from background script
-    const response = await chrome.runtime.sendMessage({ type: 'get_statistics' });
-    
+  // Get statistics from background script
+  chrome.runtime.sendMessage({ type: 'get_statistics' }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.error('Error getting statistics:', chrome.runtime.lastError);
+      loadingEl.textContent = 'Error loading statistics: ' + chrome.runtime.lastError.message;
+      loadingEl.style.color = '#dc3545';
+      return;
+    }
+
     if (!response || !response.success) {
-      throw new Error('Failed to load statistics');
+      console.error('Failed to load statistics:', response);
+      loadingEl.textContent = 'Failed to load statistics. Please try again.';
+      loadingEl.style.color = '#dc3545';
+      return;
     }
 
     const statistics = response.statistics || {};
@@ -58,11 +66,7 @@ async function loadStatistics() {
         statsListEl.appendChild(item);
       });
     }
-  } catch (error) {
-    console.error('Error loading statistics:', error);
-    loadingEl.textContent = 'Error loading statistics. Please try again.';
-    loadingEl.style.color = '#dc3545';
-  }
+  });
 }
 
 /**

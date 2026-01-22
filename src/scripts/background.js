@@ -65,10 +65,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.type === 'get_statistics') {
-    getStatistics().then(stats => {
-      sendResponse({ success: true, statistics: stats });
-    });
-    return true;
+    getStatistics()
+      .then(stats => {
+        console.log('[Background] Returning statistics:', Object.keys(stats).length, 'words');
+        sendResponse({ success: true, statistics: stats });
+      })
+      .catch(error => {
+        console.error('[Background] Error getting statistics:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Indicates we will send a response asynchronously
   }
   
   if (message.type === 'track_word') {
