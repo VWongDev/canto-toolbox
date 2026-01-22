@@ -59,7 +59,7 @@ function injectStyles() {
       border: 1px solid #e0e0e0;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      padding: 16px;
+      padding: 12px;
       min-width: 400px;
       max-width: 600px;
       width: auto;
@@ -71,7 +71,7 @@ function injectStyles() {
       flex-direction: column;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       font-size: 14px;
-      line-height: 1.5;
+      line-height: 1.4;
       color: #333;
       pointer-events: auto;
       box-sizing: border-box;
@@ -79,15 +79,15 @@ function injectStyles() {
     .popup-sections-container {
       display: flex;
       flex-direction: row;
-      gap: 20px;
+      gap: 16px;
       align-items: flex-start;
     }
     .popup-word {
       font-size: 24px;
       font-weight: bold;
       color: #1a1a1a;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
       border-bottom: 2px solid #e0e0e0;
       text-align: center;
     }
@@ -97,7 +97,7 @@ function injectStyles() {
       flex-shrink: 0;
     }
     .popup-pronunciation-group {
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
     .popup-pronunciation-group:last-child {
       margin-bottom: 0;
@@ -108,26 +108,26 @@ function injectStyles() {
       text-transform: uppercase;
       color: #666;
       letter-spacing: 0.5px;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
     .popup-pinyin,
     .popup-jyutping {
       font-size: 16px;
       color: #0066cc;
       font-weight: 500;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       font-family: 'Arial', sans-serif;
     }
     .popup-definition {
       font-size: 13px;
       color: #555;
-      line-height: 1.6;
+      line-height: 1.5;
       overflow-wrap: break-word;
       word-wrap: break-word;
       max-width: 100%;
     }
     .popup-definition-item {
-      margin-bottom: 6px;
+      margin-bottom: 3px;
     }
     .popup-definition-item:last-child {
       margin-bottom: 0;
