@@ -528,7 +528,7 @@ function getTextAtPoint(element: Element, event: MouseEvent): { text: string; of
   if (range) {
     const textNode = range.startContainer;
     if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-      const text = textNode.textContent;
+      const text = textNode.textContent || '';
       // Calculate offset in the text node
       const textOffset = range.startOffset;
       return { text, offset: textOffset };
@@ -566,7 +566,7 @@ function getTextAtPoint(element: Element, event: MouseEvent): { text: string; of
   }
 
   // Fallback: get text from element (no precise offset)
-  const text = element.textContent || element.innerText || '';
+  const text = element.textContent || (element as HTMLElement).innerText || '';
   return { text, offset: -1 };
 }
 
