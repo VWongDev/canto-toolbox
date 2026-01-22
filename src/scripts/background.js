@@ -255,19 +255,42 @@ async function updateStatistics(word) {
 
 /**
  * Get all statistics
+ * Checks both sync and local storage, merging them if both exist
  */
 async function getStatistics() {
+  let syncStats = {};
+  let localStats = {};
+  
   try {
-    const result = await chrome.storage.sync.get(['wordStatistics']);
-    return result.wordStatistics || {};
+    const syncResult = await chrome.storage.sync.get(['wordStatistics']);
+    syncStats = syncResult.wordStatistics || {};
+    console.log('[Background] Loaded from sync storage:', Object.keys(syncStats).length, 'words');
   } catch (error) {
-    console.error('Failed to get statistics:', error);
-    // Fallback to local storage
-    try {
-      const result = await chrome.storage.local.get(['wordStatistics']);
-      return result.wordStatistics || {};
-    } catch (localError) {
-      return {};
+    console.warn('[Background] Failed to get statistics from sync storage:', error);
+  }
+  
+  try {
+    const localResult = await chrome.storage.local.get(['wordStatistics']);
+    localStats = localResult.wordStatistics || {};
+    console.log('[Background] Loaded from local storage:', Object.keys(localStats).length, 'words');
+  } catch (localError) {
+    console.warn('[Background] Failed to get statistics from local storage:', localError);
+  }
+  
+  // Merge statistics, preferring sync storage values
+  const mergedStats = { ...localStats, ...syncStats };
+  
+  // If a word exists in both, merge the counts
+  for (const word in localStats) {
+    if (syncStats[word]) {
+      mergedStats[word] = {
+        count: (syncStats[word].count || 0) + (localStats[word].count || 0),
+        firstSeen: Math.min(syncStats[word].firstSeen || Date.now(), localStats[word].firstSeen || Date.now()),
+        lastSeen: Math.max(syncStats[word].lastSeen || 0, localStats[word].lastSeen || 0)
+      };
     }
   }
+  
+  console.log('[Background] Total merged statistics:', Object.keys(mergedStats).length, 'words');
+  return mergedStats;
 }
