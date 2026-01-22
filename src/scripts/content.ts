@@ -693,8 +693,8 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
         // Show error popup even on failure
         const errorDef: DefinitionResult = {
           word: word,
-          mandarin: { definition: errorMsg || 'Lookup failed', pinyin: '' },
-          cantonese: { definition: 'Not available', jyutping: '' }
+          mandarin: { definition: errorMsg || 'Lookup failed', pinyin: '', entries: [] },
+          cantonese: { definition: 'Not available', jyutping: '', entries: [] }
         };
         showPopup(word, errorDef, x, y);
       }
@@ -750,7 +750,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
   });
   
   // Format definitions - split by semicolon and display each on a new line
-  const formatDefinitions = (defText) => {
+  const formatDefinitions = (defText: string | undefined): string => {
     if (!defText || defText === 'Not found' || defText === 'N/A') {
       return escapeHtml(defText || 'Not found');
     }
