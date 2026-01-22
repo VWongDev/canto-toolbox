@@ -156,33 +156,11 @@ function injectStyles() {
 }
 
 /**
- * Handle mouseover events to detect single Chinese words
- * Only detects individual words/characters, not multi-word phrases
+ * Get the Chinese character/word at the exact cursor position
+ * Returns {word, textNode, offset} or null if not over Chinese text
  */
-function handleMouseOver(event) {
-  const target = event.target;
-  
-  // Skip if hovering over our popup - keep it visible
-  if (target.closest('#chinese-hover-popup')) {
-    clearTimeout(hideTimer); // Cancel any pending hide
-    isHoveringChinese = true;
-    return;
-  }
-
-  // Skip if there's a text selection (user is highlighting) - cache check
-  if (cachedSelection === null) {
-    cachedSelection = window.getSelection().toString().trim().length > 0;
-  }
-  if (cachedSelection) {
-    return;
-  }
-
-  // Skip script, style, and other non-text elements
-  if (target.tagName === 'SCRIPT' || target.tagName === 'STYLE' || target.tagName === 'NOSCRIPT') {
-    return;
-  }
-
-  // Always try to get the text node directly first for precise detection
+function getChineseWordAtCursor(event) {
+  // Get the text node at cursor position
   let range = null;
   if (document.caretRangeFromPoint) {
     range = document.caretRangeFromPoint(event.clientX, event.clientY);
@@ -195,30 +173,79 @@ function handleMouseOver(event) {
     }
   }
   
-  // ONLY proceed if we can get a text node directly - this ensures precise detection
+  // Must have a text node
   if (!range || range.startContainer.nodeType !== Node.TEXT_NODE) {
-    // Can't get text node - don't trigger to avoid false positives
+    return null;
+  }
+  
+  const textNode = range.startContainer;
+  const text = textNode.textContent;
+  const offset = range.startOffset;
+  
+  // Check character at exact cursor position
+  const char = text.charAt(offset);
+  
+  // Only proceed if character is Chinese
+  if (!/[\u4e00-\u9fff]/.test(char)) {
+    return null;
+  }
+  
+  // Extract Chinese word starting from cursor position
+  // Find the Chinese character sequence containing this position
+  const chineseRegex = /[\u4e00-\u9fff]+/g;
+  let match;
+  while ((match = chineseRegex.exec(text)) !== null) {
+    const start = match.index;
+    const end = start + match[0].length;
+    
+    // Check if cursor is within this Chinese sequence
+    if (offset >= start && offset < end) {
+      // Extract up to 4 characters starting from cursor position
+      const relativeOffset = offset - start;
+      const maxLength = Math.min(4, match[0].length - relativeOffset);
+      const word = match[0].substring(relativeOffset, relativeOffset + maxLength);
+      
+      return {
+        word: word,
+        textNode: textNode,
+        offset: offset
+      };
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Handle mouseover events to detect single Chinese words
+ */
+function handleMouseOver(event) {
+  const target = event.target;
+  
+  // Skip if hovering over our popup
+  if (target.closest('#chinese-hover-popup')) {
     clearTimeout(hideTimer);
-    hidePopup();
-    isHoveringChinese = false;
-    lastHoveredElement = null;
-    lastHoveredOffset = -1;
+    isHoveringChinese = true;
     return;
   }
 
-  const textNode = range.startContainer;
-  const nodeText = textNode.textContent;
-  const nodeOffset = range.startOffset;
+  // Skip if there's a text selection
+  if (cachedSelection === null) {
+    cachedSelection = window.getSelection().toString().trim().length > 0;
+  }
+  if (cachedSelection) {
+    return;
+  }
+
+  // Skip script, style, and other non-text elements
+  if (target.tagName === 'SCRIPT' || target.tagName === 'STYLE' || target.tagName === 'NOSCRIPT') {
+    return;
+  }
+
+  // Get Chinese word at cursor position
+  const result = getChineseWordAtCursor(event);
   
-  // Check the exact character at the cursor position
-  const charAtCursor = nodeText.charAt(nodeOffset);
-  // Also check character before cursor (in case cursor is between characters)
-  const charBeforeCursor = nodeOffset > 0 ? nodeText.charAt(nodeOffset - 1) : '';
-  
-  // Only proceed if cursor is directly over a Chinese character
-  const isOverChinese = /[\u4e00-\u9fff]/.test(charAtCursor) || /[\u4e00-\u9fff]/.test(charBeforeCursor);
-  
-  if (!isOverChinese) {
+  if (!result) {
     // Not over Chinese text - hide popup immediately
     clearTimeout(hideTimer);
     hidePopup();
@@ -228,30 +255,22 @@ function handleMouseOver(event) {
     return;
   }
   
-  // Extract word from text node at precise position
-  const word = extractSingleChineseWord(nodeText, nodeOffset, event);
-  if (!word) {
-    clearTimeout(hideTimer);
-    hidePopup();
-    isHoveringChinese = false;
-    lastHoveredElement = null;
-    lastHoveredOffset = -1;
-    return;
-  }
+  const { word, textNode, offset } = result;
   
   // We're hovering over Chinese text
   isHoveringChinese = true;
   clearTimeout(hideTimer);
   cachedSelection = false;
   
-  // Store element and offset for mousemove tracking
-  lastHoveredElement = target;
-  lastHoveredOffset = nodeOffset;
+  // Store for mousemove tracking
+  lastHoveredElement = textNode;
+  lastHoveredOffset = offset;
   
+  // Update popup if word changed
   if (word !== lastHoveredWord) {
-    const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
     lastHoveredWord = word;
     clearTimeout(hoverTimer);
+    const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
     if (isDifferentWord) {
       lookupAndShowWord(word, event.clientX, event.clientY);
     } else {
@@ -405,7 +424,7 @@ function handleMouseMoveThrottled(event) {
     return;
   }
   
-  // Skip if there's a text selection - use cached value
+  // Skip if there's a text selection
   if (cachedSelection) {
     return;
   }
@@ -415,46 +434,15 @@ function handleMouseMoveThrottled(event) {
     return;
   }
   
-  // Only process if we were previously hovering over Chinese text in the same element
-  if (!lastHoveredElement || lastHoveredElement !== target || lastHoveredOffset < 0) {
+  // Only process if we were previously hovering over Chinese text
+  if (!lastHoveredElement || lastHoveredOffset < 0) {
     return;
   }
   
-  // Get current text content and cursor position
-  const { text, offset } = getTextAtPoint(target, event);
-  if (!text || text.trim().length === 0 || offset < 0) {
-    // Can't determine precise position - hide popup immediately
-    isHoveringChinese = false;
-    lastHoveredElement = null;
-    lastHoveredOffset = -1;
-    clearTimeout(hideTimer);
-    hidePopup();
-    return;
-  }
+  // Get Chinese word at current cursor position
+  const result = getChineseWordAtCursor(event);
   
-  // Check if cursor position has changed (moved to a different character)
-  // Use a small threshold to avoid updating on tiny movements but allow character changes
-  const offsetDiff = Math.abs(offset - lastHoveredOffset);
-  
-  // Get the character at the current cursor position
-  const currentCharIndex = Math.floor(offset);
-  const lastCharIndex = Math.floor(lastHoveredOffset);
-  const currentChar = text.charAt(currentCharIndex);
-  const lastChar = text.charAt(lastCharIndex);
-  
-  // Check if we're over a different character
-  const isDifferentChar = currentCharIndex !== lastCharIndex && 
-                          currentChar !== lastChar && 
-                          /[\u4e00-\u9fff]/.test(currentChar);
-  
-  // If we haven't moved to a different character and offset hasn't changed much, skip
-  if (!isDifferentChar && offsetDiff < 0.3) {
-    return;
-  }
-  
-  // Find Chinese word/character at new cursor position
-  const word = extractSingleChineseWord(text, offset, event);
-  if (!word) {
+  if (!result) {
     // No longer over Chinese text - hide popup immediately
     isHoveringChinese = false;
     lastHoveredElement = null;
@@ -464,14 +452,20 @@ function handleMouseMoveThrottled(event) {
     return;
   }
   
+  const { word, textNode, offset } = result;
+  
+  // Check if we moved to a different character
+  const offsetDiff = Math.abs(offset - lastHoveredOffset);
+  const isDifferentChar = offsetDiff >= 0.5 && textNode === lastHoveredElement;
+  
   // Update tracking
+  lastHoveredElement = textNode;
   lastHoveredOffset = offset;
   
-  // If it's a different word or different character, update the popup
+  // Update popup if word or character changed
   if (word !== lastHoveredWord || isDifferentChar) {
     lastHoveredWord = word;
     clearTimeout(hoverTimer);
-    // Update immediately for smooth horizontal movement
     lookupAndShowWord(word, event.clientX, event.clientY);
   }
 }
