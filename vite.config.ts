@@ -13,11 +13,11 @@ export default defineConfig({
     rollupOptions: {
       input: {
         // Entry points - crx plugin will handle manifest and file copying
-        background: 'src/scripts/background.js',
-        content: 'src/scripts/content.js',
-        dictionaryLoader: 'src/scripts/dictionary-loader.js',
+        background: 'src/scripts/background.ts',
+        content: 'src/scripts/content.ts',
+        dictionaryLoader: 'src/scripts/dictionary-loader.ts',
         stats: 'src/html/stats.html',
-        'stats-script': 'src/scripts/stats.js'
+        'stats-script': 'src/scripts/stats.ts'
       }
     },
     copyPublicDir: false

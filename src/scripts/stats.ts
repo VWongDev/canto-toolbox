@@ -1,9 +1,11 @@
-// stats.js - Statistics page logic
+// stats.ts - Statistics page logic
+
+import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse } from '../types';
 
 console.log('[Stats] Script loaded');
 
 // Popups might load before DOMContentLoaded, so also try immediate execution
-function init() {
+function init(): void {
   console.log('[Stats] Initializing...');
   loadStatistics();
   setupClearButton();
@@ -20,7 +22,7 @@ if (document.readyState === 'loading') {
 /**
  * Load and display statistics
  */
-function loadStatistics() {
+function loadStatistics(): void {
   console.log('[Stats] loadStatistics called');
   const loadingEl = document.getElementById('loading');
   const emptyStateEl = document.getElementById('empty-state');
@@ -35,7 +37,7 @@ function loadStatistics() {
   // Get statistics from background script
   console.log('[Stats] Requesting statistics from background script...');
   console.log('[Stats] chrome.runtime available:', !!chrome.runtime);
-  chrome.runtime.sendMessage({ type: 'get_statistics' }, (response) => {
+  chrome.runtime.sendMessage({ type: 'get_statistics' }, (response: StatisticsResponse | undefined) => {
     console.log('[Stats] Received response:', response);
     
     if (chrome.runtime.lastError) {
@@ -54,12 +56,19 @@ function loadStatistics() {
 
     if (!response.success) {
       console.error('[Stats] Failed to load statistics:', response);
-      loadingEl.textContent = 'Failed to load statistics: ' + (response.error || 'Unknown error');
+      loadingEl.textContent = 'Failed to load statistics: ' + ('error' in response ? response.error : 'Unknown error');
       loadingEl.style.color = '#dc3545';
       return;
     }
 
-    const statistics = response.statistics || {};
+    if (!('statistics' in response)) {
+      console.error('[Stats] Invalid response format');
+      loadingEl.textContent = 'Invalid response from background script.';
+      loadingEl.style.color = '#dc3545';
+      return;
+    }
+
+    const statistics = response.statistics;
     const words = Object.keys(statistics);
     console.log('[Stats] Loaded statistics:', words.length, 'words', statistics);
 
@@ -81,8 +90,8 @@ function loadStatistics() {
 
       // Sort words by count (descending)
       const sortedWords = words.sort((a, b) => {
-        const countA = statistics[a].count || 0;
-        const countB = statistics[b].count || 0;
+        const countA = statistics[a]?.count || 0;
+        const countB = statistics[b]?.count || 0;
         return countB - countA;
       });
 
@@ -102,7 +111,7 @@ function loadStatistics() {
 /**
  * Create a statistics list item
  */
-function createStatItem(word, stat) {
+function createStatItem(word: string, stat: WordStatistics): HTMLElement {
   const item = document.createElement('div');
   item.className = 'stat-item';
   item.dataset.word = word;
@@ -120,7 +129,7 @@ function createStatItem(word, stat) {
 
   const countEl = document.createElement('div');
   countEl.className = 'stat-count';
-  countEl.textContent = stat.count || 0;
+  countEl.textContent = String(stat.count || 0);
 
   const labelEl = document.createElement('div');
   labelEl.className = 'stat-label';
@@ -156,7 +165,7 @@ function createStatItem(word, stat) {
 /**
  * Toggle expansion of a stat item
  */
-function toggleExpansion(item, word, expandedContent, expandIcon) {
+function toggleExpansion(item: HTMLElement, word: string, expandedContent: HTMLElement, expandIcon: HTMLElement): void {
   const isExpanded = expandedContent.style.display !== 'none';
   
   if (isExpanded) {
@@ -180,17 +189,17 @@ function toggleExpansion(item, word, expandedContent, expandIcon) {
 /**
  * Load definition for a word
  */
-function loadDefinition(word, container) {
+function loadDefinition(word: string, container: HTMLElement): void {
   container.innerHTML = '<div class="stat-loading">Loading definition...</div>';
   container.style.display = 'block';
 
-  chrome.runtime.sendMessage({ type: 'lookup_word', word: word }, (response) => {
+  chrome.runtime.sendMessage({ type: 'lookup_word', word: word }, (response: LookupResponse | undefined) => {
     if (chrome.runtime.lastError) {
       container.innerHTML = `<div class="stat-error">Error: ${chrome.runtime.lastError.message}</div>`;
       return;
     }
 
-    if (!response || !response.success || !response.definition) {
+    if (!response || !response.success || !('definition' in response) || !response.definition) {
       container.innerHTML = '<div class="stat-error">Definition not found</div>';
       return;
     }
@@ -204,10 +213,10 @@ function loadDefinition(word, container) {
 /**
  * Create HTML for definition display
  */
-function createDefinitionHTML(word, definition) {
+function createDefinitionHTML(word: string, definition: DefinitionResult): string {
   const displayWord = definition.word || word;
   
-  const formatDefinitions = (defText) => {
+  const formatDefinitions = (defText: string | undefined): string => {
     if (!defText || defText === 'Not found' || defText === 'N/A') {
       return defText || 'Not found';
     }
@@ -218,7 +227,7 @@ function createDefinitionHTML(word, definition) {
     return definitions.map(def => `<div class="definition-item">${escapeHtml(def)}</div>`).join('');
   };
 
-  const formatMandarin = (mandarinData) => {
+  const formatMandarin = (mandarinData: DefinitionResult['mandarin']): string => {
     if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
       return `
         <div class="definition-section">
@@ -230,13 +239,13 @@ function createDefinitionHTML(word, definition) {
     }
     
     const entries = mandarinData.entries;
-    const byPinyin = {};
+    const byPinyin: Record<string, string[]> = {};
     for (const entry of entries) {
       const pinyin = entry.pinyin || '';
       if (!byPinyin[pinyin]) {
         byPinyin[pinyin] = [];
       }
-      const defs = entry.definitions || (entry.definition ? [entry.definition] : []);
+      const defs = entry.definitions || [];
       byPinyin[pinyin].push(...defs.filter(d => d && String(d).trim().length > 0));
     }
     
@@ -254,7 +263,7 @@ function createDefinitionHTML(word, definition) {
     return html;
   };
 
-  const formatCantonese = (cantoneseData) => {
+  const formatCantonese = (cantoneseData: DefinitionResult['cantonese']): string => {
     if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
       return `
         <div class="definition-section">
@@ -266,7 +275,7 @@ function createDefinitionHTML(word, definition) {
     }
     
     const entries = cantoneseData.entries;
-    const byJyutping = {};
+    const byJyutping: Record<string, string[]> = {};
     for (const entry of entries) {
       const jyutping = entry.jyutping || '';
       if (!byJyutping[jyutping]) {
@@ -290,7 +299,7 @@ function createDefinitionHTML(word, definition) {
     return html;
   };
 
-  const escapeHtml = (text) => {
+  const escapeHtml = (text: string): string => {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
@@ -310,8 +319,12 @@ function createDefinitionHTML(word, definition) {
 /**
  * Setup clear button functionality
  */
-function setupClearButton() {
+function setupClearButton(): void {
   const clearBtn = document.getElementById('clear-btn');
+  if (!clearBtn) {
+    console.error('[Stats] Clear button not found');
+    return;
+  }
   
   clearBtn.addEventListener('click', async () => {
     if (!confirm('Are you sure you want to clear all statistics? This action cannot be undone.')) {

@@ -1,14 +1,16 @@
-// dictionary-loader.js - Load pre-processed dictionaries
+// dictionary-loader.ts - Load pre-processed dictionaries
+
+import type { Dictionary, DictionaryEntry, DefinitionResult } from '../types';
 
 // Dictionary data - loaded from pre-processed JSON files
-let mandarinDict = null;
-let cantoneseDict = null;
+let mandarinDict: Dictionary | null = null;
+let cantoneseDict: Dictionary | null = null;
 let dictionariesLoaded = false;
 
 /**
  * Load pre-processed dictionary files
  */
-export async function loadDictionaries() {
+export async function loadDictionaries(): Promise<{ mandarinDict: Dictionary | null; cantoneseDict: Dictionary | null }> {
   if (dictionariesLoaded) {
     return { mandarinDict, cantoneseDict };
   }
@@ -19,7 +21,7 @@ export async function loadDictionaries() {
     const mandarinResponse = await fetch(mandarinUrl);
     
     if (mandarinResponse.ok) {
-      mandarinDict = await mandarinResponse.json();
+      mandarinDict = await mandarinResponse.json() as Dictionary;
       console.log('[Dict] Loaded Mandarin dictionary:', Object.keys(mandarinDict).length, 'entries');
     } else {
       console.error('[Dict] Failed to load Mandarin dictionary:', mandarinResponse.status);
@@ -30,7 +32,7 @@ export async function loadDictionaries() {
     const cantoneseResponse = await fetch(cantoneseUrl);
     
     if (cantoneseResponse.ok) {
-      cantoneseDict = await cantoneseResponse.json();
+      cantoneseDict = await cantoneseResponse.json() as Dictionary;
       console.log('[Dict] Loaded Cantonese dictionary:', Object.keys(cantoneseDict).length, 'entries');
     } else {
       console.error('[Dict] Failed to load Cantonese dictionary:', cantoneseResponse.status);
@@ -46,11 +48,8 @@ export async function loadDictionaries() {
 
 /**
  * Lookup word in a dictionary (unified function for both Mandarin and Cantonese)
- * @param {Object} dict - The dictionary object
- * @param {string} word - The word to lookup
- * @returns {Object|null} - Dictionary entry with pinyin/jyutping and definitions, or null
  */
-function lookupInDict(dict, word) {
+function lookupInDict(dict: Dictionary | null, word: string): DictionaryEntry[] | null {
   if (!dict || typeof dict !== 'object') {
     return null;
   }
@@ -72,18 +71,20 @@ function lookupInDict(dict, word) {
 
 /**
  * Format entries for display
- * @param {Array} entries - Array of dictionary entries
- * @param {string} pronunciationKey - 'pinyin' for Mandarin, 'jyutping' for Cantonese
- * @returns {Object} - Formatted result with pronunciation and definition
  */
-function formatEntries(entries, pronunciationKey) {
+function formatEntries(entries: DictionaryEntry[], pronunciationKey: 'pinyin' | 'jyutping'): {
+  definition: string;
+  pinyin?: string;
+  jyutping?: string;
+  entries: DictionaryEntry[];
+} {
   if (!entries || entries.length === 0) {
-    return { definition: '', [pronunciationKey]: '' };
+    return { definition: '', [pronunciationKey]: '', entries: [] };
   }
 
   // If multiple pronunciations, group by pronunciation
   if (entries.length > 1) {
-    const byPronunciation = {};
+    const byPronunciation: Record<string, string[]> = {};
     for (const entry of entries) {
       const pronunciation = entry[pronunciationKey] || '';
       if (!byPronunciation[pronunciation]) {
@@ -105,7 +106,7 @@ function formatEntries(entries, pronunciationKey) {
       [pronunciationKey]: pronunciationList,
       definition: formatted,
       entries: entries
-    };
+    } as { definition: string; pinyin?: string; jyutping?: string; entries: DictionaryEntry[] };
   } else {
     // Single entry
     const entry = entries[0];
@@ -117,20 +118,20 @@ function formatEntries(entries, pronunciationKey) {
       [pronunciationKey]: pronunciation,
       definition: definition,
       entries: entries
-    };
+    } as { definition: string; pinyin?: string; jyutping?: string; entries: DictionaryEntry[] };
   }
 }
 
 /**
  * Search for a word in the dictionaries
  */
-export async function lookupWordInDictionaries(word) {
+export async function lookupWordInDictionaries(word: string): Promise<DefinitionResult> {
   // Ensure dictionaries are loaded
   await loadDictionaries();
 
   console.log('[Dict] Looking up word:', word);
 
-  const result = {
+  const result: DefinitionResult = {
     word: word,
     mandarin: { definition: '', pinyin: '' },
     cantonese: { definition: '', jyutping: '' }
@@ -140,7 +141,12 @@ export async function lookupWordInDictionaries(word) {
   const mandarinEntries = lookupInDict(mandarinDict, word);
   if (mandarinEntries) {
     console.log('[Dict] Found', mandarinEntries.length, 'Mandarin entry/entries for', word);
-    result.mandarin = formatEntries(mandarinEntries, 'pinyin');
+    const formatted = formatEntries(mandarinEntries, 'pinyin');
+    result.mandarin = {
+      definition: formatted.definition,
+      pinyin: formatted.pinyin || '',
+      entries: formatted.entries
+    };
   } else {
     console.log('[Dict] No exact Mandarin entry found for', word);
   }
@@ -149,7 +155,12 @@ export async function lookupWordInDictionaries(word) {
   const cantoneseEntries = lookupInDict(cantoneseDict, word);
   if (cantoneseEntries) {
     console.log('[Dict] Found', cantoneseEntries.length, 'Cantonese entry/entries for', word);
-    result.cantonese = formatEntries(cantoneseEntries, 'jyutping');
+    const formatted = formatEntries(cantoneseEntries, 'jyutping');
+    result.cantonese = {
+      definition: formatted.definition,
+      jyutping: formatted.jyutping || '',
+      entries: formatted.entries
+    };
   } else {
     console.log('[Dict] No exact Cantonese entry found for', word);
   }

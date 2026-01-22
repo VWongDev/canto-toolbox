@@ -1,18 +1,23 @@
-// background.js - Service worker for dictionary lookup and statistics tracking
+// background.ts - Service worker for dictionary lookup and statistics tracking
 
-// Import dictionary loader functions
 import { loadDictionaries, lookupWordInDictionaries } from './dictionary-loader.js';
+import type { DefinitionResult, BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse } from '../types';
 
 // Cache for dictionary lookups
-const lookupCache = new Map();
+interface CacheEntry {
+  data: DefinitionResult;
+  timestamp: number;
+}
+
+const lookupCache = new Map<string, CacheEntry>();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // Pre-load dictionaries when service worker starts (non-blocking)
 // This improves performance by loading dictionaries in the background
 let dictionariesLoading = false;
-let dictionariesLoadPromise = null;
+let dictionariesLoadPromise: Promise<void> | null = null;
 
-function preloadDictionaries() {
+function preloadDictionaries(): Promise<void> {
   if (dictionariesLoadPromise) {
     return dictionariesLoadPromise;
   }
@@ -40,7 +45,11 @@ function preloadDictionaries() {
 preloadDictionaries();
 
 // Listen for messages from content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((
+  message: BackgroundMessage,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response: BackgroundResponse) => void
+): boolean => {
   console.log('[Background] Received message:', message.type, message);
   console.log('[Background] Sender:', sender);
   
@@ -73,7 +82,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     getStatistics()
       .then(stats => {
         console.log('[Background] Returning statistics:', Object.keys(stats).length, 'words');
-        const response = { success: true, statistics: stats };
+        const response: StatisticsResponse = { success: true, statistics: stats };
         console.log('[Background] Sending response:', response);
         sendResponse(response);
       })
@@ -88,7 +97,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Track statistics without doing a lookup
     updateStatistics(message.word)
       .then(() => {
-        sendResponse({ success: true });
+        sendResponse({ success: true } as TrackWordResponse);
       })
       .catch(error => {
         console.error('[Background] Failed to track statistics:', error);
@@ -98,7 +107,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   // Log unhandled message types
-  console.warn('[Background] Unhandled message type:', message.type);
+  console.warn('[Background] Unhandled message type:', (message as any).type);
   return false;
 });
 
@@ -107,7 +116,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  * Tries to find the longest matching word by checking progressively shorter substrings
  * Uses CC-CEDICT (Mandarin) and CC-CANTO (Cantonese) dictionaries from submodules
  */
-async function lookupWord(word) {
+async function lookupWord(word: string): Promise<DefinitionResult> {
   // Check cache first
   const cached = lookupCache.get(word);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
@@ -121,7 +130,7 @@ async function lookupWord(word) {
     // Try to find the longest matching word
     // For single character hover: try progressively longer words starting from that character
     // For multi-character selection: try the full selection, then shorter substrings
-    let definition = null;
+    let definition: DefinitionResult | null = null;
     let matchedWord = word;
     
     // Ensure dictionaries are loaded (use pre-loaded if available)
@@ -193,8 +202,9 @@ async function lookupWord(word) {
       }
     };
   } catch (error) {
+    const err = error as Error;
     console.error('[Dict] Dictionary lookup failed:', error);
-    console.error('[Dict] Error details:', error.message, error.stack);
+    console.error('[Dict] Error details:', err.message, err.stack);
     
     // Return a fallback structure
     return {
@@ -214,7 +224,7 @@ async function lookupWord(word) {
 /**
  * Update word statistics in Chrome sync storage
  */
-async function updateStatistics(word) {
+async function updateStatistics(word: string): Promise<void> {
   if (!word || typeof word !== 'string' || word.trim().length === 0) {
     console.warn('[Background] Invalid word for statistics:', word);
     return;
@@ -222,7 +232,7 @@ async function updateStatistics(word) {
 
   try {
     const result = await chrome.storage.sync.get(['wordStatistics']);
-    const stats = result.wordStatistics || {};
+    const stats: Statistics = result.wordStatistics || {};
     
     if (!stats[word]) {
       stats[word] = {
@@ -242,7 +252,7 @@ async function updateStatistics(word) {
     // Fallback to local storage if sync fails
     try {
       const result = await chrome.storage.local.get(['wordStatistics']);
-      const stats = result.wordStatistics || {};
+      const stats: Statistics = result.wordStatistics || {};
       if (!stats[word]) {
         stats[word] = { count: 0, firstSeen: Date.now(), lastSeen: Date.now() };
       }
@@ -261,13 +271,13 @@ async function updateStatistics(word) {
  * Get all statistics
  * Checks both sync and local storage, merging them if both exist
  */
-async function getStatistics() {
-  let syncStats = {};
-  let localStats = {};
+async function getStatistics(): Promise<Statistics> {
+  let syncStats: Statistics = {};
+  let localStats: Statistics = {};
   
   try {
     const syncResult = await chrome.storage.sync.get(['wordStatistics']);
-    syncStats = syncResult.wordStatistics || {};
+    syncStats = (syncResult.wordStatistics || {}) as Statistics;
     console.log('[Background] Loaded from sync storage:', Object.keys(syncStats).length, 'words');
   } catch (error) {
     console.warn('[Background] Failed to get statistics from sync storage:', error);
@@ -275,14 +285,14 @@ async function getStatistics() {
   
   try {
     const localResult = await chrome.storage.local.get(['wordStatistics']);
-    localStats = localResult.wordStatistics || {};
+    localStats = (localResult.wordStatistics || {}) as Statistics;
     console.log('[Background] Loaded from local storage:', Object.keys(localStats).length, 'words');
   } catch (localError) {
     console.warn('[Background] Failed to get statistics from local storage:', localError);
   }
   
   // Merge statistics, preferring sync storage values
-  const mergedStats = { ...localStats, ...syncStats };
+  const mergedStats: Statistics = { ...localStats, ...syncStats };
   
   // If a word exists in both, merge the counts
   for (const word in localStats) {
