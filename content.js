@@ -187,42 +187,38 @@ function getChineseWordAtCursor(event) {
   const text = textNode.textContent;
   
   // CRITICAL: Check the exact character at cursor position FIRST
-  // This is the key insight - we must verify the character is Chinese before doing anything else
+  // This is the key - we must verify the character is Chinese before doing anything else
   const charAtOffset = text.charAt(offset);
-  const charBeforeOffset = offset > 0 ? text.charAt(offset - 1) : '';
   
-  // Check if we're directly over a Chinese character (at offset or just before)
-  const isOverChinese = /[\u4e00-\u9fff]/.test(charAtOffset) || 
-                        (offset > 0 && /[\u4e00-\u9fff]/.test(charBeforeOffset));
-  
-  if (!isOverChinese) {
+  // Only proceed if the character at the exact cursor position is Chinese
+  if (!/[\u4e00-\u9fff]/.test(charAtOffset)) {
     return null;
   }
   
-  // Now find the Chinese character sequence containing this position
-  // Use the character we confirmed is Chinese
-  const actualChar = /[\u4e00-\u9fff]/.test(charAtOffset) ? charAtOffset : charBeforeOffset;
-  const actualOffset = /[\u4e00-\u9fff]/.test(charAtOffset) ? offset : offset - 1;
-  
-  // Find the Chinese sequence containing this character
+  // Find the Chinese character sequence containing this position
   const chineseRegex = /[\u4e00-\u9fff]+/g;
   let match;
   while ((match = chineseRegex.exec(text)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
     
-    // Check if our confirmed Chinese character is within this sequence
-    if (actualOffset >= start && actualOffset < end) {
-      // Extract up to 4 characters starting from the actual Chinese character position
-      const relativeOffset = actualOffset - start;
+    // Check if cursor is within this Chinese sequence
+    if (offset >= start && offset < end) {
+      // Extract up to 4 characters starting from cursor position
+      const relativeOffset = offset - start;
       const maxLength = Math.min(4, match[0].length - relativeOffset);
       const word = match[0].substring(relativeOffset, relativeOffset + maxLength);
       
       return {
         word: word,
         textNode: textNode,
-        offset: actualOffset
+        offset: offset
       };
+    }
+    
+    // Early exit optimization: if we've passed the cursor position, no need to continue
+    if (start > offset) {
+      break;
     }
   }
   
