@@ -483,7 +483,9 @@ function handleMouseOut(event: MouseEvent): void {
   const relatedTarget = event.relatedTarget as HTMLElement | null;
   if (relatedTarget && relatedTarget.closest('#chinese-hover-popup')) {
     // Moving to popup - don't hide
-    clearTimeout(hideTimer);
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+    }
     return;
   }
   
