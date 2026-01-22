@@ -332,7 +332,10 @@ function handleMouseMove(event: MouseEvent): void {
 }
 
 function handleMouseMoveThrottled(event: MouseEvent): void {
-  const target = event.target;
+  const target = event.target as HTMLElement | null;
+  if (!target) {
+    return;
+  }
   
   // Handle selection tracking
   if (currentSelection) {
