@@ -15,23 +15,34 @@ function loadStatistics() {
   const wordCountEl = document.getElementById('word-count');
 
   // Get statistics from background script
+  console.log('[Stats] Requesting statistics from background script...');
   chrome.runtime.sendMessage({ type: 'get_statistics' }, (response) => {
+    console.log('[Stats] Received response:', response);
+    
     if (chrome.runtime.lastError) {
-      console.error('Error getting statistics:', chrome.runtime.lastError);
+      console.error('[Stats] Error getting statistics:', chrome.runtime.lastError);
       loadingEl.textContent = 'Error loading statistics: ' + chrome.runtime.lastError.message;
       loadingEl.style.color = '#dc3545';
       return;
     }
 
-    if (!response || !response.success) {
-      console.error('Failed to load statistics:', response);
-      loadingEl.textContent = 'Failed to load statistics. Please try again.';
+    if (!response) {
+      console.error('[Stats] No response received');
+      loadingEl.textContent = 'No response from background script. Please try again.';
+      loadingEl.style.color = '#dc3545';
+      return;
+    }
+
+    if (!response.success) {
+      console.error('[Stats] Failed to load statistics:', response);
+      loadingEl.textContent = 'Failed to load statistics: ' + (response.error || 'Unknown error');
       loadingEl.style.color = '#dc3545';
       return;
     }
 
     const statistics = response.statistics || {};
     const words = Object.keys(statistics);
+    console.log('[Stats] Loaded statistics:', words.length, 'words', statistics);
 
     // Hide loading
     loadingEl.style.display = 'none';
