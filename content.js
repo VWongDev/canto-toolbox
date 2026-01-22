@@ -399,11 +399,23 @@ function handleMouseMoveThrottled(event) {
     return;
   }
   
-  // Check if cursor position has changed significantly (moved to a different character)
-  // Use a threshold to avoid updating on tiny movements
+  // Check if cursor position has changed (moved to a different character)
+  // Use a small threshold to avoid updating on tiny movements but allow character changes
   const offsetDiff = Math.abs(offset - lastHoveredOffset);
-  if (offsetDiff < 0.8) {
-    // Cursor hasn't moved enough to be on a different character
+  
+  // Get the character at the current cursor position
+  const currentCharIndex = Math.floor(offset);
+  const lastCharIndex = Math.floor(lastHoveredOffset);
+  const currentChar = text.charAt(currentCharIndex);
+  const lastChar = text.charAt(lastCharIndex);
+  
+  // Check if we're over a different character
+  const isDifferentChar = currentCharIndex !== lastCharIndex && 
+                          currentChar !== lastChar && 
+                          /[\u4e00-\u9fff]/.test(currentChar);
+  
+  // If we haven't moved to a different character and offset hasn't changed much, skip
+  if (!isDifferentChar && offsetDiff < 0.3) {
     return;
   }
   
@@ -422,8 +434,8 @@ function handleMouseMoveThrottled(event) {
   // Update tracking
   lastHoveredOffset = offset;
   
-  // If it's a different word, update the popup
-  if (word !== lastHoveredWord) {
+  // If it's a different word or different character, update the popup
+  if (word !== lastHoveredWord || isDifferentChar) {
     lastHoveredWord = word;
     clearTimeout(hoverTimer);
     // Update immediately for smooth horizontal movement
