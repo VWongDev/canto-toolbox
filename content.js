@@ -29,14 +29,13 @@ function init() {
   // Inject CSS styles
   injectStyles();
   
-  // Add mouseover listener to document (for single word hover)
-  document.addEventListener('mouseover', handleMouseOver, true);
+  // Use mousemove as primary detection method (like Zhongwen)
+  // This allows real-time checking of character under cursor
+  document.addEventListener('mousemove', handleMouseMove, true);
   document.addEventListener('mouseout', handleMouseOut, true);
   
   // Add selection listener for multi-word searches
   document.addEventListener('mouseup', handleSelection, true);
-  // Track mouse movement to hide popup when cursor moves away from selection
-  document.addEventListener('mousemove', handleMouseMove, true);
   
   // Debug: log initialization
   console.log('Chinese Word Hover extension initialized');
@@ -225,70 +224,6 @@ function getChineseWordAtCursor(event) {
   return null;
 }
 
-/**
- * Handle mouseover events to detect single Chinese words
- */
-function handleMouseOver(event) {
-  const target = event.target;
-  
-  // Skip if hovering over our popup
-  if (target.closest('#chinese-hover-popup')) {
-    clearTimeout(hideTimer);
-    isHoveringChinese = true;
-    return;
-  }
-
-  // Skip if there's a text selection
-  if (cachedSelection === null) {
-    cachedSelection = window.getSelection().toString().trim().length > 0;
-  }
-  if (cachedSelection) {
-    return;
-  }
-
-  // Skip script, style, and other non-text elements
-  if (target.tagName === 'SCRIPT' || target.tagName === 'STYLE' || target.tagName === 'NOSCRIPT') {
-    return;
-  }
-
-  // Get Chinese word at cursor position
-  const result = getChineseWordAtCursor(event);
-  
-  if (!result) {
-    // Not over Chinese text - hide popup immediately
-    clearTimeout(hideTimer);
-    hidePopup();
-    isHoveringChinese = false;
-    lastHoveredElement = null;
-    lastHoveredOffset = -1;
-    return;
-  }
-  
-  const { word, textNode, offset } = result;
-  
-  // We're hovering over Chinese text
-  isHoveringChinese = true;
-  clearTimeout(hideTimer);
-  cachedSelection = false;
-  
-  // Store for mousemove tracking
-  lastHoveredElement = textNode;
-  lastHoveredOffset = offset;
-  
-  // Update popup if word changed
-  if (word !== lastHoveredWord) {
-    lastHoveredWord = word;
-    clearTimeout(hoverTimer);
-    const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
-    if (isDifferentWord) {
-      lookupAndShowWord(word, event.clientX, event.clientY);
-    } else {
-      hoverTimer = setTimeout(() => {
-        lookupAndShowWord(word, event.clientX, event.clientY);
-      }, 50);
-    }
-  }
-}
 
 /**
  * Handle text selection for multi-word searches
@@ -355,8 +290,7 @@ function handleSelection(event) {
 }
 
 /**
- * Handle mouse movement to track when cursor leaves selection area
- * Also handles horizontal movement detection for hover updates
+ * Handle mouse movement - primary detection method (like Zhongwen)
  * Throttled for performance
  */
 function handleMouseMove(event) {
@@ -381,25 +315,21 @@ function handleMouseMoveThrottled(event) {
   
   // Handle selection tracking
   if (currentSelection) {
-    // Check if mouse is still over the selection area or popup
     const mouseX = event.clientX;
     const mouseY = event.clientY;
     const rect = currentSelection.rect;
     
-    // Cache popup element reference
     if (!cachedPopupElement) {
       cachedPopupElement = document.getElementById('chinese-hover-popup');
     }
     const popup = cachedPopupElement;
     
-    // Check if mouse is over selection area (with some padding)
     const padding = 10;
     const isOverSelection = mouseX >= rect.left - padding && 
                            mouseX <= rect.right + padding &&
                            mouseY >= rect.top - padding && 
                            mouseY <= rect.bottom + padding;
     
-    // Check if mouse is over popup
     const isOverPopup = popup && (
       mouseX >= popup.offsetLeft && 
       mouseX <= popup.offsetLeft + popup.offsetWidth &&
@@ -407,11 +337,9 @@ function handleMouseMoveThrottled(event) {
       mouseY <= popup.offsetTop + popup.offsetHeight
     );
     
-    // If mouse is not over selection or popup, hide popup after delay
     if (!isOverSelection && !isOverPopup) {
       clearTimeout(selectionPopupTimer);
       selectionPopupTimer = setTimeout(() => {
-        // Double-check selection still exists and mouse is still away
         if (cachedSelection === null) {
           cachedSelection = window.getSelection().toString().trim().length > 0;
         }
@@ -419,53 +347,67 @@ function handleMouseMoveThrottled(event) {
           currentSelection = null;
           hidePopup();
         }
-      }, 300); // Small delay to allow moving to popup
+      }, 300);
     } else {
-      // Mouse is over selection or popup, cancel any pending hide
       clearTimeout(selectionPopupTimer);
     }
     return;
   }
   
-  // Handle horizontal movement detection for hover (when not selecting)
   // Skip if hovering over popup
   if (target.closest('#chinese-hover-popup')) {
+    clearTimeout(hideTimer);
+    isHoveringChinese = true;
     return;
   }
   
   // Skip if there's a text selection
+  if (cachedSelection === null) {
+    cachedSelection = window.getSelection().toString().trim().length > 0;
+  }
   if (cachedSelection) {
     return;
   }
   
   // Skip script, style, and other non-text elements
   if (target.tagName === 'SCRIPT' || target.tagName === 'STYLE' || target.tagName === 'NOSCRIPT') {
+    // Not over text - hide popup
+    if (isHoveringChinese) {
+      isHoveringChinese = false;
+      clearTimeout(hideTimer);
+      hidePopup();
+      lastHoveredElement = null;
+      lastHoveredOffset = -1;
+    }
     return;
   }
   
-  // Only process if we were previously hovering over Chinese text
-  if (!lastHoveredElement || lastHoveredOffset < 0) {
-    return;
-  }
-  
-  // Get Chinese word at current cursor position
+  // Get Chinese word at current cursor position (primary detection)
   const result = getChineseWordAtCursor(event);
   
   if (!result) {
-    // No longer over Chinese text - hide popup immediately
-    isHoveringChinese = false;
-    lastHoveredElement = null;
-    lastHoveredOffset = -1;
-    clearTimeout(hideTimer);
-    hidePopup();
+    // Not over Chinese text - hide popup immediately
+    if (isHoveringChinese || currentPopup) {
+      isHoveringChinese = false;
+      clearTimeout(hideTimer);
+      hidePopup();
+      lastHoveredElement = null;
+      lastHoveredOffset = -1;
+    }
     return;
   }
   
   const { word, textNode, offset } = result;
   
-  // Check if we moved to a different character
-  const offsetDiff = Math.abs(offset - lastHoveredOffset);
-  const isDifferentChar = offsetDiff >= 0.5 && textNode === lastHoveredElement;
+  // We're hovering over Chinese text
+  isHoveringChinese = true;
+  clearTimeout(hideTimer);
+  cachedSelection = false;
+  
+  // Check if we moved to a different character/word
+  const isSameTextNode = textNode === lastHoveredElement;
+  const offsetDiff = isSameTextNode ? Math.abs(offset - lastHoveredOffset) : 1;
+  const isDifferentChar = !isSameTextNode || offsetDiff >= 0.5;
   
   // Update tracking
   lastHoveredElement = textNode;
@@ -475,7 +417,16 @@ function handleMouseMoveThrottled(event) {
   if (word !== lastHoveredWord || isDifferentChar) {
     lastHoveredWord = word;
     clearTimeout(hoverTimer);
-    lookupAndShowWord(word, event.clientX, event.clientY);
+    const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
+    if (isDifferentWord || isDifferentChar) {
+      // Different word/character - update immediately
+      lookupAndShowWord(word, event.clientX, event.clientY);
+    } else {
+      // First word - small debounce
+      hoverTimer = setTimeout(() => {
+        lookupAndShowWord(word, event.clientX, event.clientY);
+      }, 50);
+    }
   }
 }
 
