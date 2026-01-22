@@ -96,6 +96,12 @@ function injectStyles() {
       min-width: 0;
       flex-shrink: 0;
     }
+    .popup-pronunciation-group {
+      margin-bottom: 12px;
+    }
+    .popup-pronunciation-group:last-child {
+      margin-bottom: 0;
+    }
     .popup-label {
       font-size: 11px;
       font-weight: 600;
@@ -705,14 +711,47 @@ function showPopup(word, definition, x, y) {
     return definitions.map(def => `<div class="popup-definition-item">${escapeHtml(def)}</div>`).join('');
   };
 
+  // Format Mandarin with multiple pronunciations
+  const formatMandarin = (mandarinData) => {
+    if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
+      // Single pronunciation or no entries
+      return `
+        <div class="popup-label">Mandarin</div>
+        <div class="popup-pinyin">${escapeHtml(mandarinData?.pinyin || 'N/A')}</div>
+        <div class="popup-definition">${formatDefinitions(mandarinData?.definition)}</div>
+      `;
+    }
+    
+    // Multiple pronunciations - display each separately
+    const entries = mandarinData.entries;
+    const byPinyin = {};
+    for (const entry of entries) {
+      const pinyin = entry.pinyin || '';
+      if (!byPinyin[pinyin]) {
+        byPinyin[pinyin] = [];
+      }
+      byPinyin[pinyin].push(...(entry.definitions || []));
+    }
+    
+    let html = '<div class="popup-label">Mandarin</div>';
+    for (const [pinyin, defs] of Object.entries(byPinyin)) {
+      const defsStr = defs.filter(d => d && String(d).trim().length > 0).join('; ');
+      html += `
+        <div class="popup-pronunciation-group">
+          <div class="popup-pinyin">${escapeHtml(pinyin)}</div>
+          <div class="popup-definition">${formatDefinitions(defsStr)}</div>
+        </div>
+      `;
+    }
+    return html;
+  };
+
   // Build popup content with side-by-side layout
   popup.innerHTML = `
     <div class="popup-word">${escapeHtml(displayWord)}</div>
     <div class="popup-sections-container">
       <div class="popup-section">
-        <div class="popup-label">Mandarin</div>
-        <div class="popup-pinyin">${escapeHtml(definition.mandarin.pinyin || 'N/A')}</div>
-        <div class="popup-definition">${formatDefinitions(definition.mandarin.definition)}</div>
+        ${formatMandarin(definition.mandarin)}
       </div>
       <div class="popup-section">
         <div class="popup-label">Cantonese</div>

@@ -79,6 +79,7 @@ async function loadDictionaries() {
             
             // Convert array format to dictionary object
             // Format: [traditional, simplified, pinyin, definition, ...]
+            // Support multiple entries per word (different pronunciations)
             // Use batch processing to avoid blocking
             console.log('[Dict] Processing', dataArray.length, 'Mandarin entries...');
             mandarinDict = {};
@@ -103,8 +104,19 @@ async function loadDictionaries() {
                   };
                   
                   // Index by both simplified and traditional
-                  if (simplified) mandarinDict[simplified] = dictEntry;
-                  if (traditional && traditional !== simplified) mandarinDict[traditional] = dictEntry;
+                  // Store as arrays to support multiple pronunciations per word
+                  if (simplified) {
+                    if (!mandarinDict[simplified]) {
+                      mandarinDict[simplified] = [];
+                    }
+                    mandarinDict[simplified].push(dictEntry);
+                  }
+                  if (traditional && traditional !== simplified) {
+                    if (!mandarinDict[traditional]) {
+                      mandarinDict[traditional] = [];
+                    }
+                    mandarinDict[traditional].push(dictEntry);
+                  }
                 }
               }
               
@@ -308,17 +320,53 @@ async function lookupWordInDictionaries(word) {
 
   // Search in Mandarin dictionary (CC-CEDICT format from edvardsr/cc-cedict)
   // Only use exact matches - no partial matching
+  // Support multiple entries per word (different pronunciations)
   if (mandarinDict && typeof mandarinDict === 'object') {
-    // Try exact lookup by word
-    const entry = mandarinDict[word];
+    // Try exact lookup by word - may return array of entries
+    const entries = mandarinDict[word];
     
-    if (entry) {
-      console.log('[Dict] Found exact Mandarin entry for', word, ':', entry);
-      result.mandarin.pinyin = entry.pinyin || '';
-      if (entry.definitions && entry.definitions.length > 0) {
-        result.mandarin.definition = entry.definitions.join('; ');
-      } else if (entry.definition) {
-        result.mandarin.definition = String(entry.definition);
+    if (entries) {
+      // Handle both array (multiple pronunciations) and single entry (backward compatibility)
+      const entryArray = Array.isArray(entries) ? entries : [entries];
+      
+      if (entryArray.length > 0) {
+        console.log('[Dict] Found', entryArray.length, 'Mandarin entry/entries for', word);
+        
+        // Store all entries for detailed display
+        result.mandarin.entries = entryArray;
+        
+        // If multiple pronunciations, group by pinyin
+        if (entryArray.length > 1) {
+          // Group entries by pinyin
+          const byPinyin = {};
+          for (const entry of entryArray) {
+            const pinyin = entry.pinyin || '';
+            if (!byPinyin[pinyin]) {
+              byPinyin[pinyin] = [];
+            }
+            const defs = entry.definitions || (entry.definition ? [entry.definition] : []);
+            byPinyin[pinyin].push(...defs.filter(d => d && String(d).trim().length > 0));
+          }
+          
+          // Store pinyin list and formatted definition for backward compatibility
+          result.mandarin.pinyin = Object.keys(byPinyin).join(', ');
+          const formatted = Object.entries(byPinyin)
+            .map(([pinyin, defs]) => {
+              const defsStr = defs.join('; ');
+              return `${pinyin}: ${defsStr}`;
+            })
+            .join(' | ');
+          result.mandarin.definition = formatted;
+        } else {
+          // Single entry
+          const entry = entryArray[0];
+          result.mandarin.pinyin = entry.pinyin || '';
+          if (entry.definitions && entry.definitions.length > 0) {
+            result.mandarin.definition = entry.definitions.join('; ');
+          } else if (entry.definition) {
+            result.mandarin.definition = String(entry.definition);
+          }
+        }
       }
     } else {
       console.log('[Dict] No exact Mandarin entry found for', word);
