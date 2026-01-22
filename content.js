@@ -60,8 +60,8 @@ function injectStyles() {
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       padding: 16px;
-      min-width: 280px;
-      max-width: 400px;
+      min-width: 400px;
+      max-width: 600px;
       width: auto;
       height: auto;
       max-height: 80vh;
@@ -76,6 +76,12 @@ function injectStyles() {
       pointer-events: auto;
       box-sizing: border-box;
     }
+    .popup-sections-container {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      align-items: flex-start;
+    }
     .popup-word {
       font-size: 24px;
       font-weight: bold;
@@ -86,12 +92,9 @@ function injectStyles() {
       text-align: center;
     }
     .popup-section {
-      margin-bottom: 12px;
+      flex: 1;
+      min-width: 0;
       flex-shrink: 0;
-      min-height: 0;
-    }
-    .popup-section:last-child {
-      margin-bottom: 0;
     }
     .popup-label {
       font-size: 11px;
@@ -702,18 +705,20 @@ function showPopup(word, definition, x, y) {
     return definitions.map(def => `<div class="popup-definition-item">${escapeHtml(def)}</div>`).join('');
   };
 
-  // Build popup content
+  // Build popup content with side-by-side layout
   popup.innerHTML = `
     <div class="popup-word">${escapeHtml(displayWord)}</div>
-    <div class="popup-section">
-      <div class="popup-label">Mandarin</div>
-      <div class="popup-pinyin">${escapeHtml(definition.mandarin.pinyin || 'N/A')}</div>
-      <div class="popup-definition">${formatDefinitions(definition.mandarin.definition)}</div>
-    </div>
-    <div class="popup-section">
-      <div class="popup-label">Cantonese</div>
-      <div class="popup-jyutping">${escapeHtml(definition.cantonese.jyutping || 'N/A')}</div>
-      <div class="popup-definition">${formatDefinitions(definition.cantonese.definition)}</div>
+    <div class="popup-sections-container">
+      <div class="popup-section">
+        <div class="popup-label">Mandarin</div>
+        <div class="popup-pinyin">${escapeHtml(definition.mandarin.pinyin || 'N/A')}</div>
+        <div class="popup-definition">${formatDefinitions(definition.mandarin.definition)}</div>
+      </div>
+      <div class="popup-section">
+        <div class="popup-label">Cantonese</div>
+        <div class="popup-jyutping">${escapeHtml(definition.cantonese.jyutping || 'N/A')}</div>
+        <div class="popup-definition">${formatDefinitions(definition.cantonese.definition)}</div>
+      </div>
     </div>
   `;
 
