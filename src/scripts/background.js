@@ -42,6 +42,7 @@ preloadDictionaries();
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Background] Received message:', message.type, message);
+  console.log('[Background] Sender:', sender);
   
   if (message.type === 'lookup_word') {
     console.log('[Background] Looking up word:', message.word);
@@ -68,10 +69,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.type === 'get_statistics') {
+    console.log('[Background] Handling get_statistics request');
     getStatistics()
       .then(stats => {
         console.log('[Background] Returning statistics:', Object.keys(stats).length, 'words');
-        sendResponse({ success: true, statistics: stats });
+        const response = { success: true, statistics: stats };
+        console.log('[Background] Sending response:', response);
+        sendResponse(response);
       })
       .catch(error => {
         console.error('[Background] Error getting statistics:', error);
