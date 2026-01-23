@@ -22,9 +22,11 @@ export function parseCedictFormat(text: string): Dictionary {
       const entry: DictionaryEntry = {
         traditional,
         simplified,
+        romanisation: jyutping || pinyin || '', // Prefer jyutping for Cantonese, fallback to pinyin
+        definitions: defs.filter(d => d && String(d).trim().length > 0),
+        // Legacy fields for backward compatibility
         pinyin: pinyin || '',
-        jyutping: jyutping || '',
-        definitions: defs.filter(d => d && String(d).trim().length > 0)
+        jyutping: jyutping || ''
       };
       
       // Store as arrays to support multiple pronunciations per word
@@ -52,9 +54,11 @@ export function parseCedictFormat(text: string): Dictionary {
       const entry: DictionaryEntry = {
         traditional,
         simplified,
+        romanisation: pinyin || '', // For entries without jyutping, use pinyin
+        definitions: defs.filter(d => d && String(d).trim().length > 0),
+        // Legacy fields for backward compatibility
         pinyin: pinyin || '',
-        jyutping: '',
-        definitions: defs.filter(d => d && String(d).trim().length > 0)
+        jyutping: ''
       };
       
       if (simplified) {
@@ -80,9 +84,11 @@ export function parseCedictFormat(text: string): Dictionary {
       const entry: DictionaryEntry = {
         traditional,
         simplified,
+        romanisation: jyutping || pinyin || '', // Prefer jyutping for Cantonese, fallback to pinyin
+        definitions: [],
+        // Legacy fields for backward compatibility
         pinyin: pinyin || '',
-        jyutping: jyutping || '',
-        definitions: []
+        jyutping: jyutping || ''
       };
       
       if (simplified) {

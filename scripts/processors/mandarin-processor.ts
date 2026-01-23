@@ -1,12 +1,9 @@
 import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
+import { getRootDir, addDictionaryEntry } from './utils.js';
 import type { Dictionary, DictionaryEntry } from '../types.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-// Compiled output is in scripts/dist/, so go up 3 levels to reach root
-const rootDir = join(__dirname, '../../..');
+const rootDir = getRootDir();
 
 /**
  * Load Mandarin dictionary file content
@@ -17,12 +14,9 @@ function loadMandarinFiles(): string {
 }
 
 /**
- * Process Mandarin dictionary into unified format
+ * Parse Mandarin JS module format and extract data array
  */
-export function processMandarinDict(): Dictionary {
-  const fileContent = loadMandarinFiles();
-  const mandarinDict: Dictionary = {};
-
+function parseMandarinModule(fileContent: string): unknown[] {
   // Extract the data from the export default statement
   let dataText = fileContent.trim();
   if (dataText.startsWith('export default ')) {
@@ -44,55 +38,61 @@ export function processMandarinDict(): Dictionary {
   }
   
   // Handle different structures
-  let dataArray: unknown[] | null = null;
   if (parsedData && typeof parsedData === 'object') {
     if (Array.isArray(parsedData)) {
-      dataArray = parsedData;
+      return parsedData;
     } else if (typeof parsedData === 'object' && parsedData !== null) {
       const obj = parsedData as Record<string, unknown>;
       if (obj.all && Array.isArray(obj.all)) {
-        dataArray = obj.all;
+        return obj.all;
       } else if (obj.simplified && Array.isArray(obj.simplified)) {
-        dataArray = obj.simplified;
+        return obj.simplified;
       } else if (obj.traditional && Array.isArray(obj.traditional)) {
-        dataArray = obj.traditional;
+        return obj.traditional;
       }
     }
   }
   
-  if (!dataArray) {
-    throw new Error('Could not find array data in Mandarin dictionary file');
+  throw new Error('Could not find array data in Mandarin dictionary file');
+}
+
+/**
+ * Convert Mandarin entry array to dictionary entry
+ */
+function convertMandarinEntry(entry: unknown): DictionaryEntry | null {
+  if (!Array.isArray(entry) || entry.length < 4) {
+    return null;
   }
+  
+  const [traditional, simplified, pinyin, definition] = entry as [string, string, string, string | string[]];
+  const definitions = Array.isArray(definition) ? definition : [definition];
+  
+  return {
+    traditional: String(traditional),
+    simplified: String(simplified),
+    romanisation: String(pinyin || ''),
+    definitions: definitions.filter(d => d && String(d).trim().length > 0).map(String),
+    // Legacy fields for backward compatibility
+    pinyin: String(pinyin || ''),
+    jyutping: ''
+  };
+}
+
+/**
+ * Process Mandarin dictionary into unified format
+ */
+export function processMandarinDict(): Dictionary {
+  const fileContent = loadMandarinFiles();
+  const mandarinDict: Dictionary = {};
+  const dataArray = parseMandarinModule(fileContent);
   
   console.log(`[Build] Processing ${dataArray.length} Mandarin entries...`);
 
   // Convert to unified format
   for (const entry of dataArray) {
-    if (Array.isArray(entry) && entry.length >= 4) {
-      const [traditional, simplified, pinyin, definition] = entry as [string, string, string, string | string[]];
-      const definitions = Array.isArray(definition) ? definition : [definition];
-      
-      const dictEntry: DictionaryEntry = {
-        traditional: String(traditional),
-        simplified: String(simplified),
-        pinyin: String(pinyin || ''),
-        jyutping: '', // Mandarin doesn't have jyutping
-        definitions: definitions.filter(d => d && String(d).trim().length > 0).map(String)
-      };
-      
-      // Index by both simplified and traditional
-      if (dictEntry.simplified) {
-        if (!mandarinDict[dictEntry.simplified]) {
-          mandarinDict[dictEntry.simplified] = [];
-        }
-        mandarinDict[dictEntry.simplified].push(dictEntry);
-      }
-      if (dictEntry.traditional && dictEntry.traditional !== dictEntry.simplified) {
-        if (!mandarinDict[dictEntry.traditional]) {
-          mandarinDict[dictEntry.traditional] = [];
-        }
-        mandarinDict[dictEntry.traditional].push(dictEntry);
-      }
+    const dictEntry = convertMandarinEntry(entry);
+    if (dictEntry) {
+      addDictionaryEntry(mandarinDict, dictEntry);
     }
   }
 

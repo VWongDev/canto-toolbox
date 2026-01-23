@@ -1,0 +1,51 @@
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import type { Dictionary, DictionaryEntry } from '../types.js';
+
+/**
+ * Get the root directory of the project
+ * Works for both source and compiled output locations
+ */
+export function getRootDir(): string {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  // Compiled output is in scripts/dist/, so go up 3 levels to reach root
+  // For source files in scripts/processors/, go up 2 levels
+  // This handles both cases
+  if (__dirname.includes('dist')) {
+    return join(__dirname, '../../..');
+  }
+  return join(__dirname, '../..');
+}
+
+/**
+ * Helper to add entries to dictionary, indexing by both simplified and traditional
+ */
+export function addDictionaryEntry(
+  dict: Dictionary,
+  entry: DictionaryEntry
+): void {
+  if (entry.simplified) {
+    if (!dict[entry.simplified]) {
+      dict[entry.simplified] = [];
+    }
+    // Only add if not already present (avoid duplicates)
+    const exists = dict[entry.simplified].some(
+      e => e.traditional === entry.traditional && e.simplified === entry.simplified
+    );
+    if (!exists) {
+      dict[entry.simplified].push(entry);
+    }
+  }
+  if (entry.traditional && entry.traditional !== entry.simplified) {
+    if (!dict[entry.traditional]) {
+      dict[entry.traditional] = [];
+    }
+    const exists = dict[entry.traditional].some(
+      e => e.traditional === entry.traditional && e.simplified === entry.simplified
+    );
+    if (!exists) {
+      dict[entry.traditional].push(entry);
+    }
+  }
+}
