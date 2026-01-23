@@ -72,21 +72,20 @@ function lookupInDict(dict: Dictionary | null, word: string): DictionaryEntry[] 
 /**
  * Format entries for display
  */
-function formatEntries(entries: DictionaryEntry[], pronunciationKey: 'pinyin' | 'jyutping'): {
+function formatEntries(entries: DictionaryEntry[]): {
   definition: string;
-  pinyin?: string;
-  jyutping?: string;
+  romanisation: string;
   entries: DictionaryEntry[];
 } {
   if (!entries || entries.length === 0) {
-    return { definition: '', [pronunciationKey]: '', entries: [] };
+    return { definition: '', romanisation: '', entries: [] };
   }
 
   // If multiple pronunciations, group by pronunciation
   if (entries.length > 1) {
     const byPronunciation: Record<string, string[]> = {};
     for (const entry of entries) {
-      const pronunciation = entry[pronunciationKey] || '';
+      const pronunciation = entry.romanisation || '';
       if (!byPronunciation[pronunciation]) {
         byPronunciation[pronunciation] = [];
       }
@@ -103,22 +102,22 @@ function formatEntries(entries: DictionaryEntry[], pronunciationKey: 'pinyin' | 
       .join(' | ');
 
     return {
-      [pronunciationKey]: pronunciationList,
+      romanisation: pronunciationList,
       definition: formatted,
       entries: entries
-    } as { definition: string; pinyin?: string; jyutping?: string; entries: DictionaryEntry[] };
+    };
   } else {
     // Single entry
     const entry = entries[0];
-    const pronunciation = entry[pronunciationKey] || '';
+    const pronunciation = entry.romanisation || '';
     const defs = entry.definitions || [];
     const definition = defs.filter(d => d && String(d).trim().length > 0).join('; ');
 
     return {
-      [pronunciationKey]: pronunciation,
+      romanisation: pronunciation,
       definition: definition,
       entries: entries
-    } as { definition: string; pinyin?: string; jyutping?: string; entries: DictionaryEntry[] };
+    };
   }
 }
 
@@ -157,8 +156,8 @@ export async function lookupWordInDictionaries(word: string): Promise<Definition
 
   const result: DefinitionResult = {
     word: word,
-    mandarin: { definition: '', pinyin: '' },
-    cantonese: { definition: '', jyutping: '' }
+    mandarin: { definition: '', romanisation: '' },
+    cantonese: { definition: '', romanisation: '' }
   };
 
   // Lookup in Mandarin dictionary
@@ -171,10 +170,10 @@ export async function lookupWordInDictionaries(word: string): Promise<Definition
       '(', filteredMandarinEntries.length, 'after filtering Cantonese definitions)');
     
     if (filteredMandarinEntries.length > 0) {
-      const formatted = formatEntries(filteredMandarinEntries, 'pinyin');
+      const formatted = formatEntries(filteredMandarinEntries);
       result.mandarin = {
         definition: formatted.definition,
-        pinyin: formatted.pinyin || '',
+        romanisation: formatted.romanisation,
         entries: formatted.entries
       };
     }
@@ -186,10 +185,10 @@ export async function lookupWordInDictionaries(word: string): Promise<Definition
   const cantoneseEntries = lookupInDict(cantoneseDict, word);
   if (cantoneseEntries) {
     console.log('[Dict] Found', cantoneseEntries.length, 'Cantonese entry/entries for', word);
-    const formatted = formatEntries(cantoneseEntries, 'jyutping');
+    const formatted = formatEntries(cantoneseEntries);
     result.cantonese = {
       definition: formatted.definition,
-      jyutping: formatted.jyutping || '',
+      romanisation: formatted.romanisation,
       entries: formatted.entries
     };
   } else {

@@ -31,15 +31,11 @@ function mergeReadings(mainDict: Dictionary, readingsDict: Dictionary): void {
     const mainEntryArray = Array.isArray(mainEntries) ? mainEntries : (mainEntries ? [mainEntries] : []);
     
     if (mainEntryArray.length > 0) {
-      // Entry exists in main dict, add jyutping/romanisation if missing
+      // Entry exists in main dict, add romanisation if missing
       for (const readingEntry of readingEntryArray) {
         for (const mainEntry of mainEntryArray) {
-          if (!mainEntry.jyutping && readingEntry.jyutping) {
-            mainEntry.jyutping = readingEntry.jyutping;
-            // Update romanisation to use jyutping (preferred for Cantonese)
-            if (!mainEntry.romanisation || mainEntry.romanisation === mainEntry.pinyin) {
-              mainEntry.romanisation = readingEntry.jyutping;
-            }
+          if (!mainEntry.romanisation || (readingEntry.romanisation && !mainEntry.romanisation)) {
+            mainEntry.romanisation = readingEntry.romanisation;
             mergedCount++;
           }
         }

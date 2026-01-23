@@ -693,8 +693,8 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
         // Show error popup even on failure
         const errorDef: DefinitionResult = {
           word: word,
-          mandarin: { definition: errorMsg || 'Lookup failed', pinyin: '', entries: [] },
-          cantonese: { definition: 'Not available', jyutping: '', entries: [] }
+          mandarin: { definition: errorMsg || 'Lookup failed', romanisation: '', entries: [] },
+          cantonese: { definition: 'Not available', romanisation: '', entries: [] }
         };
         showPopup(word, errorDef, x, y);
       }
@@ -708,8 +708,8 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
 function showErrorPopup(word: string, x: number, y: number, error: string): void {
   const errorDef: DefinitionResult = {
     word: word,
-    mandarin: { definition: `Error: ${error}`, pinyin: '', entries: [] },
-    cantonese: { definition: 'Not available', jyutping: '', entries: [] }
+    mandarin: { definition: `Error: ${error}`, romanisation: '', entries: [] },
+    cantonese: { definition: 'Not available', romanisation: '', entries: [] }
   };
   showPopup(word, errorDef, x, y);
 }
@@ -770,7 +770,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
       // Single pronunciation or no entries
       return `
         <div class="popup-label">Mandarin</div>
-        <div class="popup-pinyin">${escapeHtml(mandarinData?.pinyin || 'N/A')}</div>
+        <div class="popup-pinyin">${escapeHtml(mandarinData?.romanisation || 'N/A')}</div>
         <div class="popup-definition">${formatDefinitions(mandarinData?.definition)}</div>
       `;
     }
@@ -779,7 +779,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
     const entries = mandarinData.entries;
     const byPinyin: Record<string, string[]> = {};
     for (const entry of entries) {
-      const pinyin = entry.pinyin || '';
+      const pinyin = entry.romanisation || '';
       if (!byPinyin[pinyin]) {
         byPinyin[pinyin] = [];
       }
@@ -806,7 +806,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
       // Single pronunciation or no entries
       return `
         <div class="popup-label">Cantonese</div>
-        <div class="popup-jyutping">${escapeHtml(cantoneseData?.jyutping || 'N/A')}</div>
+        <div class="popup-jyutping">${escapeHtml(cantoneseData?.romanisation || 'N/A')}</div>
         <div class="popup-definition">${formatDefinitions(cantoneseData?.definition)}</div>
       `;
     }
@@ -815,7 +815,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
     const entries = cantoneseData.entries;
     const byJyutping: Record<string, string[]> = {};
     for (const entry of entries) {
-      const jyutping = entry.jyutping || '';
+      const jyutping = entry.romanisation || '';
       if (!byJyutping[jyutping]) {
         byJyutping[jyutping] = [];
       }

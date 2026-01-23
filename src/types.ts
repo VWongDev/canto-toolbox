@@ -5,11 +5,6 @@ export interface DictionaryEntry {
   simplified: string;
   romanisation: string; // Pinyin for Mandarin, Jyutping for Cantonese
   definitions: string[];
-  // Legacy fields for backward compatibility (deprecated, use romanisation instead)
-  /** @deprecated Use romanisation instead */
-  pinyin?: string;
-  /** @deprecated Use romanisation instead */
-  jyutping?: string;
 }
 
 export type Dictionary = Record<string, DictionaryEntry[]>;
@@ -28,12 +23,12 @@ export interface DefinitionResult {
   word: string;
   mandarin: {
     definition: string;
-    pinyin: string;
+    romanisation: string;
     entries?: DictionaryEntry[];
   };
   cantonese: {
     definition: string;
-    jyutping: string;
+    romanisation: string;
     entries?: DictionaryEntry[];
   };
 }

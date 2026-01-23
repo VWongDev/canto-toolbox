@@ -232,7 +232,7 @@ function createDefinitionHTML(word: string, definition: DefinitionResult): strin
       return `
         <div class="definition-section">
           <div class="definition-label">Mandarin</div>
-          <div class="definition-pinyin">${escapeHtml(mandarinData?.pinyin || 'N/A')}</div>
+          <div class="definition-pinyin">${escapeHtml(mandarinData?.romanisation || 'N/A')}</div>
           <div class="definition-text">${formatDefinitions(mandarinData?.definition)}</div>
         </div>
       `;
@@ -241,7 +241,7 @@ function createDefinitionHTML(word: string, definition: DefinitionResult): strin
     const entries = mandarinData.entries;
     const byPinyin: Record<string, string[]> = {};
     for (const entry of entries) {
-      const pinyin = entry.pinyin || '';
+      const pinyin = entry.romanisation || '';
       if (!byPinyin[pinyin]) {
         byPinyin[pinyin] = [];
       }
@@ -268,7 +268,7 @@ function createDefinitionHTML(word: string, definition: DefinitionResult): strin
       return `
         <div class="definition-section">
           <div class="definition-label">Cantonese</div>
-          <div class="definition-jyutping">${escapeHtml(cantoneseData?.jyutping || 'N/A')}</div>
+          <div class="definition-jyutping">${escapeHtml(cantoneseData?.romanisation || 'N/A')}</div>
           <div class="definition-text">${formatDefinitions(cantoneseData?.definition)}</div>
         </div>
       `;
@@ -277,7 +277,7 @@ function createDefinitionHTML(word: string, definition: DefinitionResult): strin
     const entries = cantoneseData.entries;
     const byJyutping: Record<string, string[]> = {};
     for (const entry of entries) {
-      const jyutping = entry.jyutping || '';
+      const jyutping = entry.romanisation || '';
       if (!byJyutping[jyutping]) {
         byJyutping[jyutping] = [];
       }

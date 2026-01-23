@@ -71,10 +71,7 @@ function convertMandarinEntry(entry: unknown): DictionaryEntry | null {
     traditional: String(traditional),
     simplified: String(simplified),
     romanisation: String(pinyin || ''),
-    definitions: definitions.filter(d => d && String(d).trim().length > 0).map(String),
-    // Legacy fields for backward compatibility
-    pinyin: String(pinyin || ''),
-    jyutping: ''
+    definitions: definitions.filter(d => d && String(d).trim().length > 0).map(String)
   };
 }
 

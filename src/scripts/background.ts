@@ -194,11 +194,11 @@ async function lookupWord(word: string): Promise<DefinitionResult> {
       word: word,
       mandarin: { 
         definition: 'Word not found in dictionary',
-        pinyin: '' 
+        romanisation: '' 
       },
       cantonese: { 
         definition: 'Not found',
-        jyutping: '' 
+        romanisation: '' 
       }
     };
   } catch (error) {
@@ -211,11 +211,11 @@ async function lookupWord(word: string): Promise<DefinitionResult> {
       word: word,
       mandarin: { 
         definition: 'Dictionary files not loaded. Please ensure dictionaries submodules are initialized.',
-        pinyin: '' 
+        romanisation: '' 
       },
       cantonese: { 
         definition: 'Dictionary files not loaded',
-        jyutping: '' 
+        romanisation: '' 
       }
     };
   }
