@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -10,19 +10,8 @@ const rootDir = join(__dirname, '../..');
  * Load Mandarin dictionary file content
  */
 function loadMandarinFiles() {
-  const mandarinPaths = [
-    join(rootDir, 'dictionaries/mandarin/data/all.js'),
-    join(rootDir, 'dictionaries/mandarin/data/simplified.js')
-  ];
-
-  for (const path of mandarinPaths) {
-    if (existsSync(path)) {
-      return readFileSync(path, 'utf-8');
-    }
-    console.warn(`[Build] Mandarin dictionary file not found: ${path}`);
-  }
-
-  throw new Error('No valid Mandarin dictionary file found');
+  const path = join(rootDir, 'dictionaries/mandarin/data/all.js');
+  return readFileSync(path, 'utf-8');
 }
 
 /**
