@@ -160,39 +160,46 @@ export async function lookupWordInDictionaries(word: string): Promise<Definition
     cantonese: { definition: '', romanisation: '' }
   };
 
-  // Lookup in Mandarin dictionary
-  const mandarinEntries = lookupInDict(mandarinDict, word);
-
-  // Process Mandarin entries, filtering out definitions marked as Cantonese
-  if (mandarinEntries) {
-    const filteredMandarinEntries = filterOutCantoneseDefinitions(mandarinEntries);
-    console.log('[Dict] Found', mandarinEntries.length, 'Mandarin entry/entries for', word, 
-      '(', filteredMandarinEntries.length, 'after filtering Cantonese definitions)');
-    
-    if (filteredMandarinEntries.length > 0) {
-      const formatted = formatEntries(filteredMandarinEntries);
-      result.mandarin = {
-        definition: formatted.definition,
-        romanisation: formatted.romanisation,
-        entries: formatted.entries
-      };
+  // Process each dictionary
+  const dictionaries = [
+    {
+      dict: mandarinDict,
+      name: 'Mandarin',
+      resultKey: 'mandarin' as const,
+      filterCantonese: true
+    },
+    {
+      dict: cantoneseDict,
+      name: 'Cantonese',
+      resultKey: 'cantonese' as const,
+      filterCantonese: false
     }
-  } else {
-    console.log('[Dict] No exact Mandarin entry found for', word);
-  }
+  ];
 
-  // Lookup in Cantonese dictionary
-  const cantoneseEntries = lookupInDict(cantoneseDict, word);
-  if (cantoneseEntries) {
-    console.log('[Dict] Found', cantoneseEntries.length, 'Cantonese entry/entries for', word);
-    const formatted = formatEntries(cantoneseEntries);
-    result.cantonese = {
-      definition: formatted.definition,
-      romanisation: formatted.romanisation,
-      entries: formatted.entries
-    };
-  } else {
-    console.log('[Dict] No exact Cantonese entry found for', word);
+  for (const { dict, name, resultKey, filterCantonese } of dictionaries) {
+    const entries = lookupInDict(dict, word);
+    
+    if (entries) {
+      const processedEntries = filterCantonese 
+        ? filterOutCantoneseDefinitions(entries)
+        : entries;
+      
+      const logMessage = filterCantonese
+        ? `[Dict] Found ${entries.length} ${name} entry/entries for ${word} (${processedEntries.length} after filtering Cantonese definitions)`
+        : `[Dict] Found ${processedEntries.length} ${name} entry/entries for ${word}`;
+      console.log(logMessage);
+      
+      if (processedEntries.length > 0) {
+        const formatted = formatEntries(processedEntries);
+        result[resultKey] = {
+          definition: formatted.definition,
+          romanisation: formatted.romanisation,
+          entries: formatted.entries
+        };
+      }
+    } else {
+      console.log(`[Dict] No exact ${name} entry found for`, word);
+    }
   }
 
   // If no definitions found at all
