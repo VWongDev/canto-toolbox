@@ -2,8 +2,10 @@
  * Parse CC-CEDICT format text file
  * Format: Traditional Simplified [pinyin] {jyutping} /def1/def2/
  */
-export function parseCedictFormat(text) {
-  const dict = {};
+import type { Dictionary, DictionaryEntry } from '../types.js';
+
+export function parseCedictFormat(text: string): Dictionary {
+  const dict: Dictionary = {};
   const lines = text.split('\n');
   
   for (const line of lines) {
@@ -17,7 +19,7 @@ export function parseCedictFormat(text) {
       const [, traditional, simplified, pinyin, jyutping, definitions] = match;
       const defs = definitions.split('/').filter(d => d.trim().length > 0);
       
-      const entry = {
+      const entry: DictionaryEntry = {
         traditional,
         simplified,
         pinyin: pinyin || '',
@@ -47,7 +49,7 @@ export function parseCedictFormat(text) {
       const [, traditional, simplified, pinyin, definitions] = match;
       const defs = definitions.split('/').filter(d => d.trim().length > 0);
       
-      const entry = {
+      const entry: DictionaryEntry = {
         traditional,
         simplified,
         pinyin: pinyin || '',
@@ -75,7 +77,7 @@ export function parseCedictFormat(text) {
     if (match) {
       const [, traditional, simplified, pinyin, jyutping] = match;
       
-      const entry = {
+      const entry: DictionaryEntry = {
         traditional,
         simplified,
         pinyin: pinyin || '',

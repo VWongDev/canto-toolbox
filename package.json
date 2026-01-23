@@ -4,10 +4,11 @@
   "description": "Hover over Chinese words to see definitions in Mandarin and Cantonese with pronunciations",
   "type": "module",
   "scripts": {
-    "build:dict": "node scripts/build-dictionaries.js",
+    "build:scripts": "tsc -p scripts/tsconfig.json",
+    "build:dict": "pnpm build:scripts && node scripts/dist/build-dictionaries.js",
     "build": "pnpm build:dict && vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist src/data"
+    "clean": "rm -rf dist src/data scripts/dist"
   },
   "keywords": [
     "chrome-extension",

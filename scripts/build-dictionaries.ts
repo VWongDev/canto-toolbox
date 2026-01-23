@@ -1,24 +1,26 @@
 #!/usr/bin/env node
-// build-dictionaries.js - Pre-process dictionaries at build time into unified format
+// build-dictionaries.ts - Pre-process dictionaries at build time into unified format
 
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { processMandarinDict } from './processors/mandarin-processor.js';
 import { processCantoneseDict } from './processors/cantonese-processor.js';
+import type { Dictionary } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const rootDir = join(__dirname, '..');
+// Compiled output is in scripts/dist/, so go up 2 levels to reach root
+const rootDir = join(__dirname, '../..');
 
 /**
  * Main build function
  */
-async function buildDictionaries() {
+async function buildDictionaries(): Promise<void> {
   console.log('[Build] Starting dictionary preprocessing...');
   
   // Dictionary configuration: name -> processor
-  const dictionaries = {
+  const dictionaries: Record<string, () => Dictionary> = {
     mandarin: processMandarinDict,
     cantonese: processCantoneseDict
   };
@@ -38,7 +40,8 @@ async function buildDictionaries() {
       writeFileSync(outputPath, JSON.stringify(dict, null, 2), 'utf-8');
       console.log(`[Build] Wrote ${name.charAt(0).toUpperCase() + name.slice(1)} dictionary: ${outputPath} (${Object.keys(dict).length} entries)`);
     } catch (error) {
-      console.error(`[Build] Failed to process ${name} dictionary:`, error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[Build] Failed to process ${name} dictionary:`, errorMessage);
       throw error;
     }
   }
@@ -47,4 +50,3 @@ async function buildDictionaries() {
 }
 
 buildDictionaries();
-

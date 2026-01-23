@@ -4,6 +4,7 @@ node_modules/
 # Generated files
 dist/
 src/data/
+scripts/dist/
 
 # Build artifacts
 *.tsbuildinfo
