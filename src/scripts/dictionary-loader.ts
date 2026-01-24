@@ -58,20 +58,6 @@ function lookupInDict(dict: Dictionary | null, word: string): DictionaryEntry[] 
   return entryArray;
 }
 
-function groupEntriesByPronunciation(entries: DictionaryEntry[]): Record<string, string[]> {
-  const byPronunciation: Record<string, string[]> = {};
-  for (const entry of entries) {
-    const pronunciation = entry.romanisation || '';
-    if (!byPronunciation[pronunciation]) {
-      byPronunciation[pronunciation] = [];
-    }
-    const defs = entry.definitions || [];
-    byPronunciation[pronunciation].push(...defs.filter(d => d && String(d).trim().length > 0));
-  }
-  return byPronunciation;
-}
-
-
 function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): DictionaryEntry[] {
   const filteredEntries: DictionaryEntry[] = [];
   
