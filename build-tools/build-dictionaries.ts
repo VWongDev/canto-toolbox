@@ -10,8 +10,9 @@ import type { Dictionary } from '../src/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-// Compiled output is in build-tools/dist/, so go up 2 levels to reach root
-const rootDir = join(__dirname, '../..');
+// Compiled output is in build-tools/dist/build-tools/, so go up 3 levels to reach root
+// When source: build-tools/ -> go up 2 levels
+const rootDir = join(__dirname, __dirname.includes('dist') ? '../../..' : '../..');
 
 /**
  * Main build function

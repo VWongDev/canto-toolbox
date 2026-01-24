@@ -4,7 +4,9 @@ import type { Dictionary, DictionaryEntry } from '../../src/types.js';
 
 export function getRootDir(): string {
   const __dirname = dirname(fileURLToPath(import.meta.url));
-  return join(__dirname, __dirname.includes('dist') ? '../../..' : '../..');
+  // When compiled: build-tools/dist/build-tools/processors -> go up 4 levels
+  // When source: build-tools/processors -> go up 2 levels
+  return join(__dirname, __dirname.includes('dist') ? '../../../../' : '../..');
 }
 
 function isDuplicate(existing: DictionaryEntry, newEntry: DictionaryEntry): boolean {

@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build:scripts": "tsc -p build-tools/tsconfig.json",
-    "build:dict": "pnpm build:scripts && node build-tools/dist/build-dictionaries.js",
-    "build": "pnpm build:dict && vite build",
+    "build:dict": "pnpm build:scripts && node build-tools/dist/build-tools/build-dictionaries.js",
+    "build": "pnpm build:dict && NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist src/data build-tools/dist"
   },
