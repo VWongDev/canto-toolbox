@@ -132,28 +132,6 @@ function hasValidDefinition(definition: DefinitionResult | null): boolean {
   return definition ? (isDefinitionValid(definition.mandarin.entries) || isDefinitionValid(definition.cantonese.entries)) : false;
 }
 
-function createNotFoundResult(word: string): DefinitionResult {
-  return {
-    word,
-    mandarin: { 
-      entries: [{ traditional: word, simplified: word, romanisation: '', definitions: ['Word not found in dictionary'] }]
-    },
-    cantonese: { entries: [] }
-  };
-}
-
-function createErrorResult(word: string): DefinitionResult {
-  return {
-    word,
-    mandarin: { 
-      entries: [{ traditional: word, simplified: word, romanisation: '', definitions: ['Dictionary files not loaded. Please ensure dictionaries submodules are initialized.'] }]
-    },
-    cantonese: { 
-      entries: [{ traditional: word, simplified: word, romanisation: '', definitions: ['Dictionary files not loaded'] }]
-    }
-  };
-}
-
 async function findLongestMatchingWord(word: string): Promise<{ definition: DefinitionResult; matchedWord: string } | null> {
   await preloadDictionaries();
   
@@ -181,18 +159,15 @@ async function lookupWord(word: string): Promise<DefinitionResult> {
     return cached.data;
   }
 
-  try {
-    const matchResult = await findLongestMatchingWord(word);
-    if (matchResult) {
-      matchResult.definition.word = matchResult.matchedWord;
-      lookupCache.set(word, { data: matchResult.definition, timestamp: Date.now() });
-      return matchResult.definition;
-    }
-    return createNotFoundResult(word);
-  } catch (error) {
-    console.error('[Dict] Dictionary lookup failed:', error);
-    return createErrorResult(word);
+  const matchResult = await findLongestMatchingWord(word);
+  if (matchResult) {
+    matchResult.definition.word = matchResult.matchedWord;
+    lookupCache.set(word, { data: matchResult.definition, timestamp: Date.now() });
+    return matchResult.definition;
   }
+  
+  console.error('[Dict] Word not found:', word);
+  throw new Error(`Word "${word}" not found in dictionary`);
 }
 
 async function updateStatisticsInStorage(storage: chrome.storage.StorageArea, word: string): Promise<void> {
