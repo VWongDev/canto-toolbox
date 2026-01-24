@@ -12,23 +12,324 @@ const POPUP_OFFSET_PX = 15;
 const SELECTION_PADDING_PX = 10;
 const VIEWPORT_MARGIN_PX = 10;
 
-let hoverTimer: ReturnType<typeof setTimeout> | null = null;
-let hideTimer: ReturnType<typeof setTimeout> | null = null;
-let lastHoveredWord: string | null = null;
-let lastHoveredOffset = -1;
-let currentPopup: HTMLElement | null = null;
-
 interface SelectionData {
   rect: DOMRect;
 }
 
-let currentSelection: SelectionData | null = null;
-let selectionPopupTimer: ReturnType<typeof setTimeout> | null = null;
-let isHoveringChinese = false;
-let lastHoveredElement: Node | null = null;
-let mousemoveThrottle: number | null = null;
-let lastMouseMoveTime = 0;
-let cachedPopupElement: HTMLElement | null = null;
+interface CursorResult {
+  word: string;
+  textNode: Text;
+  offset: number;
+}
+
+class ChineseHoverPopupManager {
+  private hoverTimer: ReturnType<typeof setTimeout> | null = null;
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastHoveredWord: string | null = null;
+  private lastHoveredOffset = -1;
+  private currentPopup: HTMLElement | null = null;
+  private currentSelection: SelectionData | null = null;
+  private selectionPopupTimer: ReturnType<typeof setTimeout> | null = null;
+  private isHoveringChinese = false;
+  private lastHoveredElement: Node | null = null;
+  private mousemoveThrottle: number | null = null;
+  private lastMouseMoveTime = 0;
+  private cachedPopupElement: HTMLElement | null = null;
+
+  handleMouseMove(event: MouseEvent): void {
+    const now = Date.now();
+    if (now - this.lastMouseMoveTime < THROTTLE_INTERVAL_MS) {
+      if (!this.mousemoveThrottle) {
+        this.mousemoveThrottle = requestAnimationFrame(() => {
+          this.handleMouseMoveThrottled(event);
+          this.mousemoveThrottle = null;
+          this.lastMouseMoveTime = Date.now();
+        });
+      }
+      return;
+    }
+    this.lastMouseMoveTime = now;
+    this.handleMouseMoveThrottled(event);
+  }
+
+  handleSelection(event: MouseEvent): void {
+    const selection = window.getSelection();
+    if (!selection) {
+      return;
+    }
+    
+    const selectedText = selection.toString().trim();
+    
+    if (!selectedText || selectedText.length === 0) {
+      if (this.currentSelection) {
+        this.currentSelection = null;
+        this.scheduleSelectionHide();
+      }
+      return;
+    }
+
+    const chineseWords = extractChineseWordsFromText(selectedText);
+    if (chineseWords.length === 0) {
+      return;
+    }
+
+    const word = chineseWords.join('');
+    
+    if (selection.rangeCount === 0) {
+      return;
+    }
+    
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    
+    this.currentSelection = { rect };
+    this.lookupAndShowWord(word, rect.left + rect.width / 2, rect.top - 10);
+  }
+
+  handleMouseOut(event: MouseEvent): void {
+    if (this.currentSelection) {
+      return;
+    }
+    
+    const relatedTarget = event.relatedTarget as HTMLElement | null;
+    if (relatedTarget && relatedTarget.closest('#chinese-hover-popup')) {
+      this.clearHideTimer();
+      return;
+    }
+    
+    this.clearHideTimer();
+    if (!this.isHoveringChinese && this.currentPopup) {
+      const popup = this.getCachedPopupElement();
+      if (!popup || !popup.matches(':hover')) {
+        this.hidePopup();
+        this.resetHoverState();
+        this.lastHoveredWord = null;
+      }
+    }
+  }
+
+  private handleMouseMoveThrottled(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return;
+    }
+    
+    if (this.currentSelection) {
+      this.handleSelectionTracking(event);
+      return;
+    }
+    
+    if (target.closest('#chinese-hover-popup')) {
+      this.clearHideTimer();
+      this.isHoveringChinese = true;
+      return;
+    }
+    
+    if (hasActiveSelection()) {
+      return;
+    }
+    
+    if (isNonTextElement(target.tagName)) {
+      if (this.isHoveringChinese) {
+        this.resetHoverState();
+        this.clearHideTimer();
+        this.hidePopup();
+      }
+      return;
+    }
+    
+    const result = getChineseWordAtCursor(event);
+    
+    if (!result) {
+      if (this.isHoveringChinese || this.currentPopup) {
+        this.resetHoverState();
+        this.clearHideTimer();
+        this.hidePopup();
+      }
+      return;
+    }
+    
+    const { word, textNode, offset } = result;
+    
+    this.isHoveringChinese = true;
+    this.clearHideTimer();
+    
+    const characterChanged = this.hasCharacterChanged(textNode, offset);
+    
+    this.lastHoveredElement = textNode;
+    this.lastHoveredOffset = offset;
+    
+    if (word !== this.lastHoveredWord || characterChanged) {
+      this.lastHoveredWord = word;
+      this.clearHoverTimer();
+      const isDifferentWord = this.lastHoveredWord && this.lastHoveredWord !== word;
+      if (isDifferentWord || characterChanged) {
+        this.lookupAndShowWord(word, event.clientX, event.clientY);
+      } else {
+        this.hoverTimer = setTimeout(() => {
+          this.lookupAndShowWord(word, event.clientX, event.clientY);
+        }, HOVER_DEBOUNCE_MS);
+      }
+    }
+  }
+
+  private handleSelectionTracking(event: MouseEvent): void {
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+    const rect = this.currentSelection!.rect;
+    const popup = this.getCachedPopupElement();
+    
+    const overSelection = isMouseOverSelection(mouseX, mouseY, rect);
+    const overPopup = isMouseOverPopup(mouseX, mouseY, popup);
+    
+    if (!overSelection && !overPopup) {
+      this.clearSelectionPopupTimer();
+      this.selectionPopupTimer = setTimeout(() => {
+        if (!hasActiveSelection()) {
+          this.currentSelection = null;
+          this.hidePopup();
+        }
+      }, SELECTION_TRACKING_DELAY_MS);
+    } else {
+      this.clearSelectionPopupTimer();
+    }
+  }
+
+  private lookupAndShowWord(word: string, x: number, y: number): void {
+    if (this.currentPopup && this.currentPopup.dataset.word === word) {
+      positionPopup(this.currentPopup, x, y);
+      trackWordStatistics(word);
+      return;
+    }
+
+    chrome.runtime.sendMessage(
+      { type: 'lookup_word', word: word },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('[Content] Extension error:', chrome.runtime.lastError);
+          return;
+        }
+
+        if (response && response.success && 'definition' in response && response.definition) {
+          const displayWord = response.definition.word || word;
+          this.showPopup(displayWord, response.definition, x, y);
+        } else {
+          const errorMsg = response && 'error' in response ? response.error : 'Lookup failed';
+          console.error('[Content] Lookup failed:', errorMsg);
+        }
+      }
+    );
+  }
+
+  private showPopup(word: string, definition: DefinitionResult, x: number, y: number): void {
+    this.hidePopup();
+    this.clearHideTimer();
+
+    const displayWord = definition.word || word;
+
+    const popup = createElement({
+      tag: 'div',
+      id: 'chinese-hover-popup',
+      className: 'chinese-hover-popup',
+      dataset: { word },
+      listeners: {
+        mouseenter: () => {
+          this.clearHideTimer();
+          this.isHoveringChinese = true;
+        },
+        mouseleave: () => {
+          if (!this.isHoveringChinese) {
+            this.hidePopup();
+          }
+        }
+      }
+    });
+    
+    const wordEl = createElement({
+      className: 'popup-word',
+      textContent: displayWord
+    });
+    
+    const sectionsContainer = createElement({
+      className: 'popup-sections-container',
+      children: [
+        createMandarinSection(definition.mandarin),
+        createCantoneseSection(definition.cantonese)
+      ]
+    });
+    
+    popup.appendChild(wordEl);
+    popup.appendChild(sectionsContainer);
+
+    document.body.appendChild(popup);
+    this.currentPopup = popup;
+    this.cachedPopupElement = popup;
+
+    positionPopup(popup, x, y);
+  }
+
+  private hidePopup(): void {
+    if (this.currentPopup) {
+      this.currentPopup.remove();
+      this.currentPopup = null;
+      this.cachedPopupElement = null;
+      this.lastHoveredWord = null;
+      this.lastHoveredElement = null;
+      this.lastHoveredOffset = -1;
+    }
+  }
+
+  private clearHideTimer(): void {
+    if (this.hideTimer) {
+      clearTimeout(this.hideTimer);
+      this.hideTimer = null;
+    }
+  }
+
+  private clearHoverTimer(): void {
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+      this.hoverTimer = null;
+    }
+  }
+
+  private resetHoverState(): void {
+    this.isHoveringChinese = false;
+    this.lastHoveredElement = null;
+    this.lastHoveredOffset = -1;
+  }
+
+  private scheduleSelectionHide(): void {
+    this.clearSelectionPopupTimer();
+    this.selectionPopupTimer = setTimeout(() => {
+      if (!this.currentSelection) {
+        this.hidePopup();
+      }
+    }, SELECTION_HIDE_DELAY_MS);
+  }
+
+  private clearSelectionPopupTimer(): void {
+    if (this.selectionPopupTimer) {
+      clearTimeout(this.selectionPopupTimer);
+      this.selectionPopupTimer = null;
+    }
+  }
+
+  private getCachedPopupElement(): HTMLElement | null {
+    if (!this.cachedPopupElement) {
+      this.cachedPopupElement = document.getElementById('chinese-hover-popup');
+    }
+    return this.cachedPopupElement;
+  }
+
+  private hasCharacterChanged(textNode: Node, offset: number): boolean {
+    const isSameTextNode = textNode === this.lastHoveredElement;
+    const offsetDiff = isSameTextNode ? Math.abs(offset - this.lastHoveredOffset) : 1;
+    return !isSameTextNode || offsetDiff >= 0.5;
+  }
+}
+
+const popupManager = new ChineseHoverPopupManager();
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
@@ -38,9 +339,9 @@ if (document.readyState === 'loading') {
 
 function init(): void {
   injectStyles();
-  document.addEventListener('mousemove', handleMouseMove, true);
-  document.addEventListener('mouseout', handleMouseOut, true);
-  document.addEventListener('mouseup', handleSelection, true);
+  document.addEventListener('mousemove', (e) => popupManager.handleMouseMove(e), true);
+  document.addEventListener('mouseout', (e) => popupManager.handleMouseOut(e), true);
+  document.addEventListener('mouseup', (e) => popupManager.handleSelection(e), true);
 }
 
 function injectStyles(): void {
@@ -54,12 +355,6 @@ function injectStyles(): void {
   });
   style.textContent = popupStyles;
   document.head.appendChild(style);
-}
-
-interface CursorResult {
-  word: string;
-  textNode: Text;
-  offset: number;
 }
 
 function getTextNodeAtCursor(event: MouseEvent): { textNode: Text; offset: number } | null {
@@ -114,83 +409,9 @@ function getChineseWordAtCursor(event: MouseEvent): CursorResult | null {
   };
 }
 
-
 function extractChineseWordsFromText(text: string): string[] {
   const matches = text.match(CHINESE_REGEX);
   return matches || [];
-}
-
-function clearSelectionPopupTimer(): void {
-  if (selectionPopupTimer) {
-    clearTimeout(selectionPopupTimer);
-    selectionPopupTimer = null;
-  }
-}
-
-function scheduleSelectionHide(): void {
-  clearSelectionPopupTimer();
-  selectionPopupTimer = setTimeout(() => {
-    if (!currentSelection) {
-      hidePopup();
-    }
-  }, SELECTION_HIDE_DELAY_MS);
-}
-
-function handleSelection(event: MouseEvent): void {
-  const selection = window.getSelection();
-  if (!selection) {
-    return;
-  }
-  
-  const selectedText = selection.toString().trim();
-  
-  if (!selectedText || selectedText.length === 0) {
-    if (currentSelection) {
-      currentSelection = null;
-      scheduleSelectionHide();
-    }
-    return;
-  }
-
-  const chineseWords = extractChineseWordsFromText(selectedText);
-  if (chineseWords.length === 0) {
-    return;
-  }
-
-  const word = chineseWords.join('');
-  
-  if (selection.rangeCount === 0) {
-    return;
-  }
-  
-  const range = selection.getRangeAt(0);
-  const rect = range.getBoundingClientRect();
-  
-  currentSelection = { rect };
-  lookupAndShowWord(word, rect.left + rect.width / 2, rect.top - 10);
-}
-
-function handleMouseMove(event: MouseEvent): void {
-  const now = Date.now();
-  if (now - lastMouseMoveTime < THROTTLE_INTERVAL_MS) {
-    if (!mousemoveThrottle) {
-      mousemoveThrottle = requestAnimationFrame(() => {
-        handleMouseMoveThrottled(event);
-        mousemoveThrottle = null;
-        lastMouseMoveTime = Date.now();
-      });
-    }
-    return;
-  }
-  lastMouseMoveTime = now;
-  handleMouseMoveThrottled(event);
-}
-
-function getCachedPopupElement(): HTMLElement | null {
-  if (!cachedPopupElement) {
-    cachedPopupElement = document.getElementById('chinese-hover-popup');
-  }
-  return cachedPopupElement;
 }
 
 function isMouseOverSelection(mouseX: number, mouseY: number, rect: DOMRect): boolean {
@@ -213,143 +434,8 @@ function hasActiveSelection(): boolean {
   return selection ? selection.toString().trim().length > 0 : false;
 }
 
-function handleSelectionTracking(event: MouseEvent): void {
-  const mouseX = event.clientX;
-  const mouseY = event.clientY;
-  const rect = currentSelection!.rect;
-  const popup = getCachedPopupElement();
-  
-  const overSelection = isMouseOverSelection(mouseX, mouseY, rect);
-  const overPopup = isMouseOverPopup(mouseX, mouseY, popup);
-  
-  if (!overSelection && !overPopup) {
-    clearSelectionPopupTimer();
-    selectionPopupTimer = setTimeout(() => {
-      if (!hasActiveSelection()) {
-        currentSelection = null;
-        hidePopup();
-      }
-    }, SELECTION_TRACKING_DELAY_MS);
-  } else {
-    clearSelectionPopupTimer();
-  }
-}
-
 function isNonTextElement(tagName: string): boolean {
   return tagName === 'SCRIPT' || tagName === 'STYLE' || tagName === 'NOSCRIPT';
-}
-
-function clearHideTimer(): void {
-  if (hideTimer) {
-    clearTimeout(hideTimer);
-    hideTimer = null;
-  }
-}
-
-function clearHoverTimer(): void {
-  if (hoverTimer) {
-    clearTimeout(hoverTimer);
-    hoverTimer = null;
-  }
-}
-
-function resetHoverState(): void {
-  isHoveringChinese = false;
-  lastHoveredElement = null;
-  lastHoveredOffset = -1;
-}
-
-function hasCharacterChanged(textNode: Node, offset: number): boolean {
-  const isSameTextNode = textNode === lastHoveredElement;
-  const offsetDiff = isSameTextNode ? Math.abs(offset - lastHoveredOffset) : 1;
-  return !isSameTextNode || offsetDiff >= 0.5;
-}
-
-function handleMouseMoveThrottled(event: MouseEvent): void {
-  const target = event.target as HTMLElement | null;
-  if (!target) {
-    return;
-  }
-  
-  if (currentSelection) {
-    handleSelectionTracking(event);
-    return;
-  }
-  
-  if (target.closest('#chinese-hover-popup')) {
-    clearHideTimer();
-    isHoveringChinese = true;
-    return;
-  }
-  
-  if (hasActiveSelection()) {
-    return;
-  }
-  
-  if (isNonTextElement(target.tagName)) {
-    if (isHoveringChinese) {
-      resetHoverState();
-      clearHideTimer();
-      hidePopup();
-    }
-    return;
-  }
-  
-  const result = getChineseWordAtCursor(event);
-  
-  if (!result) {
-    if (isHoveringChinese || currentPopup) {
-      resetHoverState();
-      clearHideTimer();
-      hidePopup();
-    }
-    return;
-  }
-  
-  const { word, textNode, offset } = result;
-  
-  isHoveringChinese = true;
-  clearHideTimer();
-  
-  const characterChanged = hasCharacterChanged(textNode, offset);
-  
-  lastHoveredElement = textNode;
-  lastHoveredOffset = offset;
-  
-  if (word !== lastHoveredWord || characterChanged) {
-    lastHoveredWord = word;
-    clearHoverTimer();
-    const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
-    if (isDifferentWord || characterChanged) {
-      lookupAndShowWord(word, event.clientX, event.clientY);
-    } else {
-      hoverTimer = setTimeout(() => {
-        lookupAndShowWord(word, event.clientX, event.clientY);
-      }, HOVER_DEBOUNCE_MS);
-    }
-  }
-}
-
-function handleMouseOut(event: MouseEvent): void {
-  if (currentSelection) {
-    return;
-  }
-  
-  const relatedTarget = event.relatedTarget as HTMLElement | null;
-  if (relatedTarget && relatedTarget.closest('#chinese-hover-popup')) {
-    clearHideTimer();
-    return;
-  }
-  
-  clearHideTimer();
-  if (!isHoveringChinese && currentPopup) {
-    const popup = cachedPopupElement || document.getElementById('chinese-hover-popup');
-    if (!popup || !popup.matches(':hover')) {
-      hidePopup();
-      resetHoverState();
-      lastHoveredWord = null;
-    }
-  }
 }
 
 function trackWordStatistics(word: string): void {
@@ -360,32 +446,6 @@ function trackWordStatistics(word: string): void {
         console.warn('[Content] Statistics tracking error:', chrome.runtime.lastError);
       } else if (response && !response.success) {
         console.warn('[Content] Statistics tracking failed:', response.error);
-      }
-    }
-  );
-}
-
-function lookupAndShowWord(word: string, x: number, y: number): void {
-  if (currentPopup && currentPopup.dataset.word === word) {
-    positionPopup(currentPopup, x, y);
-    trackWordStatistics(word);
-    return;
-  }
-
-  chrome.runtime.sendMessage(
-    { type: 'lookup_word', word: word },
-    (response) => {
-      if (chrome.runtime.lastError) {
-        console.error('[Content] Extension error:', chrome.runtime.lastError);
-        return;
-      }
-
-      if (response && response.success && 'definition' in response && response.definition) {
-        const displayWord = response.definition.word || word;
-        showPopup(displayWord, response.definition, x, y);
-      } else {
-        const errorMsg = response && 'error' in response ? response.error : 'Lookup failed';
-        console.error('[Content] Lookup failed:', errorMsg);
       }
     }
   );
@@ -475,53 +535,6 @@ function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): H
   return createPronunciationSection(cantoneseData, 'Cantonese', 'jyutping');
 }
 
-function showPopup(word: string, definition: DefinitionResult, x: number, y: number): void {
-  hidePopup();
-  clearHideTimer();
-
-  const displayWord = definition.word || word;
-
-  const popup = createElement({
-    tag: 'div',
-    id: 'chinese-hover-popup',
-    className: 'chinese-hover-popup',
-    dataset: { word },
-    listeners: {
-      mouseenter: () => {
-        clearHideTimer();
-        isHoveringChinese = true;
-      },
-      mouseleave: () => {
-        if (!isHoveringChinese) {
-          hidePopup();
-        }
-      }
-    }
-  });
-  
-  const wordEl = createElement({
-    className: 'popup-word',
-    textContent: displayWord
-  });
-  
-  const sectionsContainer = createElement({
-    className: 'popup-sections-container',
-    children: [
-      createMandarinSection(definition.mandarin),
-      createCantoneseSection(definition.cantonese)
-    ]
-  });
-  
-  popup.appendChild(wordEl);
-  popup.appendChild(sectionsContainer);
-
-  document.body.appendChild(popup);
-  currentPopup = popup;
-  cachedPopupElement = popup;
-
-  positionPopup(popup, x, y);
-}
-
 function calculatePopupPosition(x: number, y: number, popupRect: DOMRect): { left: number; top: number } {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
@@ -551,15 +564,3 @@ function positionPopup(popup: HTMLElement, x: number, y: number): void {
   popup.style.left = `${left}px`;
   popup.style.top = `${top}px`;
 }
-
-function hidePopup(): void {
-  if (currentPopup) {
-    currentPopup.remove();
-    currentPopup = null;
-    cachedPopupElement = null;
-    lastHoveredWord = null;
-    lastHoveredElement = null;
-    lastHoveredOffset = -1;
-  }
-}
-
