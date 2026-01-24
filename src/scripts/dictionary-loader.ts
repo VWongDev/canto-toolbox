@@ -3,7 +3,6 @@ import mandarinDictData from '../data/mandarin.json';
 import cantoneseDictData from '../data/cantonese.json';
 
 const CANTONESE_MARKER = '(cantonese)';
-const NOT_FOUND_MESSAGE = 'Word not found in dictionary';
 
 const mandarinDict = mandarinDictData as Dictionary;
 const cantoneseDict = cantoneseDictData as Dictionary;
@@ -44,21 +43,6 @@ function processDictionaryLookup(
   return filterCantonese ? filterOutCantoneseDefinitions(entries) : entries;
 }
 
-function setNotFoundMessages(result: DefinitionResult): void {
-  const hasMandarin = result.mandarin.entries.length > 0;
-  const hasCantonese = result.cantonese.entries.length > 0;
-  
-  if (!hasMandarin && !hasCantonese) {
-    // Add a not-found entry for mandarin
-    result.mandarin.entries = [{
-      traditional: result.word,
-      simplified: result.word,
-      romanisation: '',
-      definitions: [NOT_FOUND_MESSAGE]
-    }];
-  }
-}
-
 export function lookupWordInDictionaries(word: string): DefinitionResult {
   const result: DefinitionResult = {
     word: word,
@@ -68,8 +52,6 @@ export function lookupWordInDictionaries(word: string): DefinitionResult {
 
   result.mandarin.entries = processDictionaryLookup(mandarinDict, word, true);
   result.cantonese.entries = processDictionaryLookup(cantoneseDict, word, false);
-
-  setNotFoundMessages(result);
 
   return result;
 }
