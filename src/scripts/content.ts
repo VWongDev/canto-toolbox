@@ -104,30 +104,33 @@ function injectStyles(): void {
       box-sizing: border-box;
     }
     .popup-pronunciations-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+      column-count: 2;
+      column-gap: 12px;
       max-width: 100%;
       width: 100%;
       box-sizing: border-box;
     }
     .popup-pronunciations-grid[data-count="1"] {
-      grid-template-columns: minmax(0, 1fr);
+      column-count: 1;
     }
     .popup-pronunciations-grid[data-count="2"] {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-count: 2;
     }
     @media (max-width: 600px) {
       .popup-pronunciations-grid {
-        grid-template-columns: 1fr;
+        column-count: 1;
       }
     }
     .popup-pronunciation-group {
-      margin-bottom: 0;
+      break-inside: avoid;
+      margin-bottom: 12px;
       min-width: 0;
       max-width: 100%;
       overflow: hidden;
       box-sizing: border-box;
+    }
+    .popup-pronunciation-group:last-child {
+      margin-bottom: 0;
     }
     .popup-label {
       font-size: 11px;
