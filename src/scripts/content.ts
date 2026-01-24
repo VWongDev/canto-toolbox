@@ -1,5 +1,6 @@
 import type { DefinitionResult, DictionaryEntry } from '../types';
 import { createElement, clearElement } from './dom-utils';
+import { MessageManager } from './background.js';
 import popupStyles from '../css/popup.css?raw';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
@@ -24,7 +25,7 @@ interface CursorResult {
 
 class ChineseHoverPopupManager {
   private readonly document: Document;
-  private readonly chromeRuntime: typeof chrome.runtime;
+  private readonly messageManager: MessageManager;
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastHoveredWord: string | null = null;
@@ -40,7 +41,7 @@ class ChineseHoverPopupManager {
 
   constructor(document: Document, chromeRuntime: typeof chrome.runtime) {
     this.document = document;
-    this.chromeRuntime = chromeRuntime;
+    this.messageManager = new MessageManager(chromeRuntime);
   }
 
   init(): void {
@@ -203,27 +204,18 @@ class ChineseHoverPopupManager {
   private lookupAndShowWord(word: string, x: number, y: number): void {
     if (this.currentPopup && this.currentPopup.dataset.word === word) {
       positionPopup(this.currentPopup, x, y);
-      trackWordStatistics(word, this.chromeRuntime);
+      trackWordStatistics(word, this.messageManager);
       return;
     }
 
-    this.chromeRuntime.sendMessage(
-      { type: 'lookup_word', word: word },
-      (response) => {
-        if (this.chromeRuntime.lastError) {
-          console.error('[Content] Extension error:', this.chromeRuntime.lastError);
-          return;
-        }
-
-        if (response && response.success && 'definition' in response && response.definition) {
-          const displayWord = response.definition.word || word;
-          this.showPopup(displayWord, response.definition, x, y);
-        } else {
-          const errorMsg = response && 'error' in response ? response.error : 'Lookup failed';
-          console.error('[Content] Lookup failed:', errorMsg);
-        }
+    this.messageManager.lookupWord(word, (response) => {
+      if (response.success && 'definition' in response) {
+        const displayWord = response.definition.word || word;
+        this.showPopup(displayWord, response.definition, x, y);
+      } else {
+        console.error('[Content] Lookup failed:', response.error);
       }
-    );
+    });
   }
 
   private showPopup(word: string, definition: DefinitionResult, x: number, y: number): void {
@@ -432,17 +424,12 @@ function hasActiveSelection(): boolean {
   return selection ? selection.toString().trim().length > 0 : false;
 }
 
-function trackWordStatistics(word: string, chromeRuntime: typeof chrome.runtime): void {
-  chromeRuntime.sendMessage(
-    { type: 'track_word', word: word },
-    (response) => {
-      if (chromeRuntime.lastError) {
-        console.warn('[Content] Statistics tracking error:', chromeRuntime.lastError);
-      } else if (response && !response.success) {
-        console.warn('[Content] Statistics tracking failed:', response.error);
-      }
+function trackWordStatistics(word: string, messageManager: MessageManager): void {
+  messageManager.trackWord(word, (response) => {
+    if (!response.success) {
+      console.warn('[Content] Statistics tracking failed:', response.error);
     }
-  );
+  });
 }
 
 function createDefinitionElement(definitions: string[]): HTMLElement {

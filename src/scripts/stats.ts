@@ -1,5 +1,6 @@
-import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, DictionaryEntry } from '../types';
+import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, DictionaryEntry, ErrorResponse } from '../types';
 import { createElement, clearElement } from './dom-utils';
+import { MessageManager } from './background.js';
 
 const ELEMENT_IDS = {
   loading: 'loading',
@@ -15,12 +16,12 @@ const EXPAND_ICON_EXPANDED = '▼';
 
 class StatsManager {
   private readonly document: Document;
-  private readonly chromeRuntime: typeof chrome.runtime;
+  private readonly messageManager: MessageManager;
   private readonly chromeStorage: typeof chrome.storage;
 
   constructor(document: Document, chromeRuntime: typeof chrome.runtime, chromeStorage: typeof chrome.storage) {
     this.document = document;
-    this.chromeRuntime = chromeRuntime;
+    this.messageManager = new MessageManager(chromeRuntime);
     this.chromeStorage = chromeStorage;
   }
 
@@ -48,16 +49,10 @@ class StatsManager {
     loadingEl.style.color = '#dc3545';
   }
 
-  private handleStatisticsResponse(response: StatisticsResponse | undefined, elements: ReturnType<typeof this.getRequiredElements>): void {
+  private handleStatisticsResponse(response: StatisticsResponse | ErrorResponse | undefined, elements: ReturnType<typeof this.getRequiredElements>): void {
     if (!elements) return;
 
     const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
-
-    if (this.chromeRuntime.lastError) {
-      console.error('[Stats] Error getting statistics:', this.chromeRuntime.lastError);
-      this.showError(loadingEl, 'Error loading statistics: ' + this.chromeRuntime.lastError.message);
-      return;
-    }
 
     if (!response) {
       console.error('[Stats] No response received');
@@ -67,14 +62,7 @@ class StatsManager {
 
     if (!response.success) {
       console.error('[Stats] Failed to load statistics:', response);
-      const errorMsg = 'error' in response ? response.error : 'Unknown error';
-      this.showError(loadingEl, 'Failed to load statistics: ' + errorMsg);
-      return;
-    }
-
-    if (!('statistics' in response)) {
-      console.error('[Stats] Invalid response format');
-      this.showError(loadingEl, 'Invalid response from background script.');
+      this.showError(loadingEl, 'Failed to load statistics: ' + response.error);
       return;
     }
 
@@ -113,7 +101,7 @@ class StatsManager {
     const elements = this.getRequiredElements();
     if (!elements) return;
 
-    this.chromeRuntime.sendMessage({ type: 'get_statistics' }, (response: StatisticsResponse | undefined) => {
+    this.messageManager.getStatistics((response) => {
       this.handleStatisticsResponse(response, elements);
     });
   }
@@ -190,19 +178,28 @@ class StatsManager {
     }
   }
 
-  private handleDefinitionResponse(response: LookupResponse | undefined, container: HTMLElement, word: string): void {
+  private handleDefinitionResponse(response: LookupResponse | ErrorResponse | undefined, container: HTMLElement, word: string): void {
     clearElement(container);
     
-    if (this.chromeRuntime.lastError) {
+    if (!response) {
       const errorEl = createElement({
         className: 'stat-error',
-        textContent: `Error: ${this.chromeRuntime.lastError.message}`
+        textContent: 'No response received'
       });
       container.appendChild(errorEl);
       return;
     }
 
-    if (!response || !response.success || !('definition' in response) || !response.definition) {
+    if (!response.success) {
+      const errorEl = createElement({
+        className: 'stat-error',
+        textContent: `Error: ${response.error}`
+      });
+      container.appendChild(errorEl);
+      return;
+    }
+
+    if (!('definition' in response) || !response.definition) {
       const errorEl = createElement({
         className: 'stat-error',
         textContent: 'Definition not found'
@@ -227,7 +224,7 @@ class StatsManager {
     container.appendChild(loadingEl);
     container.style.display = 'block';
 
-    this.chromeRuntime.sendMessage({ type: 'lookup_word', word: word }, (response: LookupResponse | undefined) => {
+    this.messageManager.lookupWord(word, (response) => {
       this.handleDefinitionResponse(response, container, word);
     });
   }

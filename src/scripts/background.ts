@@ -1,5 +1,88 @@
 import { loadDictionaries, lookupWordInDictionaries } from './dictionary-loader.js';
-import type { DefinitionResult, BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, DictionaryEntry } from '../types';
+import type { DefinitionResult, BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, DictionaryEntry, LookupResponse, ErrorResponse } from '../types';
+
+export class MessageManager {
+  private readonly chromeRuntime: typeof chrome.runtime;
+
+  constructor(chromeRuntime: typeof chrome.runtime) {
+    this.chromeRuntime = chromeRuntime;
+  }
+
+  lookupWord(word: string, callback: (response: LookupResponse | ErrorResponse) => void): void {
+    this.chromeRuntime.sendMessage(
+      { type: 'lookup_word', word },
+      (response: BackgroundResponse | undefined) => {
+        if (this.chromeRuntime.lastError) {
+          callback({
+            success: false,
+            error: this.chromeRuntime.lastError.message || 'Unknown error'
+          });
+          return;
+        }
+
+        if (response && response.success && 'definition' in response) {
+          callback(response as LookupResponse);
+        } else {
+          const errorMsg = response && 'error' in response ? response.error : 'Lookup failed';
+          callback({
+            success: false,
+            error: errorMsg
+          });
+        }
+      }
+    );
+  }
+
+  trackWord(word: string, callback: (response: TrackWordResponse | ErrorResponse) => void): void {
+    this.chromeRuntime.sendMessage(
+      { type: 'track_word', word },
+      (response: BackgroundResponse | undefined) => {
+        if (this.chromeRuntime.lastError) {
+          callback({
+            success: false,
+            error: this.chromeRuntime.lastError.message || 'Unknown error'
+          });
+          return;
+        }
+
+        if (response && response.success) {
+          callback(response as TrackWordResponse);
+        } else {
+          const errorMsg = response && 'error' in response ? response.error : 'Tracking failed';
+          callback({
+            success: false,
+            error: errorMsg
+          });
+        }
+      }
+    );
+  }
+
+  getStatistics(callback: (response: StatisticsResponse | ErrorResponse) => void): void {
+    this.chromeRuntime.sendMessage(
+      { type: 'get_statistics' },
+      (response: BackgroundResponse | undefined) => {
+        if (this.chromeRuntime.lastError) {
+          callback({
+            success: false,
+            error: this.chromeRuntime.lastError.message || 'Unknown error'
+          });
+          return;
+        }
+
+        if (response && response.success && 'statistics' in response) {
+          callback(response as StatisticsResponse);
+        } else {
+          const errorMsg = response && 'error' in response ? response.error : 'Failed to get statistics';
+          callback({
+            success: false,
+            error: errorMsg
+          });
+        }
+      }
+    );
+  }
+}
 
 interface CacheEntry {
   data: DefinitionResult;
