@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { parseCedictFormat } from './cedict-parser.js';
 import { getRootDir, addDictionaryEntry } from './utils.js';
-import type { Dictionary, DictionaryEntry } from '../types.js';
+import type { Dictionary, DictionaryEntry } from '../../src/types.js';
 
 const rootDir = getRootDir();
 

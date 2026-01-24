@@ -1,6 +1,6 @@
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import type { Dictionary, DictionaryEntry } from '../types.js';
+import type { Dictionary, DictionaryEntry } from '../../src/types.js';
 
 /**
  * Get the root directory of the project

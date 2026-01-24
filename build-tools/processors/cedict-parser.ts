@@ -3,7 +3,7 @@
  * Format: Traditional Simplified [pinyin] {jyutping} /def1/def2/
  */
 import { addDictionaryEntry } from './utils.js';
-import type { Dictionary, DictionaryEntry } from '../types.js';
+import type { Dictionary, DictionaryEntry } from '../../src/types.js';
 
 export function parseCedictFormat(text: string): Dictionary {
   const dict: Dictionary = {};

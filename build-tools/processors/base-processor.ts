@@ -1,4 +1,4 @@
-import type { Dictionary } from '../types.js';
+import type { Dictionary } from '../../src/types.js';
 
 /**
  * Base interface for dictionary processors

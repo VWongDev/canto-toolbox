@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { pathToFileURL } from 'url';
 import { getRootDir, addDictionaryEntry } from './utils.js';
-import type { Dictionary, DictionaryEntry } from '../types.js';
+import type { Dictionary, DictionaryEntry } from '../../src/types.js';
 
 const rootDir = getRootDir();
 
