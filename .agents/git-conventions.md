@@ -39,6 +39,8 @@ The domain specifies the area of the codebase affected:
 - Start with a capitalized verb (e.g., "Add", "Fix", "Implement")
 - Use present tense
 - Be concise but descriptive
+- Use a single sentence
+- Avoid commas
 - No period at the end
 
 ### Examples
