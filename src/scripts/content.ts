@@ -611,18 +611,11 @@ function showErrorPopup(word: string, x: number, y: number, error: string): void
   showPopup(word, errorDef, x, y);
 }
 
-function createDefinitionElement(definitions: string[] | undefined): HTMLElement {
-  if (!definitions || definitions.length === 0) {
+function createDefinitionElement(definitions: string[]): HTMLElement {
+  if (definitions.length === 0) {
     return createElement({
       className: 'popup-definition',
       textContent: 'Not found'
-    });
-  }
-  
-  if (definitions.length === 1) {
-    return createElement({
-      className: 'popup-definition',
-      textContent: definitions[0]
     });
   }
   
