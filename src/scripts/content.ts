@@ -28,7 +28,6 @@ let isHoveringChinese = false;
 let lastHoveredElement: Node | null = null;
 let mousemoveThrottle: number | null = null;
 let lastMouseMoveTime = 0;
-let cachedSelection: boolean | null = null;
 let cachedPopupElement: HTMLElement | null = null;
 
 if (document.readyState === 'loading') {
@@ -154,10 +153,8 @@ function handleSelection(event: MouseEvent): void {
   }
   
   const selectedText = selection.toString().trim();
-  cachedSelection = selectedText.length > 0;
   
   if (!selectedText || selectedText.length === 0) {
-    cachedSelection = false;
     if (currentSelection) {
       currentSelection = null;
       scheduleSelectionHide();
@@ -225,11 +222,9 @@ function isMouseOverPopup(mouseX: number, mouseY: number, popup: HTMLElement | n
          mouseY <= popup.offsetTop + popup.offsetHeight;
 }
 
-function updateCachedSelection(): void {
-  if (cachedSelection === null) {
-    const selection = window.getSelection();
-    cachedSelection = selection ? selection.toString().trim().length > 0 : false;
-  }
+function hasActiveSelection(): boolean {
+  const selection = window.getSelection();
+  return selection ? selection.toString().trim().length > 0 : false;
 }
 
 function handleSelectionTracking(event: MouseEvent): void {
@@ -244,8 +239,7 @@ function handleSelectionTracking(event: MouseEvent): void {
   if (!overSelection && !overPopup) {
     clearSelectionPopupTimer();
     selectionPopupTimer = setTimeout(() => {
-      updateCachedSelection();
-      if (!cachedSelection || (!overSelection && !overPopup)) {
+      if (!hasActiveSelection()) {
         currentSelection = null;
         hidePopup();
       }
@@ -302,8 +296,7 @@ function handleMouseMoveThrottled(event: MouseEvent): void {
     return;
   }
   
-  updateCachedSelection();
-  if (cachedSelection) {
+  if (hasActiveSelection()) {
     return;
   }
   
@@ -331,7 +324,6 @@ function handleMouseMoveThrottled(event: MouseEvent): void {
   
   isHoveringChinese = true;
   clearHideTimer();
-  cachedSelection = false;
   
   const characterChanged = hasCharacterChanged(textNode, offset);
   
