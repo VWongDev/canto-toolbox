@@ -34,6 +34,8 @@ The domain specifies the area of the codebase affected:
 - `api`: API integration
 - `global`: Repository-wide changes
 
+Multiple domains can be specified when a change affects multiple areas (e.g., `refactor(content, stats)`). If more than 3 domains would be specified, use `global` instead.
+
 ### Description
 
 - Start with a capitalized verb (e.g., "Add", "Fix", "Implement")
@@ -50,6 +52,7 @@ feat(manifest): Add extension manifest configuration
 fix(icons): Add blank placeholder icons for extension loading
 feat(background): Implement dictionary API and statistics tracking
 fix(api): Improve error handling and logging for API failures
+refactor(content, stats): Extract shared pronunciation section utilities
 ai(global): Add agent documentation files
 ```
 
@@ -65,3 +68,5 @@ ai(global): Add agent documentation files
 2. Write clear, descriptive commit messages
 3. Reference related issues when applicable
 4. Keep commits focused on one domain when possible
+5. Use multiple domains when a change affects multiple areas (e.g., `refactor(content, stats)`)
+6. Use `global` domain if more than 3 domains would be specified
