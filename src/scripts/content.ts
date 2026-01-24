@@ -101,11 +101,32 @@ function injectStyles(): void {
       min-width: 0;
       flex-shrink: 0;
     }
-    .popup-pronunciation-group {
-      margin-bottom: 8px;
+    .popup-pronunciations-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-width: 100%;
     }
-    .popup-pronunciation-group:last-child {
+    .popup-pronunciations-grid[data-count="1"] {
+      grid-template-columns: 1fr;
+    }
+    .popup-pronunciations-grid[data-count="2"] {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    @media (max-width: 500px) {
+      .popup-pronunciations-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (min-width: 501px) and (max-width: 600px) {
+      .popup-pronunciations-grid[data-count="3"],
+      .popup-pronunciations-grid[data-count="4"] {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    .popup-pronunciation-group {
       margin-bottom: 0;
+      min-width: 0;
     }
     .popup-label {
       font-size: 11px;
@@ -787,7 +808,11 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
       byPinyin[pinyin].push(...defs.filter(d => d && String(d).trim().length > 0));
     }
     
+    const pinyinKeys = Object.keys(byPinyin);
+    const pronunciationCount = Math.min(pinyinKeys.length, 3); // Use count for responsive layout (max 3 columns)
+    
     let html = '<div class="popup-label">Mandarin</div>';
+    html += `<div class="popup-pronunciations-grid" data-count="${pronunciationCount}">`;
     for (const [pinyin, defs] of Object.entries(byPinyin)) {
       const defsStr = defs.join('; ');
       html += `
@@ -797,6 +822,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
         </div>
       `;
     }
+    html += '</div>';
     return html;
   };
 
@@ -829,7 +855,11 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
       byJyutping[jyutping].push(...defs.filter(d => d && String(d).trim().length > 0));
     }
     
+    const jyutpingKeys = Object.keys(byJyutping);
+    const pronunciationCount = Math.min(jyutpingKeys.length, 3); // Use count for responsive layout (max 3 columns)
+    
     let html = '<div class="popup-label">Cantonese</div>';
+    html += `<div class="popup-pronunciations-grid" data-count="${pronunciationCount}">`;
     for (const [jyutping, defs] of Object.entries(byJyutping)) {
       const defsStr = defs.join('; ');
       const hasDefinition = defsStr && defsStr.trim().length > 0;
@@ -843,6 +873,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
         </div>
       `;
     }
+    html += '</div>';
     return html;
   };
 
