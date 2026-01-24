@@ -5,19 +5,38 @@
 ```
 canto-toolbox/
 ├── manifest.json              # Chrome extension manifest (Manifest V3)
-├── background.js              # Service worker for dictionary lookups and statistics
-├── content.js                # Content script for hover detection
-├── dictionary-loader.js      # Dictionary file loading and searching
-├── popup.css                 # Popup styling (injected via content script)
-├── stats.html                # Statistics page HTML
-├── stats.js                  # Statistics page logic
-├── stats.css                 # Statistics page styling
+├── vite.config.ts            # Vite build configuration
+├── tsconfig.json             # TypeScript configuration
+├── src/
+│   ├── scripts/
+│   │   ├── background.ts     # Service worker for dictionary lookups and statistics
+│   │   ├── content.ts        # Content script for hover detection
+│   │   ├── dictionary-loader.ts  # Dictionary lookup functions
+│   │   ├── dom-utils.ts      # DOM manipulation utilities
+│   │   └── stats.ts          # Statistics page logic
+│   ├── css/
+│   │   ├── popup.css         # Popup styling
+│   │   └── stats.css         # Statistics page styling
+│   ├── html/
+│   │   └── stats.html        # Statistics page HTML
+│   ├── data/
+│   │   ├── mandarin.json     # Pre-processed Mandarin dictionary
+│   │   └── cantonese.json    # Pre-processed Cantonese dictionary
+│   ├── utils/
+│   │   ├── dictionary-utils.ts  # Dictionary data transformation utilities
+│   │   └── ui-helpers.ts     # Shared UI component creation utilities
+│   ├── types.ts              # TypeScript type definitions
+│   └── vite-env.d.ts         # Vite environment type declarations
+├── build-tools/              # Build-time dictionary processing
+│   ├── processors/           # Dictionary processors
+│   └── build-dictionaries.ts # Dictionary build script
+├── dictionaries/             # Dictionary submodule (git submodule)
+│   ├── mandarin/             # CC-CEDICT source data
+│   └── cantonese/            # CC-CANTO source data
 ├── icons/                    # Extension icons
 │   ├── icon16.png
 │   ├── icon48.png
 │   └── icon128.png
-├── dictionaries/             # Dictionary submodule (git submodule)
-│   └── [cc-cedict-yomitan repository]
 └── .agents/                  # AI agent documentation
     ├── git-conventions.md
     └── architecture.md
@@ -30,56 +49,59 @@ flowchart TD
     A[Web Page] -->|Hover Event| B[Content Script]
     B -->|Detect Chinese Word| C[Background Service Worker]
     C -->|Lookup Definition| D[Dictionary Loader]
-    D -->|Read Local Files| E[Dictionary Files]
+    D -->|Static Import| E[Dictionary JSON Files]
     E -->|Return Data| D
     D -->|Definition| C
     C -->|Display Popup| B
     C -->|Update Statistics| F[Chrome Sync Storage]
     G[Statistics Page] -->|Read Data| F
-    G -->|Render Charts| H[Statistics Display]
+    G -->|Render Display| H[Statistics UI]
 ```
 
 ## Components
 
-### Content Script (`content.js`)
+### Content Script (`content.ts`)
 
 - **Purpose**: Detects Chinese characters on web pages and handles hover events
+- **Key Class**: `ChineseHoverPopupManager` - Encapsulates popup display and selection logic
 - **Responsibilities**:
   - Inject CSS styles into pages
   - Listen for mouseover events
   - Detect Chinese characters using regex `[\u4e00-\u9fff]+`
   - Extract Chinese words from text
-  - Send lookup requests to background script
-  - Display popup with definitions
+  - Send lookup requests to background script via `MessageManager`
+  - Display popup with definitions using shared UI utilities
 
-### Background Service Worker (`background.js`)
+### Background Service Worker (`background.ts`)
 
 - **Purpose**: Handles dictionary lookups and statistics tracking
+- **Key Class**: `MessageManager` - Provides typed message passing interface
 - **Responsibilities**:
   - Receive lookup requests from content script
-  - Load and search dictionary files
-  - Cache lookup results
+  - Search statically imported dictionary data (synchronous lookups)
   - Track word statistics in Chrome sync storage
   - Provide statistics data to stats page
+  - Handle longest matching word algorithm for multi-character lookups
 
-### Dictionary Loader (`dictionary-loader.js`)
+### Dictionary Loader (`dictionary-loader.ts`)
 
-- **Purpose**: Load and search local dictionary files
+- **Purpose**: Search statically imported dictionary data
 - **Responsibilities**:
-  - Load CC-CEDICT (Mandarin) dictionary files
-  - Load CC-CANTO (Cantonese) dictionary files
-  - Search dictionaries for word definitions
-  - Extract pinyin and jyutping pronunciations
-  - Handle multiple dictionary file formats
+  - Statically import pre-processed Mandarin and Cantonese dictionary JSON files
+  - Search dictionaries for word definitions (synchronous, O(1) lookups)
+  - Filter out Cantonese markers from Mandarin entries
+  - Return structured definition results with entries grouped by pronunciation
 
-### Statistics Page (`stats.html`, `stats.js`, `stats.css`)
+### Statistics Page (`stats.html`, `stats.ts`, `stats.css`)
 
 - **Purpose**: Display word frequency statistics
+- **Key Class**: `StatsManager` - Encapsulates statistics page logic and UI interactions
 - **Responsibilities**:
-  - Load statistics from Chrome sync storage
-  - Display word frequency list
+  - Load statistics from Chrome sync storage via `MessageManager`
+  - Display word frequency list with expandable definitions
   - Provide clear statistics functionality
   - Show word count and hover counts
+  - Lazy-load word definitions when expanded
 
 ## Data Flow
 
@@ -90,9 +112,9 @@ flowchart TD
 
 2. **Dictionary Lookup**:
    - Background script receives lookup request
-   - Dictionary loader searches local dictionary files
+   - Dictionary loader searches statically imported dictionary data
    - Definition, pinyin, and jyutping are extracted
-   - Result is cached and returned
+   - Result is returned synchronously (no caching needed)
 
 3. **Display**:
    - Content script receives definition data
@@ -106,29 +128,40 @@ flowchart TD
 
 ## Storage
 
-- **Chrome Sync Storage**: Used for word statistics (syncs across devices)
-- **Local Cache**: In-memory cache for dictionary lookups (24-hour TTL)
-- **Dictionary Files**: Local JSON files loaded from submodule
+- **Chrome Sync Storage**: Used for word statistics (syncs across devices, falls back to local storage)
+- **Dictionary Files**: Pre-processed JSON files in `src/data/` (statically imported at build time, bundled with extension)
 
 ## Dependencies
 
-- **No external npm packages**: Pure vanilla JavaScript
-- **Dictionary Submodule**: `cc-cedict-yomitan` repository for dictionary data
+- **TypeScript**: Type-safe development with TypeScript
+- **Vite**: Build tool for bundling and development
 - **Chrome Extension APIs**: 
-  - `chrome.storage.sync` - Statistics storage
+  - `chrome.storage.sync` - Statistics storage (with local fallback)
   - `chrome.runtime` - Message passing
   - `chrome.scripting` - Content script injection
+- **Dictionary Submodules**: 
+  - `dictionaries/mandarin` - CC-CEDICT source data
+  - `dictionaries/cantonese` - CC-CANTO source data
+- **Build Tools**: Custom processors for converting raw dictionary data into unified JSON format
 
 ## Extension Permissions
 
 - `storage`: For statistics tracking
 - `activeTab`: For content script injection
 - `scripting`: For dynamic content script injection
-- `host_permissions`: For dictionary file access (if needed)
 
 ## Dictionary Sources
 
 - **CC-CEDICT**: Mandarin Chinese-English dictionary with Pinyin
 - **CC-CANTO**: Cantonese Chinese-English dictionary with Jyutping
 
-Both dictionaries are included as a git submodule from the `cc-cedict-yomitan` repository.
+Both dictionaries are included as git submodules and processed at build time into unified JSON format stored in `src/data/`.
+
+## Key Classes and Utilities
+
+- **`ChineseHoverPopupManager`**: Manages popup display and selection logic in content script
+- **`StatsManager`**: Handles statistics page UI and data loading
+- **`MessageManager`**: Centralizes typed message passing between content/background scripts
+- **`dom-utils.ts`**: Shared DOM manipulation utilities (`createElement`, `clearElement`)
+- **`dictionary-utils.ts`**: Dictionary data transformation utilities (`groupEntriesByRomanisation`)
+- **`ui-helpers.ts`**: Shared UI component creation (`createPronunciationSection`)
