@@ -23,6 +23,8 @@ interface CursorResult {
 }
 
 class ChineseHoverPopupManager {
+  private readonly document: Document;
+  private readonly chromeRuntime: typeof chrome.runtime;
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastHoveredWord: string | null = null;
@@ -35,6 +37,11 @@ class ChineseHoverPopupManager {
   private mousemoveThrottle: number | null = null;
   private lastMouseMoveTime = 0;
   private cachedPopupElement: HTMLElement | null = null;
+
+  constructor(document: Document, chromeRuntime: typeof chrome.runtime) {
+    this.document = document;
+    this.chromeRuntime = chromeRuntime;
+  }
 
   handleMouseMove(event: MouseEvent): void {
     const now = Date.now();
@@ -198,15 +205,15 @@ class ChineseHoverPopupManager {
   private lookupAndShowWord(word: string, x: number, y: number): void {
     if (this.currentPopup && this.currentPopup.dataset.word === word) {
       positionPopup(this.currentPopup, x, y);
-      trackWordStatistics(word);
+      trackWordStatistics(word, this.chromeRuntime);
       return;
     }
 
-    chrome.runtime.sendMessage(
+    this.chromeRuntime.sendMessage(
       { type: 'lookup_word', word: word },
       (response) => {
-        if (chrome.runtime.lastError) {
-          console.error('[Content] Extension error:', chrome.runtime.lastError);
+        if (this.chromeRuntime.lastError) {
+          console.error('[Content] Extension error:', this.chromeRuntime.lastError);
           return;
         }
 
@@ -261,7 +268,7 @@ class ChineseHoverPopupManager {
     popup.appendChild(wordEl);
     popup.appendChild(sectionsContainer);
 
-    document.body.appendChild(popup);
+    this.document.body.appendChild(popup);
     this.currentPopup = popup;
     this.cachedPopupElement = popup;
 
@@ -317,7 +324,7 @@ class ChineseHoverPopupManager {
 
   private getCachedPopupElement(): HTMLElement | null {
     if (!this.cachedPopupElement) {
-      this.cachedPopupElement = document.getElementById('chinese-hover-popup');
+      this.cachedPopupElement = this.document.getElementById('chinese-hover-popup');
     }
     return this.cachedPopupElement;
   }
@@ -329,7 +336,7 @@ class ChineseHoverPopupManager {
   }
 }
 
-const popupManager = new ChineseHoverPopupManager();
+const popupManager = new ChineseHoverPopupManager(document, chrome.runtime);
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
@@ -438,12 +445,12 @@ function isNonTextElement(tagName: string): boolean {
   return tagName === 'SCRIPT' || tagName === 'STYLE' || tagName === 'NOSCRIPT';
 }
 
-function trackWordStatistics(word: string): void {
-  chrome.runtime.sendMessage(
+function trackWordStatistics(word: string, chromeRuntime: typeof chrome.runtime): void {
+  chromeRuntime.sendMessage(
     { type: 'track_word', word: word },
     (response) => {
-      if (chrome.runtime.lastError) {
-        console.warn('[Content] Statistics tracking error:', chrome.runtime.lastError);
+      if (chromeRuntime.lastError) {
+        console.warn('[Content] Statistics tracking error:', chromeRuntime.lastError);
       } else if (response && !response.success) {
         console.warn('[Content] Statistics tracking failed:', response.error);
       }
