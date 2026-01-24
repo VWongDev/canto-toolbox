@@ -23,8 +23,6 @@ function loadCantoneseFiles(): { mainText: string; readingsText: string } {
  * Merge readings dictionary into main dictionary
  */
 function mergeReadings(mainDict: Dictionary, readingsDict: Dictionary): void {
-  let mergedCount = 0;
-  
   for (const [word, readingEntries] of Object.entries(readingsDict)) {
     const readingEntryArray = Array.isArray(readingEntries) ? readingEntries : [readingEntries];
     const mainEntries = mainDict[word];
@@ -36,7 +34,6 @@ function mergeReadings(mainDict: Dictionary, readingsDict: Dictionary): void {
         for (const mainEntry of mainEntryArray) {
           if (!mainEntry.romanisation || (readingEntry.romanisation && !mainEntry.romanisation)) {
             mainEntry.romanisation = readingEntry.romanisation;
-            mergedCount++;
           }
         }
       }
@@ -44,11 +41,8 @@ function mergeReadings(mainDict: Dictionary, readingsDict: Dictionary): void {
     } else {
       // Entry only in readings dict, add it to main dict
       mainDict[word] = readingEntryArray;
-      mergedCount += readingEntryArray.length;
     }
   }
-  
-  console.log(`[Build] Merged ${mergedCount} readings into Cantonese dictionary`);
 }
 
 /**
@@ -57,16 +51,11 @@ function mergeReadings(mainDict: Dictionary, readingsDict: Dictionary): void {
 export function processCantoneseDict(): Dictionary {
   const { mainText, readingsText } = loadCantoneseFiles();
   
-  console.log(`[Build] Processing Cantonese dictionary...`);
   const cantoneseDict = parseCedictFormat(mainText);
-  console.log(`[Build] Loaded Cantonese dictionary: ${Object.keys(cantoneseDict).length} entries`);
-
-  // Process readings-only dictionary and merge
-  console.log(`[Build] Processing Cantonese readings...`);
   const cantoneseReadingsDict = parseCedictFormat(readingsText);
-  console.log(`[Build] Loaded Cantonese readings: ${Object.keys(cantoneseReadingsDict).length} entries`);
   
   mergeReadings(cantoneseDict, cantoneseReadingsDict);
 
+  console.log(`[Build] Loaded Cantonese dictionary: ${Object.keys(cantoneseDict).length} entries`);
   return cantoneseDict;
 }

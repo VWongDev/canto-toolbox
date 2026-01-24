@@ -82,8 +82,6 @@ export function processMandarinDict(): Dictionary {
   const fileContent = loadMandarinFiles();
   const mandarinDict: Dictionary = {};
   const dataArray = parseMandarinModule(fileContent);
-  
-  console.log(`[Build] Processing ${dataArray.length} Mandarin entries...`);
 
   // Convert to unified format
   for (const entry of dataArray) {
