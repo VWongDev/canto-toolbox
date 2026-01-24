@@ -205,7 +205,13 @@ export async function lookupWordInDictionaries(word: string): Promise<Definition
   // If no definitions found at all
   if (!result.mandarin.definition && !result.cantonese.definition) {
     result.mandarin.definition = 'Word not found in dictionary';
-    result.cantonese.definition = 'Not found';
+    // Only set "Not found" for Cantonese if there's also no pronunciation
+    if (!result.cantonese.romanisation || result.cantonese.romanisation.trim().length === 0) {
+      result.cantonese.definition = 'Not found';
+    }
+  } else if (!result.cantonese.definition && result.cantonese.romanisation && result.cantonese.romanisation.trim().length > 0) {
+    // Cantonese has pronunciation but no definition - leave definition empty (don't set "Not found")
+    result.cantonese.definition = '';
   }
 
   return result;

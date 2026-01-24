@@ -197,7 +197,7 @@ async function lookupWord(word: string): Promise<DefinitionResult> {
         romanisation: '' 
       },
       cantonese: { 
-        definition: 'Not found',
+        definition: '',
         romanisation: '' 
       }
     };

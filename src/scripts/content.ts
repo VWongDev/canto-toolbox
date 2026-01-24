@@ -804,10 +804,16 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
   const formatCantonese = (cantoneseData: DefinitionResult['cantonese']): string => {
     if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
       // Single pronunciation or no entries
+      const hasDefinition = cantoneseData?.definition && 
+                            cantoneseData.definition !== 'Not found' && 
+                            cantoneseData.definition.trim().length > 0;
+      const definitionHtml = hasDefinition 
+        ? `<div class="popup-definition">${formatDefinitions(cantoneseData.definition)}</div>`
+        : '';
       return `
         <div class="popup-label">Cantonese</div>
         <div class="popup-jyutping">${escapeHtml(cantoneseData?.romanisation || 'N/A')}</div>
-        <div class="popup-definition">${formatDefinitions(cantoneseData?.definition)}</div>
+        ${definitionHtml}
       `;
     }
     
@@ -826,10 +832,14 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
     let html = '<div class="popup-label">Cantonese</div>';
     for (const [jyutping, defs] of Object.entries(byJyutping)) {
       const defsStr = defs.join('; ');
+      const hasDefinition = defsStr && defsStr.trim().length > 0;
+      const definitionHtml = hasDefinition
+        ? `<div class="popup-definition">${formatDefinitions(defsStr)}</div>`
+        : '';
       html += `
         <div class="popup-pronunciation-group">
           <div class="popup-jyutping">${escapeHtml(jyutping)}</div>
-          <div class="popup-definition">${formatDefinitions(defsStr)}</div>
+          ${definitionHtml}
         </div>
       `;
     }

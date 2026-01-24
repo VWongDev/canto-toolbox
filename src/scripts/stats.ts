@@ -265,11 +265,17 @@ function createDefinitionHTML(word: string, definition: DefinitionResult): strin
 
   const formatCantonese = (cantoneseData: DefinitionResult['cantonese']): string => {
     if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
+      const hasDefinition = cantoneseData?.definition && 
+                            cantoneseData.definition !== 'Not found' && 
+                            cantoneseData.definition.trim().length > 0;
+      const definitionHtml = hasDefinition
+        ? `<div class="definition-text">${formatDefinitions(cantoneseData.definition)}</div>`
+        : '';
       return `
         <div class="definition-section">
           <div class="definition-label">Cantonese</div>
           <div class="definition-jyutping">${escapeHtml(cantoneseData?.romanisation || 'N/A')}</div>
-          <div class="definition-text">${formatDefinitions(cantoneseData?.definition)}</div>
+          ${definitionHtml}
         </div>
       `;
     }
@@ -288,10 +294,14 @@ function createDefinitionHTML(word: string, definition: DefinitionResult): strin
     let html = '<div class="definition-section"><div class="definition-label">Cantonese</div>';
     for (const [jyutping, defs] of Object.entries(byJyutping)) {
       const defsStr = defs.join('; ');
+      const hasDefinition = defsStr && defsStr.trim().length > 0;
+      const definitionHtml = hasDefinition
+        ? `<div class="definition-text">${formatDefinitions(defsStr)}</div>`
+        : '';
       html += `
         <div class="pronunciation-group">
           <div class="definition-jyutping">${escapeHtml(jyutping)}</div>
-          <div class="definition-text">${formatDefinitions(defsStr)}</div>
+          ${definitionHtml}
         </div>
       `;
     }
