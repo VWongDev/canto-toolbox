@@ -112,6 +112,27 @@ chrome.runtime.onMessage.addListener((
 });
 
 /**
+ * Check if a definition result has any valid definition (Mandarin or Cantonese)
+ */
+function hasValidDefinition(definition: DefinitionResult | null): boolean {
+  if (!definition) {
+    return false;
+  }
+  
+  const hasMandarin = definition.mandarin.definition && 
+    !definition.mandarin.definition.includes('not found') &&
+    !definition.mandarin.definition.includes('not loaded') &&
+    definition.mandarin.definition.trim().length > 0;
+  
+  const hasCantonese = definition.cantonese.definition && 
+    !definition.cantonese.definition.includes('not found') &&
+    !definition.cantonese.definition.includes('not loaded') &&
+    definition.cantonese.definition.trim().length > 0;
+  
+  return hasMandarin || hasCantonese;
+}
+
+/**
  * Lookup Chinese word in local dictionary files
  * Tries to find the longest matching word by checking progressively shorter substrings
  * Uses CC-CEDICT (Mandarin) and CC-CANTO (Cantonese) dictionaries from submodules
@@ -146,12 +167,8 @@ async function lookupWord(word: string): Promise<DefinitionResult> {
       const substring = word.substring(0, len);
       const subDefinition = await lookupWordInDictionaries(substring);
       
-      // Check if this substring has a valid exact definition
-      if (subDefinition && 
-          subDefinition.mandarin.definition && 
-          !subDefinition.mandarin.definition.includes('not found') &&
-          !subDefinition.mandarin.definition.includes('not loaded') &&
-          subDefinition.mandarin.definition.trim().length > 0) {
+      // Check if this substring has a valid definition (Mandarin or Cantonese)
+      if (hasValidDefinition(subDefinition)) {
         definition = subDefinition;
         matchedWord = substring;
         foundMatch = true;
@@ -164,11 +181,7 @@ async function lookupWord(word: string): Promise<DefinitionResult> {
     if (!foundMatch && word.length > 1) {
       const firstChar = word[0];
       const charDefinition = await lookupWordInDictionaries(firstChar);
-      if (charDefinition && 
-          charDefinition.mandarin.definition && 
-          !charDefinition.mandarin.definition.includes('not found') &&
-          !charDefinition.mandarin.definition.includes('not loaded') &&
-          charDefinition.mandarin.definition.trim().length > 0) {
+      if (hasValidDefinition(charDefinition)) {
         definition = charDefinition;
         matchedWord = firstChar;
         console.log('[Dict] Found single character match:', firstChar);
