@@ -1,6 +1,7 @@
 // stats.ts - Statistics page logic
 
 import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse } from '../types';
+import { createElement, clearElement } from './dom-utils';
 
 console.log('[Stats] Script loaded');
 
@@ -96,7 +97,7 @@ function loadStatistics(): void {
       });
 
       // Clear existing list
-      statsListEl.innerHTML = '';
+      clearElement(statsListEl);
 
       // Create list items
       sortedWords.forEach(word => {
@@ -112,51 +113,54 @@ function loadStatistics(): void {
  * Create a statistics list item
  */
 function createStatItem(word: string, stat: WordStatistics): HTMLElement {
-  const item = document.createElement('div');
-  item.className = 'stat-item';
-  item.dataset.word = word;
+  const item = createElement({
+    className: 'stat-item',
+    dataset: { word }
+  });
 
-  const header = document.createElement('div');
-  header.className = 'stat-header';
-  header.style.cursor = 'pointer';
+  const header = createElement({
+    className: 'stat-header',
+    style: { cursor: 'pointer' }
+  });
 
-  const wordEl = document.createElement('div');
-  wordEl.className = 'stat-word';
-  wordEl.textContent = word;
+  const wordEl = createElement({
+    className: 'stat-word',
+    textContent: word
+  });
 
-  const detailsEl = document.createElement('div');
-  detailsEl.className = 'stat-details';
-
-  const countEl = document.createElement('div');
-  countEl.className = 'stat-count';
-  countEl.textContent = String(stat.count || 0);
-
-  const labelEl = document.createElement('div');
-  labelEl.className = 'stat-label';
-  labelEl.textContent = 'Hover Count';
-
-  const expandIcon = document.createElement('div');
-  expandIcon.className = 'stat-expand-icon';
-  expandIcon.textContent = '▶';
-
-  detailsEl.appendChild(countEl);
-  detailsEl.appendChild(labelEl);
-  detailsEl.appendChild(expandIcon);
+  const detailsEl = createElement({
+    className: 'stat-details',
+    children: [
+      createElement({
+        className: 'stat-count',
+        textContent: String(stat.count || 0)
+      }),
+      createElement({
+        className: 'stat-label',
+        textContent: 'Hover Count'
+      }),
+      createElement({
+        className: 'stat-expand-icon',
+        textContent: '▶'
+      })
+    ]
+  });
 
   header.appendChild(wordEl);
   header.appendChild(detailsEl);
 
   // Expanded content container (initially hidden)
-  const expandedContent = document.createElement('div');
-  expandedContent.className = 'stat-expanded';
-  expandedContent.style.display = 'none';
+  const expandedContent = createElement({
+    className: 'stat-expanded',
+    style: { display: 'none' }
+  });
 
   item.appendChild(header);
   item.appendChild(expandedContent);
 
   // Add click handler to toggle expansion
   header.addEventListener('click', () => {
-    toggleExpansion(item, word, expandedContent, expandIcon);
+    toggleExpansion(item, word, expandedContent, detailsEl.querySelector('.stat-expand-icon') as HTMLElement);
   });
 
   return item;
@@ -190,52 +194,92 @@ function toggleExpansion(item: HTMLElement, word: string, expandedContent: HTMLE
  * Load definition for a word
  */
 function loadDefinition(word: string, container: HTMLElement): void {
-  container.innerHTML = '<div class="stat-loading">Loading definition...</div>';
+  clearElement(container);
+  
+  const loadingEl = createElement({
+    className: 'stat-loading',
+    textContent: 'Loading definition...'
+  });
+  container.appendChild(loadingEl);
   container.style.display = 'block';
 
   chrome.runtime.sendMessage({ type: 'lookup_word', word: word }, (response: LookupResponse | undefined) => {
+    clearElement(container);
+    
     if (chrome.runtime.lastError) {
-      container.innerHTML = `<div class="stat-error">Error: ${chrome.runtime.lastError.message}</div>`;
+      const errorEl = createElement({
+        className: 'stat-error',
+        textContent: `Error: ${chrome.runtime.lastError.message}`
+      });
+      container.appendChild(errorEl);
       return;
     }
 
     if (!response || !response.success || !('definition' in response) || !response.definition) {
-      container.innerHTML = '<div class="stat-error">Definition not found</div>';
+      const errorEl = createElement({
+        className: 'stat-error',
+        textContent: 'Definition not found'
+      });
+      container.appendChild(errorEl);
       return;
     }
 
     const definition = response.definition;
-    container.innerHTML = createDefinitionHTML(word, definition);
+    const definitionEl = createDefinitionElement(word, definition);
+    container.appendChild(definitionEl);
     container.dataset.loaded = 'true';
   });
 }
 
 /**
- * Create HTML for definition display
+ * Create definition element for display
  */
-function createDefinitionHTML(word: string, definition: DefinitionResult): string {
+function createDefinitionElement(word: string, definition: DefinitionResult): HTMLElement {
   const displayWord = definition.word || word;
   
-  const formatDefinitions = (defText: string | undefined): string => {
+  const createDefinitionTextElement = (defText: string | undefined): HTMLElement => {
     if (!defText || defText === 'Not found' || defText === 'N/A') {
-      return defText || 'Not found';
+      return createElement({
+        className: 'definition-text',
+        textContent: defText || 'Not found'
+      });
     }
+    
     const definitions = defText.split(';').map(d => d.trim()).filter(d => d.length > 0);
     if (definitions.length === 1) {
-      return definitions[0];
+      return createElement({
+        className: 'definition-text',
+        textContent: definitions[0]
+      });
     }
-    return definitions.map(def => `<div class="definition-item">${escapeHtml(def)}</div>`).join('');
+    
+    return createElement({
+      className: 'definition-text',
+      children: definitions.map(def =>
+        createElement({
+          className: 'definition-item',
+          textContent: def
+        })
+      )
+    });
   };
 
-  const formatMandarin = (mandarinData: DefinitionResult['mandarin']): string => {
+  const createMandarinSection = (mandarinData: DefinitionResult['mandarin']): HTMLElement => {
     if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
-      return `
-        <div class="definition-section">
-          <div class="definition-label">Mandarin</div>
-          <div class="definition-pinyin">${escapeHtml(mandarinData?.romanisation || 'N/A')}</div>
-          <div class="definition-text">${formatDefinitions(mandarinData?.definition)}</div>
-        </div>
-      `;
+      return createElement({
+        className: 'definition-section',
+        children: [
+          createElement({
+            className: 'definition-label',
+            textContent: 'Mandarin'
+          }),
+          createElement({
+            className: 'definition-pinyin',
+            textContent: mandarinData?.romanisation || 'N/A'
+          }),
+          createDefinitionTextElement(mandarinData?.definition)
+        ]
+      });
     }
     
     const entries = mandarinData.entries;
@@ -249,35 +293,55 @@ function createDefinitionHTML(word: string, definition: DefinitionResult): strin
       byPinyin[pinyin].push(...defs.filter(d => d && String(d).trim().length > 0));
     }
     
-    let html = '<div class="definition-section"><div class="definition-label">Mandarin</div>';
-    for (const [pinyin, defs] of Object.entries(byPinyin)) {
-      const defsStr = defs.join('; ');
-      html += `
-        <div class="pronunciation-group">
-          <div class="definition-pinyin">${escapeHtml(pinyin)}</div>
-          <div class="definition-text">${formatDefinitions(defsStr)}</div>
-        </div>
-      `;
-    }
-    html += '</div>';
-    return html;
+    return createElement({
+      className: 'definition-section',
+      children: [
+        createElement({
+          className: 'definition-label',
+          textContent: 'Mandarin'
+        }),
+        ...Object.entries(byPinyin).map(([pinyin, defs]) => {
+          const defsStr = defs.join('; ');
+          return createElement({
+            className: 'pronunciation-group',
+            children: [
+              createElement({
+                className: 'definition-pinyin',
+                textContent: pinyin
+              }),
+              createDefinitionTextElement(defsStr)
+            ]
+          });
+        })
+      ]
+    });
   };
 
-  const formatCantonese = (cantoneseData: DefinitionResult['cantonese']): string => {
+  const createCantoneseSection = (cantoneseData: DefinitionResult['cantonese']): HTMLElement => {
     if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
       const hasDefinition = cantoneseData?.definition && 
                             cantoneseData.definition !== 'Not found' && 
                             cantoneseData.definition.trim().length > 0;
-      const definitionHtml = hasDefinition
-        ? `<div class="definition-text">${formatDefinitions(cantoneseData.definition)}</div>`
-        : '';
-      return `
-        <div class="definition-section">
-          <div class="definition-label">Cantonese</div>
-          <div class="definition-jyutping">${escapeHtml(cantoneseData?.romanisation || 'N/A')}</div>
-          ${definitionHtml}
-        </div>
-      `;
+      
+      const children: HTMLElement[] = [
+        createElement({
+          className: 'definition-label',
+          textContent: 'Cantonese'
+        }),
+        createElement({
+          className: 'definition-jyutping',
+          textContent: cantoneseData?.romanisation || 'N/A'
+        })
+      ];
+      
+      if (hasDefinition) {
+        children.push(createDefinitionTextElement(cantoneseData.definition));
+      }
+      
+      return createElement({
+        className: 'definition-section',
+        children
+      });
     }
     
     const entries = cantoneseData.entries;
@@ -291,39 +355,55 @@ function createDefinitionHTML(word: string, definition: DefinitionResult): strin
       byJyutping[jyutping].push(...defs.filter(d => d && String(d).trim().length > 0));
     }
     
-    let html = '<div class="definition-section"><div class="definition-label">Cantonese</div>';
-    for (const [jyutping, defs] of Object.entries(byJyutping)) {
-      const defsStr = defs.join('; ');
-      const hasDefinition = defsStr && defsStr.trim().length > 0;
-      const definitionHtml = hasDefinition
-        ? `<div class="definition-text">${formatDefinitions(defsStr)}</div>`
-        : '';
-      html += `
-        <div class="pronunciation-group">
-          <div class="definition-jyutping">${escapeHtml(jyutping)}</div>
-          ${definitionHtml}
-        </div>
-      `;
-    }
-    html += '</div>';
-    return html;
+    const children: HTMLElement[] = [
+      createElement({
+        className: 'definition-label',
+        textContent: 'Cantonese'
+      }),
+      ...Object.entries(byJyutping).map(([jyutping, defs]) => {
+        const defsStr = defs.join('; ');
+        const hasDefinition = defsStr && defsStr.trim().length > 0;
+        
+        const groupChildren: HTMLElement[] = [
+          createElement({
+            className: 'definition-jyutping',
+            textContent: jyutping
+          })
+        ];
+        
+        if (hasDefinition) {
+          groupChildren.push(createDefinitionTextElement(defsStr));
+        }
+        
+        return createElement({
+          className: 'pronunciation-group',
+          children: groupChildren
+        });
+      })
+    ];
+    
+    return createElement({
+      className: 'definition-section',
+      children
+    });
   };
 
-  const escapeHtml = (text: string): string => {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  };
-
-  return `
-    <div class="definition-container">
-      <div class="definition-word">${escapeHtml(displayWord)}</div>
-      <div class="definition-sections">
-        ${formatMandarin(definition.mandarin)}
-        ${formatCantonese(definition.cantonese)}
-      </div>
-    </div>
-  `;
+  return createElement({
+    className: 'definition-container',
+    children: [
+      createElement({
+        className: 'definition-word',
+        textContent: displayWord
+      }),
+      createElement({
+        className: 'definition-sections',
+        children: [
+          createMandarinSection(definition.mandarin),
+          createCantoneseSection(definition.cantonese)
+        ]
+      })
+    ]
+  });
 }
 
 /**

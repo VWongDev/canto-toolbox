@@ -1,6 +1,7 @@
 // content.ts - Content script for detecting Chinese words on hover
 
 import type { DefinitionResult } from '../types';
+import { createElement, clearElement } from './dom-utils';
 
 // Chinese character regex pattern
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
@@ -54,8 +55,10 @@ function injectStyles(): void {
     return; // Already injected
   }
 
-  const style = document.createElement('style');
-  style.id = 'chinese-hover-styles';
+  const style = createElement<HTMLStyleElement>({
+    tag: 'style',
+    id: 'chinese-hover-styles'
+  });
   style.textContent = `
     .chinese-hover-popup {
       position: fixed;
@@ -771,49 +774,75 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
   const displayWord = definition.word || word;
 
   // Create popup element
-  const popup = document.createElement('div');
-  popup.id = 'chinese-hover-popup';
-  popup.className = 'chinese-hover-popup';
-  popup.dataset.word = word; // Store original word for comparison
-  
-  // Add mouseenter/mouseleave to popup to keep it visible
-  popup.addEventListener('mouseenter', () => {
-    if (hideTimer) {
-      clearTimeout(hideTimer);
-    }
-    isHoveringChinese = true;
-  });
-  
-  popup.addEventListener('mouseleave', () => {
-    // When leaving popup, hide immediately if not over Chinese text
-    if (!isHoveringChinese) {
-      hidePopup();
+  const popup = createElement({
+    tag: 'div',
+    id: 'chinese-hover-popup',
+    className: 'chinese-hover-popup',
+    dataset: { word },
+    listeners: {
+      mouseenter: () => {
+        if (hideTimer) {
+          clearTimeout(hideTimer);
+        }
+        isHoveringChinese = true;
+      },
+      mouseleave: () => {
+        // When leaving popup, hide immediately if not over Chinese text
+        if (!isHoveringChinese) {
+          hidePopup();
+        }
+      }
     }
   });
   
   // Format definitions - split by semicolon and display each on a new line
-  const formatDefinitions = (defText: string | undefined): string => {
+  const createDefinitionElement = (defText: string | undefined): HTMLElement => {
     if (!defText || defText === 'Not found' || defText === 'N/A') {
-      return escapeHtml(defText || 'Not found');
+      return createElement({
+        className: 'popup-definition',
+        textContent: defText || 'Not found'
+      });
     }
+    
     // Split by semicolon and create separate lines
     const definitions = defText.split(';').map(d => d.trim()).filter(d => d.length > 0);
     if (definitions.length === 1) {
-      return escapeHtml(definitions[0]);
+      return createElement({
+        className: 'popup-definition',
+        textContent: definitions[0]
+      });
     }
+    
     // Multiple definitions - display each on a new line
-    return definitions.map(def => `<div class="popup-definition-item">${escapeHtml(def)}</div>`).join('');
+    return createElement({
+      className: 'popup-definition',
+      children: definitions.map(def => 
+        createElement({
+          className: 'popup-definition-item',
+          textContent: def
+        })
+      )
+    });
   };
 
   // Format Mandarin with multiple pronunciations
-  const formatMandarin = (mandarinData: DefinitionResult['mandarin']): string => {
+  const createMandarinSection = (mandarinData: DefinitionResult['mandarin']): HTMLElement => {
     if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
       // Single pronunciation or no entries
-      return `
-        <div class="popup-label">Mandarin</div>
-        <div class="popup-pinyin">${escapeHtml(mandarinData?.romanisation || 'N/A')}</div>
-        <div class="popup-definition">${formatDefinitions(mandarinData?.definition)}</div>
-      `;
+      return createElement({
+        className: 'popup-section',
+        children: [
+          createElement({
+            className: 'popup-label',
+            textContent: 'Mandarin'
+          }),
+          createElement({
+            className: 'popup-pinyin',
+            textContent: mandarinData?.romanisation || 'N/A'
+          }),
+          createDefinitionElement(mandarinData?.definition)
+        ]
+      });
     }
     
     // Multiple pronunciations - display each separately
@@ -829,38 +858,65 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
     }
     
     const pinyinKeys = Object.keys(byPinyin);
-    const pronunciationCount = Math.min(pinyinKeys.length, 2); // Use count for responsive layout (max 2 columns)
+    const pronunciationCount = Math.min(pinyinKeys.length, 2);
     
-    let html = '<div class="popup-label">Mandarin</div>';
-    html += `<div class="popup-pronunciations-grid" data-count="${pronunciationCount}">`;
-    for (const [pinyin, defs] of Object.entries(byPinyin)) {
-      const defsStr = defs.join('; ');
-      html += `
-        <div class="popup-pronunciation-group">
-          <div class="popup-pinyin">${escapeHtml(pinyin)}</div>
-          <div class="popup-definition">${formatDefinitions(defsStr)}</div>
-        </div>
-      `;
-    }
-    html += '</div>';
-    return html;
+    const grid = createElement({
+      className: 'popup-pronunciations-grid',
+      dataset: { count: String(pronunciationCount) },
+      children: Object.entries(byPinyin).map(([pinyin, defs]) => {
+        const defsStr = defs.join('; ');
+        return createElement({
+          className: 'popup-pronunciation-group',
+          children: [
+            createElement({
+              className: 'popup-pinyin',
+              textContent: pinyin
+            }),
+            createDefinitionElement(defsStr)
+          ]
+        });
+      })
+    });
+    
+    return createElement({
+      className: 'popup-section',
+      children: [
+        createElement({
+          className: 'popup-label',
+          textContent: 'Mandarin'
+        }),
+        grid
+      ]
+    });
   };
 
   // Format Cantonese with multiple pronunciations
-  const formatCantonese = (cantoneseData: DefinitionResult['cantonese']): string => {
+  const createCantoneseSection = (cantoneseData: DefinitionResult['cantonese']): HTMLElement => {
     if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
       // Single pronunciation or no entries
       const hasDefinition = cantoneseData?.definition && 
                             cantoneseData.definition !== 'Not found' && 
                             cantoneseData.definition.trim().length > 0;
-      const definitionHtml = hasDefinition 
-        ? `<div class="popup-definition">${formatDefinitions(cantoneseData.definition)}</div>`
-        : '';
-      return `
-        <div class="popup-label">Cantonese</div>
-        <div class="popup-jyutping">${escapeHtml(cantoneseData?.romanisation || 'N/A')}</div>
-        ${definitionHtml}
-      `;
+      
+      const children: HTMLElement[] = [
+        createElement({
+          className: 'popup-label',
+          textContent: 'Cantonese'
+        }),
+        createElement({
+          className: 'popup-jyutping',
+          textContent: cantoneseData?.romanisation || 'N/A'
+        })
+      ];
+      
+      if (hasDefinition) {
+        children.push(createDefinitionElement(cantoneseData.definition));
+      }
+      
+      return createElement({
+        className: 'popup-section',
+        children
+      });
     }
     
     // Multiple pronunciations - display each separately
@@ -876,39 +932,61 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
     }
     
     const jyutpingKeys = Object.keys(byJyutping);
-    const pronunciationCount = Math.min(jyutpingKeys.length, 2); // Use count for responsive layout (max 2 columns)
+    const pronunciationCount = Math.min(jyutpingKeys.length, 2);
     
-    let html = '<div class="popup-label">Cantonese</div>';
-    html += `<div class="popup-pronunciations-grid" data-count="${pronunciationCount}">`;
-    for (const [jyutping, defs] of Object.entries(byJyutping)) {
-      const defsStr = defs.join('; ');
-      const hasDefinition = defsStr && defsStr.trim().length > 0;
-      const definitionHtml = hasDefinition
-        ? `<div class="popup-definition">${formatDefinitions(defsStr)}</div>`
-        : '';
-      html += `
-        <div class="popup-pronunciation-group">
-          <div class="popup-jyutping">${escapeHtml(jyutping)}</div>
-          ${definitionHtml}
-        </div>
-      `;
-    }
-    html += '</div>';
-    return html;
+    const grid = createElement({
+      className: 'popup-pronunciations-grid',
+      dataset: { count: String(pronunciationCount) },
+      children: Object.entries(byJyutping).map(([jyutping, defs]) => {
+        const defsStr = defs.join('; ');
+        const hasDefinition = defsStr && defsStr.trim().length > 0;
+        
+        const groupChildren: HTMLElement[] = [
+          createElement({
+            className: 'popup-jyutping',
+            textContent: jyutping
+          })
+        ];
+        
+        if (hasDefinition) {
+          groupChildren.push(createDefinitionElement(defsStr));
+        }
+        
+        return createElement({
+          className: 'popup-pronunciation-group',
+          children: groupChildren
+        });
+      })
+    });
+    
+    return createElement({
+      className: 'popup-section',
+      children: [
+        createElement({
+          className: 'popup-label',
+          textContent: 'Cantonese'
+        }),
+        grid
+      ]
+    });
   };
 
   // Build popup content with side-by-side layout
-  popup.innerHTML = `
-    <div class="popup-word">${escapeHtml(displayWord)}</div>
-    <div class="popup-sections-container">
-      <div class="popup-section">
-        ${formatMandarin(definition.mandarin)}
-      </div>
-      <div class="popup-section">
-        ${formatCantonese(definition.cantonese)}
-      </div>
-    </div>
-  `;
+  const wordEl = createElement({
+    className: 'popup-word',
+    textContent: displayWord
+  });
+  
+  const sectionsContainer = createElement({
+    className: 'popup-sections-container',
+    children: [
+      createMandarinSection(definition.mandarin),
+      createCantoneseSection(definition.cantonese)
+    ]
+  });
+  
+  popup.appendChild(wordEl);
+  popup.appendChild(sectionsContainer);
 
   // Add popup to page
   document.body.appendChild(popup);
@@ -969,11 +1047,3 @@ function hidePopup(): void {
   }
 }
 
-/**
- * Escape HTML to prevent XSS
- */
-function escapeHtml(text: string | undefined): string {
-  const div = document.createElement('div');
-  div.textContent = text || '';
-  return div.innerHTML;
-}
