@@ -40,6 +40,8 @@ export function addDictionaryEntry(
       dict[entry.simplified].push(entry);
     }
   }
+  // Note: For entries where traditional === simplified, we only add once above
+  // For entries where traditional !== simplified, we also add under traditional key
   if (entry.traditional && entry.traditional !== entry.simplified) {
     if (!dict[entry.traditional]) {
       dict[entry.traditional] = [];

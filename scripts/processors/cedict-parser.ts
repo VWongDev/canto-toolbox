@@ -15,7 +15,8 @@ export function parseCedictFormat(text: string): Dictionary {
     }
     
     // Try format with definitions: Traditional Simplified [pinyin] {jyutping} /def1/def2/
-    let match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\{([^}]+)\}\s+\/(.+)\/$/);
+    // Allow content after the final / (e.g., comments like # adapted from cc-cedict)
+    let match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\{([^}]+)\}\s+\/(.+)\//);
     if (match) {
       const [, traditional, simplified, pinyin, jyutping, definitions] = match;
       const defs = definitions.split('/').filter(d => d.trim().length > 0);
@@ -32,7 +33,8 @@ export function parseCedictFormat(text: string): Dictionary {
     }
     
     // Try format without jyutping: Traditional Simplified [pinyin] /def1/def2/
-    match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.+)\/$/);
+    // Allow content after the final / (e.g., comments)
+    match = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.+)\//);
     if (match) {
       const [, traditional, simplified, pinyin, definitions] = match;
       const defs = definitions.split('/').filter(d => d.trim().length > 0);
