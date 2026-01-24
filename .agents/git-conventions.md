@@ -34,7 +34,7 @@ The domain specifies the area of the codebase affected:
 - `api`: API integration
 - `global`: Repository-wide changes
 
-Multiple domains can be specified when a change affects multiple areas (e.g., `refactor(content, stats)`). If more than 3 domains would be specified, use `global` instead.
+Multiple domains can be specified when a change affects multiple areas (e.g., `refactor(content, stats)`). Domains should be listed in alphabetical order (e.g., `refactor(background, dict)` not `refactor(dict, background)`). If more than 3 domains would be specified, use `global` instead.
 
 ### Description
 
@@ -52,6 +52,7 @@ feat(manifest): Add extension manifest configuration
 fix(icons): Add blank placeholder icons for extension loading
 feat(background): Implement dictionary API and statistics tracking
 fix(api): Improve error handling and logging for API failures
+refactor(background, dict): Replace runtime fetching with static imports
 refactor(content, stats): Extract shared pronunciation section utilities
 ai(global): Add agent documentation files
 ```
