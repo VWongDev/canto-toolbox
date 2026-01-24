@@ -1,5 +1,3 @@
-/* popup.css - Styles for the word definition popup */
-
 .chinese-hover-popup {
   position: fixed;
   z-index: 999999;
@@ -7,31 +5,85 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 16px;
-  min-width: 280px;
-  max-width: 400px;
+  padding: 12px;
+  min-width: 500px;
+  max-width: 900px;
+  width: auto;
+  height: auto;
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.4;
   color: #333;
   pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.popup-sections-container {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  align-items: flex-start;
+  min-width: 0;
+  width: 100%;
 }
 
 .popup-word {
   font-size: 24px;
   font-weight: bold;
   color: #1a1a1a;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
   border-bottom: 2px solid #e0e0e0;
   text-align: center;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .popup-section {
-  margin-bottom: 12px;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-.popup-section:last-child {
+.popup-pronunciations-grid {
+  column-count: 2;
+  column-gap: 12px;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.popup-pronunciations-grid[data-count="1"] {
+  column-count: 1;
+}
+
+.popup-pronunciations-grid[data-count="2"] {
+  column-count: 2;
+}
+
+@media (max-width: 600px) {
+  .popup-pronunciations-grid {
+    column-count: 1;
+  }
+}
+
+.popup-pronunciation-group {
+  break-inside: avoid;
+  margin-bottom: 12px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.popup-pronunciation-group:last-child {
   margin-bottom: 0;
 }
 
@@ -41,7 +93,10 @@
   text-transform: uppercase;
   color: #666;
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  max-width: 100%;
 }
 
 .popup-pinyin,
@@ -49,17 +104,34 @@
   font-size: 16px;
   color: #0066cc;
   font-weight: 500;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   font-family: 'Arial', sans-serif;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .popup-definition {
   font-size: 13px;
   color: #555;
-  line-height: 1.6;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  hyphens: auto;
+  box-sizing: border-box;
 }
 
-/* Dark mode support */
+.popup-definition-item {
+  margin-bottom: 3px;
+}
+
+.popup-definition-item:last-child {
+  margin-bottom: 0;
+}
+
 @media (prefers-color-scheme: dark) {
   .chinese-hover-popup {
     background: #2d2d2d;
@@ -83,5 +155,13 @@
 
   .popup-definition {
     color: #ccc;
+  }
+
+  .popup-definition-item {
+    margin-bottom: 6px;
+  }
+
+  .popup-definition-item:last-child {
+    margin-bottom: 0;
   }
 }
