@@ -143,15 +143,6 @@ class ChineseHoverPopupManager {
       return;
     }
     
-    if (isNonTextElement(target.tagName)) {
-      if (this.isHoveringChinese) {
-        this.resetHoverState();
-        this.clearHideTimer();
-        this.hidePopup();
-      }
-      return;
-    }
-    
     const result = getChineseWordAtCursor(event);
     
     if (!result) {
@@ -439,10 +430,6 @@ function isMouseOverPopup(mouseX: number, mouseY: number, popup: HTMLElement | n
 function hasActiveSelection(): boolean {
   const selection = window.getSelection();
   return selection ? selection.toString().trim().length > 0 : false;
-}
-
-function isNonTextElement(tagName: string): boolean {
-  return tagName === 'SCRIPT' || tagName === 'STYLE' || tagName === 'NOSCRIPT';
 }
 
 function trackWordStatistics(word: string, chromeRuntime: typeof chrome.runtime): void {
