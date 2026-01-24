@@ -42,6 +42,28 @@ export class MessageManager {
       callback(response as StatisticsResponse);
     });
   }
+
+  init(): void {
+    this.chromeRuntime.onMessage.addListener((
+      message: BackgroundMessage,
+      sender: chrome.runtime.MessageSender,
+      sendResponse: (response: BackgroundResponse) => void
+    ): boolean => {
+      if (message.type === 'lookup_word') {
+        handleLookupWordMessage(message.word, sendResponse);
+        return true;
+      }
+      if (message.type === 'get_statistics') {
+        handleGetStatisticsMessage(sendResponse);
+        return true;
+      }
+      if (message.type === 'track_word') {
+        handleTrackWordMessage(message.word, sendResponse);
+        return true;
+      }
+      return false;
+    });
+  }
 }
 
 const STORAGE_KEY = 'wordStatistics';
@@ -77,26 +99,8 @@ function handleTrackWordMessage(word: string, sendResponse: (response: Backgroun
     });
 }
 
-chrome.runtime.onMessage.addListener((
-  message: BackgroundMessage,
-  sender: chrome.runtime.MessageSender,
-  sendResponse: (response: BackgroundResponse) => void
-): boolean => {
-  if (message.type === 'lookup_word') {
-    handleLookupWordMessage(message.word, sendResponse);
-    return true;
-  }
-  if (message.type === 'get_statistics') {
-    handleGetStatisticsMessage(sendResponse);
-    return true;
-  }
-  if (message.type === 'track_word') {
-    handleTrackWordMessage(message.word, sendResponse);
-    return true;
-  }
-  console.warn('[Background] Unhandled message type:', (message as any).type);
-  return false;
-});
+const messageManager = new MessageManager(chrome.runtime);
+messageManager.init();
 
 function isDefinitionValid(entries: DictionaryEntry[] | undefined): boolean {
   if (!entries?.length) return false;
