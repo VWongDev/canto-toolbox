@@ -1,54 +1,49 @@
-// dictionary-loader.ts - Load pre-processed dictionaries
-
 import type { Dictionary, DictionaryEntry, DefinitionResult } from '../types';
 
-// Dictionary data - loaded from pre-processed JSON files
+const DICTIONARY_PATHS = {
+  mandarin: 'src/data/mandarin.json',
+  cantonese: 'src/data/cantonese.json'
+} as const;
+
+const CANTONESE_MARKER = '(cantonese)';
+const NOT_FOUND_MESSAGE = 'Word not found in dictionary';
+
 let mandarinDict: Dictionary | null = null;
 let cantoneseDict: Dictionary | null = null;
 let dictionariesLoaded = false;
 
-/**
- * Load pre-processed dictionary files
- */
+async function loadDictionary(url: string): Promise<Dictionary | null> {
+  try {
+    const response = await fetch(url);
+    if (response.ok) {
+      const dict = await response.json() as Dictionary;
+      console.log('[Dict] Loaded dictionary:', Object.keys(dict).length, 'entries');
+      return dict;
+    } else {
+      console.error('[Dict] Failed to load dictionary:', response.status);
+      return null;
+    }
+  } catch (error) {
+    console.error('[Dict] Error loading dictionary:', error);
+    return null;
+  }
+}
+
 export async function loadDictionaries(): Promise<{ mandarinDict: Dictionary | null; cantoneseDict: Dictionary | null }> {
   if (dictionariesLoaded) {
     return { mandarinDict, cantoneseDict };
   }
 
-  try {
-    // Load pre-processed Mandarin dictionary
-    const mandarinUrl = chrome.runtime.getURL('src/data/mandarin.json');
-    const mandarinResponse = await fetch(mandarinUrl);
-    
-    if (mandarinResponse.ok) {
-      mandarinDict = await mandarinResponse.json() as Dictionary;
-      console.log('[Dict] Loaded Mandarin dictionary:', Object.keys(mandarinDict).length, 'entries');
-    } else {
-      console.error('[Dict] Failed to load Mandarin dictionary:', mandarinResponse.status);
-    }
+  const mandarinUrl = chrome.runtime.getURL(DICTIONARY_PATHS.mandarin);
+  const cantoneseUrl = chrome.runtime.getURL(DICTIONARY_PATHS.cantonese);
 
-    // Load pre-processed Cantonese dictionary
-    const cantoneseUrl = chrome.runtime.getURL('src/data/cantonese.json');
-    const cantoneseResponse = await fetch(cantoneseUrl);
-    
-    if (cantoneseResponse.ok) {
-      cantoneseDict = await cantoneseResponse.json() as Dictionary;
-      console.log('[Dict] Loaded Cantonese dictionary:', Object.keys(cantoneseDict).length, 'entries');
-    } else {
-      console.error('[Dict] Failed to load Cantonese dictionary:', cantoneseResponse.status);
-    }
+  mandarinDict = await loadDictionary(mandarinUrl);
+  cantoneseDict = await loadDictionary(cantoneseUrl);
 
-    dictionariesLoaded = true;
-    return { mandarinDict, cantoneseDict };
-  } catch (error) {
-    console.error('[Dict] Error loading dictionaries:', error);
-    return { mandarinDict, cantoneseDict };
-  }
+  dictionariesLoaded = true;
+  return { mandarinDict, cantoneseDict };
 }
 
-/**
- * Lookup word in a dictionary (unified function for both Mandarin and Cantonese)
- */
 function lookupInDict(dict: Dictionary | null, word: string): DictionaryEntry[] | null {
   if (!dict || typeof dict !== 'object') {
     return null;
@@ -59,7 +54,6 @@ function lookupInDict(dict: Dictionary | null, word: string): DictionaryEntry[] 
     return null;
   }
 
-  // Handle both array (multiple pronunciations) and single entry (backward compatibility)
   const entryArray = Array.isArray(entries) ? entries : [entries];
   
   if (entryArray.length === 0) {
@@ -69,9 +63,56 @@ function lookupInDict(dict: Dictionary | null, word: string): DictionaryEntry[] 
   return entryArray;
 }
 
-/**
- * Format entries for display
- */
+function groupEntriesByPronunciation(entries: DictionaryEntry[]): Record<string, string[]> {
+  const byPronunciation: Record<string, string[]> = {};
+  for (const entry of entries) {
+    const pronunciation = entry.romanisation || '';
+    if (!byPronunciation[pronunciation]) {
+      byPronunciation[pronunciation] = [];
+    }
+    const defs = entry.definitions || [];
+    byPronunciation[pronunciation].push(...defs.filter(d => d && String(d).trim().length > 0));
+  }
+  return byPronunciation;
+}
+
+function formatMultipleEntries(entries: DictionaryEntry[]): {
+  definition: string;
+  romanisation: string;
+  entries: DictionaryEntry[];
+} {
+  const byPronunciation = groupEntriesByPronunciation(entries);
+  const pronunciationList = Object.keys(byPronunciation).join(', ');
+  const formatted = Object.entries(byPronunciation)
+    .map(([pronunciation, defs]) => {
+      const defsStr = defs.join('; ');
+      return `${pronunciation}: ${defsStr}`;
+    })
+    .join(' | ');
+
+  return {
+    romanisation: pronunciationList,
+    definition: formatted,
+    entries: entries
+  };
+}
+
+function formatSingleEntry(entry: DictionaryEntry): {
+  definition: string;
+  romanisation: string;
+  entries: DictionaryEntry[];
+} {
+  const pronunciation = entry.romanisation || '';
+  const defs = entry.definitions || [];
+  const definition = defs.filter(d => d && String(d).trim().length > 0).join('; ');
+
+  return {
+    romanisation: pronunciation,
+    definition: definition,
+    entries: [entry]
+  };
+}
+
 function formatEntries(entries: DictionaryEntry[]): {
   definition: string;
   romanisation: string;
@@ -81,59 +122,21 @@ function formatEntries(entries: DictionaryEntry[]): {
     return { definition: '', romanisation: '', entries: [] };
   }
 
-  // If multiple pronunciations, group by pronunciation
   if (entries.length > 1) {
-    const byPronunciation: Record<string, string[]> = {};
-    for (const entry of entries) {
-      const pronunciation = entry.romanisation || '';
-      if (!byPronunciation[pronunciation]) {
-        byPronunciation[pronunciation] = [];
-      }
-      const defs = entry.definitions || [];
-      byPronunciation[pronunciation].push(...defs.filter(d => d && String(d).trim().length > 0));
-    }
-
-    const pronunciationList = Object.keys(byPronunciation).join(', ');
-    const formatted = Object.entries(byPronunciation)
-      .map(([pronunciation, defs]) => {
-        const defsStr = defs.join('; ');
-        return `${pronunciation}: ${defsStr}`;
-      })
-      .join(' | ');
-
-    return {
-      romanisation: pronunciationList,
-      definition: formatted,
-      entries: entries
-    };
+    return formatMultipleEntries(entries);
   } else {
-    // Single entry
-    const entry = entries[0];
-    const pronunciation = entry.romanisation || '';
-    const defs = entry.definitions || [];
-    const definition = defs.filter(d => d && String(d).trim().length > 0).join('; ');
-
-    return {
-      romanisation: pronunciation,
-      definition: definition,
-      entries: entries
-    };
+    return formatSingleEntry(entries[0]);
   }
 }
 
-/**
- * Filter out definitions marked as Cantonese from Mandarin entries
- * Definitions containing "(Cantonese)" are considered Cantonese-specific
- */
 function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): DictionaryEntry[] {
   const filteredEntries: DictionaryEntry[] = [];
   
   for (const entry of mandarinEntries) {
     const filteredDefs = (entry.definitions || []).filter(
-      def => !def.toLowerCase().includes('(cantonese)')
+      def => !def.toLowerCase().includes(CANTONESE_MARKER.toLowerCase())
     );
     
-    // Only include entry if it still has definitions after filtering
     if (filteredDefs.length > 0) {
       filteredEntries.push({
         ...entry,
@@ -145,11 +148,52 @@ function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): Dict
   return filteredEntries;
 }
 
-/**
- * Search for a word in the dictionaries
- */
+function processDictionaryLookup(
+  dict: Dictionary | null,
+  word: string,
+  name: string,
+  filterCantonese: boolean
+): { definition: string; romanisation: string; entries: DictionaryEntry[] } | null {
+  const entries = lookupInDict(dict, word);
+  
+  if (!entries) {
+    console.log(`[Dict] No exact ${name} entry found for`, word);
+    return null;
+  }
+
+  const processedEntries = filterCantonese 
+    ? filterOutCantoneseDefinitions(entries)
+    : entries;
+  
+  const logMessage = filterCantonese
+    ? `[Dict] Found ${entries.length} ${name} entry/entries for ${word} (${processedEntries.length} after filtering Cantonese definitions)`
+    : `[Dict] Found ${processedEntries.length} ${name} entry/entries for ${word}`;
+  console.log(logMessage);
+  
+  if (processedEntries.length === 0) {
+    return null;
+  }
+
+  const formatted = formatEntries(processedEntries);
+  return {
+    definition: formatted.definition,
+    romanisation: formatted.romanisation,
+    entries: formatted.entries
+  };
+}
+
+function setNotFoundMessages(result: DefinitionResult): void {
+  if (!result.mandarin.definition && !result.cantonese.definition) {
+    result.mandarin.definition = NOT_FOUND_MESSAGE;
+    if (!result.cantonese.romanisation || result.cantonese.romanisation.trim().length === 0) {
+      result.cantonese.definition = 'Not found';
+    }
+  } else if (!result.cantonese.definition && result.cantonese.romanisation && result.cantonese.romanisation.trim().length > 0) {
+    result.cantonese.definition = '';
+  }
+}
+
 export async function lookupWordInDictionaries(word: string): Promise<DefinitionResult> {
-  // Ensure dictionaries are loaded
   await loadDictionaries();
 
   console.log('[Dict] Looking up word:', word);
@@ -160,59 +204,17 @@ export async function lookupWordInDictionaries(word: string): Promise<Definition
     cantonese: { definition: '', romanisation: '' }
   };
 
-  // Process each dictionary
-  const dictionaries = [
-    {
-      dict: mandarinDict,
-      name: 'Mandarin',
-      resultKey: 'mandarin' as const,
-      filterCantonese: true
-    },
-    {
-      dict: cantoneseDict,
-      name: 'Cantonese',
-      resultKey: 'cantonese' as const,
-      filterCantonese: false
-    }
-  ];
-
-  for (const { dict, name, resultKey, filterCantonese } of dictionaries) {
-    const entries = lookupInDict(dict, word);
-    
-    if (entries) {
-      const processedEntries = filterCantonese 
-        ? filterOutCantoneseDefinitions(entries)
-        : entries;
-      
-      const logMessage = filterCantonese
-        ? `[Dict] Found ${entries.length} ${name} entry/entries for ${word} (${processedEntries.length} after filtering Cantonese definitions)`
-        : `[Dict] Found ${processedEntries.length} ${name} entry/entries for ${word}`;
-      console.log(logMessage);
-      
-      if (processedEntries.length > 0) {
-        const formatted = formatEntries(processedEntries);
-        result[resultKey] = {
-          definition: formatted.definition,
-          romanisation: formatted.romanisation,
-          entries: formatted.entries
-        };
-      }
-    } else {
-      console.log(`[Dict] No exact ${name} entry found for`, word);
-    }
+  const mandarinResult = processDictionaryLookup(mandarinDict, word, 'Mandarin', true);
+  if (mandarinResult) {
+    result.mandarin = mandarinResult;
   }
 
-  // If no definitions found at all
-  if (!result.mandarin.definition && !result.cantonese.definition) {
-    result.mandarin.definition = 'Word not found in dictionary';
-    // Only set "Not found" for Cantonese if there's also no pronunciation
-    if (!result.cantonese.romanisation || result.cantonese.romanisation.trim().length === 0) {
-      result.cantonese.definition = 'Not found';
-    }
-  } else if (!result.cantonese.definition && result.cantonese.romanisation && result.cantonese.romanisation.trim().length > 0) {
-    // Cantonese has pronunciation but no definition - leave definition empty (don't set "Not found")
-    result.cantonese.definition = '';
+  const cantoneseResult = processDictionaryLookup(cantoneseDict, word, 'Cantonese', false);
+  if (cantoneseResult) {
+    result.cantonese = cantoneseResult;
   }
+
+  setNotFoundMessages(result);
 
   return result;
 }
