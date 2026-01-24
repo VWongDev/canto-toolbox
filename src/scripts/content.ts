@@ -215,22 +215,12 @@ interface CursorResult {
 }
 
 function getTextNodeAtCursor(event: MouseEvent): { textNode: Text; offset: number } | null {
-  if (document.caretRangeFromPoint) {
-    const range = document.caretRangeFromPoint(event.clientX, event.clientY);
-    if (range && range.startContainer.nodeType === Node.TEXT_NODE) {
-      return {
-        textNode: range.startContainer as Text,
-        offset: range.startOffset
-      };
-    }
-  } else if ((document as any).caretPositionFromPoint) {
-    const pos = (document as any).caretPositionFromPoint(event.clientX, event.clientY);
-    if (pos && pos.offsetNode.nodeType === Node.TEXT_NODE) {
-      return {
-        textNode: pos.offsetNode as Text,
-        offset: pos.offset
-      };
-    }
+  const range = document.caretRangeFromPoint(event.clientX, event.clientY);
+  if (range && range.startContainer.nodeType === Node.TEXT_NODE) {
+    return {
+      textNode: range.startContainer as Text,
+      offset: range.startOffset
+    };
   }
   return null;
 }
