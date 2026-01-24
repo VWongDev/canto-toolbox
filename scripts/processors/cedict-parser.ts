@@ -2,6 +2,7 @@
  * Parse CC-CEDICT format text file
  * Format: Traditional Simplified [pinyin] {jyutping} /def1/def2/
  */
+import { addDictionaryEntry } from './utils.js';
 import type { Dictionary, DictionaryEntry } from '../types.js';
 
 export function parseCedictFormat(text: string): Dictionary {
@@ -26,19 +27,7 @@ export function parseCedictFormat(text: string): Dictionary {
         definitions: defs.filter(d => d && String(d).trim().length > 0)
       };
       
-      // Store as arrays to support multiple pronunciations per word
-      if (simplified) {
-        if (!dict[simplified]) {
-          dict[simplified] = [];
-        }
-        dict[simplified].push(entry);
-      }
-      if (traditional && traditional !== simplified) {
-        if (!dict[traditional]) {
-          dict[traditional] = [];
-        }
-        dict[traditional].push(entry);
-      }
+      addDictionaryEntry(dict, entry);
       continue;
     }
     
@@ -55,18 +44,7 @@ export function parseCedictFormat(text: string): Dictionary {
         definitions: defs.filter(d => d && String(d).trim().length > 0)
       };
       
-      if (simplified) {
-        if (!dict[simplified]) {
-          dict[simplified] = [];
-        }
-        dict[simplified].push(entry);
-      }
-      if (traditional && traditional !== simplified) {
-        if (!dict[traditional]) {
-          dict[traditional] = [];
-        }
-        dict[traditional].push(entry);
-      }
+      addDictionaryEntry(dict, entry);
       continue;
     }
     
@@ -82,18 +60,7 @@ export function parseCedictFormat(text: string): Dictionary {
         definitions: []
       };
       
-      if (simplified) {
-        if (!dict[simplified]) {
-          dict[simplified] = [];
-        }
-        dict[simplified].push(entry);
-      }
-      if (traditional && traditional !== simplified) {
-        if (!dict[traditional]) {
-          dict[traditional] = [];
-        }
-        dict[traditional].push(entry);
-      }
+      addDictionaryEntry(dict, entry);
     }
   }
   
