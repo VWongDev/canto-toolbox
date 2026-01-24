@@ -414,13 +414,6 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
 }
 
 function createDefinitionElement(definitions: string[]): HTMLElement {
-  if (definitions.length === 0) {
-    return createElement({
-      className: 'popup-definition',
-      textContent: 'Not found'
-    });
-  }
-  
   return createElement({
     className: 'popup-definition',
     children: definitions.map(def => 
