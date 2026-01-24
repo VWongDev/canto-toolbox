@@ -181,35 +181,15 @@ class StatsManager {
   private handleDefinitionResponse(response: LookupResponse | ErrorResponse | undefined, container: HTMLElement, word: string): void {
     clearElement(container);
     
-    if (!response) {
-      const errorEl = createElement({
+    if (!response || !response.success || !response.definition) {
+      container.appendChild(createElement({
         className: 'stat-error',
-        textContent: 'No response received'
-      });
-      container.appendChild(errorEl);
+        textContent: 'Something went wrong'
+      }));
       return;
     }
 
-    if (!response.success) {
-      const errorEl = createElement({
-        className: 'stat-error',
-        textContent: `Error: ${response.error}`
-      });
-      container.appendChild(errorEl);
-      return;
-    }
-
-    if (!('definition' in response) || !response.definition) {
-      const errorEl = createElement({
-        className: 'stat-error',
-        textContent: 'Definition not found'
-      });
-      container.appendChild(errorEl);
-      return;
-    }
-
-    const definition = response.definition;
-    const definitionEl = createDefinitionElement(word, definition);
+    const definitionEl = createDefinitionElement(word, response.definition);
     container.appendChild(definitionEl);
     container.dataset.loaded = 'true';
   }
