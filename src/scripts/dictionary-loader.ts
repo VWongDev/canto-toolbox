@@ -43,22 +43,18 @@ export async function loadDictionaries(): Promise<{ mandarinDict: Dictionary | n
   return { mandarinDict, cantoneseDict };
 }
 
-function lookupInDict(dict: Dictionary | null, word: string): DictionaryEntry[] | null {
+function lookupInDict(dict: Dictionary | null, word: string): DictionaryEntry[] {
   if (!dict || typeof dict !== 'object') {
-    return null;
+    return [];
   }
 
   const entries = dict[word];
   if (!entries) {
-    return null;
+    return [];
   }
 
   const entryArray = Array.isArray(entries) ? entries : [entries];
   
-  if (entryArray.length === 0) {
-    return null;
-  }
-
   return entryArray;
 }
 
@@ -100,21 +96,13 @@ function processDictionaryLookup(
   word: string,
   name: string,
   filterCantonese: boolean
-): DictionaryEntry[] | null {
+): DictionaryEntry[] {
   const entries = lookupInDict(dict, word);
   
-  if (!entries) {
-    return null;
-  }
-
   const processedEntries = filterCantonese 
     ? filterOutCantoneseDefinitions(entries)
     : entries;
   
-  if (processedEntries.length === 0) {
-    return null;
-  }
-
   return processedEntries;
 }
 
@@ -142,15 +130,8 @@ export async function lookupWordInDictionaries(word: string): Promise<Definition
     cantonese: { entries: [] }
   };
 
-  const mandarinResult = processDictionaryLookup(mandarinDict, word, 'Mandarin', true);
-  if (mandarinResult) {
-    result.mandarin.entries = mandarinResult;
-  }
-
-  const cantoneseResult = processDictionaryLookup(cantoneseDict, word, 'Cantonese', false);
-  if (cantoneseResult) {
-    result.cantonese.entries = cantoneseResult;
-  }
+  result.mandarin.entries = processDictionaryLookup(mandarinDict, word, 'Mandarin', true);
+  result.cantonese.entries = processDictionaryLookup(cantoneseDict, word, 'Cantonese', false);
 
   setNotFoundMessages(result);
 
