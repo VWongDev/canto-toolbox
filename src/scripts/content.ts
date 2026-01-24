@@ -65,8 +65,8 @@ function injectStyles(): void {
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       padding: 12px;
-      min-width: 400px;
-      max-width: 600px;
+      min-width: 500px;
+      max-width: 900px;
       width: auto;
       height: auto;
       max-height: 80vh;
@@ -84,8 +84,10 @@ function injectStyles(): void {
     .popup-sections-container {
       display: flex;
       flex-direction: row;
-      gap: 16px;
+      gap: 24px;
       align-items: flex-start;
+      min-width: 0;
+      width: 100%;
     }
     .popup-word {
       font-size: 24px;
@@ -95,38 +97,47 @@ function injectStyles(): void {
       padding-bottom: 6px;
       border-bottom: 2px solid #e0e0e0;
       text-align: center;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
     .popup-section {
       flex: 1;
       min-width: 0;
-      flex-shrink: 0;
+      max-width: 100%;
+      overflow: hidden;
+      box-sizing: border-box;
     }
     .popup-pronunciations-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
       max-width: 100%;
+      width: 100%;
+      box-sizing: border-box;
     }
     .popup-pronunciations-grid[data-count="1"] {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
     .popup-pronunciations-grid[data-count="2"] {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    @media (max-width: 500px) {
+    @media (max-width: 600px) {
       .popup-pronunciations-grid {
         grid-template-columns: 1fr;
       }
     }
-    @media (min-width: 501px) and (max-width: 600px) {
+    @media (min-width: 601px) and (max-width: 800px) {
       .popup-pronunciations-grid[data-count="3"],
       .popup-pronunciations-grid[data-count="4"] {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
     .popup-pronunciation-group {
       margin-bottom: 0;
       min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      box-sizing: border-box;
     }
     .popup-label {
       font-size: 11px;
@@ -135,6 +146,9 @@ function injectStyles(): void {
       color: #666;
       letter-spacing: 0.5px;
       margin-bottom: 3px;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      max-width: 100%;
     }
     .popup-pinyin,
     .popup-jyutping {
@@ -143,11 +157,23 @@ function injectStyles(): void {
       font-weight: 500;
       margin-bottom: 4px;
       font-family: 'Arial', sans-serif;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-word;
+      max-width: 100%;
     }
     .popup-definition {
       font-size: 13px;
       color: #555;
       line-height: 1.5;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-word;
+      max-width: 100%;
+      hyphens: auto;
+      box-sizing: border-box;
+    }
+    .popup-label {
       overflow-wrap: break-word;
       word-wrap: break-word;
       max-width: 100%;
