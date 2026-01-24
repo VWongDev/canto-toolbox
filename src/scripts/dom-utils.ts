@@ -1,43 +1,68 @@
-// dom-utils.ts - DOM element creation utilities
-
-/**
- * Options for creating DOM elements
- */
 export interface CreateElementOptions {
-  /** HTML tag name (default: 'div') */
   tag?: string;
-  /** CSS class name(s) - can be string or array */
   className?: string | string[];
-  /** Text content for the element */
   textContent?: string;
-  /** Dataset attributes as an object */
   dataset?: Record<string, string>;
-  /** HTML attributes as an object */
   attributes?: Record<string, string>;
-  /** Inline styles as an object or string */
   style?: Partial<CSSStyleDeclaration> | string;
-  /** Element ID */
   id?: string;
-  /** Child elements to append */
   children?: (HTMLElement | Node | string)[];
-  /** Event listeners to attach */
   listeners?: Record<string, EventListener>;
-  /** Whether to append children (default: true) */
   appendChildren?: boolean;
 }
 
-/**
- * Create a DOM element with specified properties
- * 
- * @example
- * const el = createElement({
- *   tag: 'div',
- *   className: 'my-class',
- *   textContent: 'Hello',
- *   dataset: { id: '123' },
- *   children: [createElement({ tag: 'span', textContent: 'World' })]
- * });
- */
+function setElementId(element: HTMLElement, id: string): void {
+  element.id = id;
+}
+
+function setElementClassName(element: HTMLElement, className: string | string[]): void {
+  if (Array.isArray(className)) {
+    element.className = className.join(' ');
+  } else {
+    element.className = className;
+  }
+}
+
+function setElementTextContent(element: HTMLElement, textContent: string): void {
+  element.textContent = textContent;
+}
+
+function setElementDataset(element: HTMLElement, dataset: Record<string, string>): void {
+  for (const [key, value] of Object.entries(dataset)) {
+    element.dataset[key] = value;
+  }
+}
+
+function setElementAttributes(element: HTMLElement, attributes: Record<string, string>): void {
+  for (const [key, value] of Object.entries(attributes)) {
+    element.setAttribute(key, value);
+  }
+}
+
+function setElementStyle(element: HTMLElement, style: Partial<CSSStyleDeclaration> | string): void {
+  if (typeof style === 'string') {
+    element.style.cssText = style;
+  } else {
+    Object.assign(element.style, style);
+  }
+}
+
+function appendElementChildren(element: HTMLElement, children: (HTMLElement | Node | string)[]): void {
+  for (const child of children) {
+    if (typeof child === 'string') {
+      element.appendChild(document.createTextNode(child));
+    } else if (child instanceof Node) {
+      element.appendChild(child);
+    }
+  }
+}
+
+function attachElementListeners(element: HTMLElement, listeners: Record<string, EventListener>): void {
+  for (const [event, handler] of Object.entries(listeners)) {
+    element.addEventListener(event, handler);
+  }
+}
+
 export function createElement<T extends HTMLElement = HTMLElement>(
   options: CreateElementOptions = {}
 ): T {
@@ -56,82 +81,47 @@ export function createElement<T extends HTMLElement = HTMLElement>(
 
   const element = document.createElement(tag) as T;
 
-  // Set ID
   if (id) {
-    element.id = id;
+    setElementId(element, id);
   }
 
-  // Set class name(s)
   if (className) {
-    if (Array.isArray(className)) {
-      element.className = className.join(' ');
-    } else {
-      element.className = className;
-    }
+    setElementClassName(element, className);
   }
 
-  // Set text content
   if (textContent !== undefined) {
-    element.textContent = textContent;
+    setElementTextContent(element, textContent);
   }
 
-  // Set dataset attributes
   if (dataset) {
-    for (const [key, value] of Object.entries(dataset)) {
-      element.dataset[key] = value;
-    }
+    setElementDataset(element, dataset);
   }
 
-  // Set HTML attributes
   if (attributes) {
-    for (const [key, value] of Object.entries(attributes)) {
-      element.setAttribute(key, value);
-    }
+    setElementAttributes(element, attributes);
   }
 
-  // Set inline styles
   if (style) {
-    if (typeof style === 'string') {
-      element.style.cssText = style;
-    } else {
-      Object.assign(element.style, style);
-    }
+    setElementStyle(element, style);
   }
 
-  // Append children
   if (appendChildren && children) {
-    for (const child of children) {
-      if (typeof child === 'string') {
-        element.appendChild(document.createTextNode(child));
-      } else if (child instanceof Node) {
-        element.appendChild(child);
-      }
-    }
+    appendElementChildren(element, children);
   }
 
-  // Attach event listeners
   if (listeners) {
-    for (const [event, handler] of Object.entries(listeners)) {
-      element.addEventListener(event, handler);
-    }
+    attachElementListeners(element, listeners);
   }
 
   return element;
 }
 
-/**
- * Clear all children from an element
- */
 export function clearElement(element: HTMLElement): void {
   while (element.firstChild) {
     element.removeChild(element.firstChild);
   }
 }
 
-/**
- * Helper to create a text node
- */
 export function createText(text: string): Text {
   return document.createTextNode(text);
 }
-
