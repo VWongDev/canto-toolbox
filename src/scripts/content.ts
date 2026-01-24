@@ -332,7 +332,7 @@ function handleSelection(event: MouseEvent): void {
     return;
   }
 
-  const word = chineseWords.length === 1 ? chineseWords[0] : chineseWords.join('');
+  const word = chineseWords.join('');
   
   if (selection.rangeCount === 0) {
     return;
