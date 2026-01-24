@@ -43,7 +43,14 @@ class ChineseHoverPopupManager {
     this.chromeRuntime = chromeRuntime;
   }
 
-  handleMouseMove(event: MouseEvent): void {
+  init(): void {
+    this.injectStyles();
+    this.document.addEventListener('mousemove', (e) => this.handleMouseMove(e), true);
+    this.document.addEventListener('mouseout', (e) => this.handleMouseOut(e), true);
+    this.document.addEventListener('mouseup', (e) => this.handleSelection(e), true);
+  }
+
+  private handleMouseMove(event: MouseEvent): void {
     const now = Date.now();
     if (now - this.lastMouseMoveTime < THROTTLE_INTERVAL_MS) {
       if (!this.mousemoveThrottle) {
@@ -59,7 +66,7 @@ class ChineseHoverPopupManager {
     this.handleMouseMoveThrottled(event);
   }
 
-  handleSelection(event: MouseEvent): void {
+  private handleSelection(event: MouseEvent): void {
     const selection = window.getSelection();
     if (!selection) {
       return;
@@ -93,7 +100,7 @@ class ChineseHoverPopupManager {
     this.lookupAndShowWord(word, rect.left + rect.width / 2, rect.top - 10);
   }
 
-  handleMouseOut(event: MouseEvent): void {
+  private handleMouseOut(event: MouseEvent): void {
     if (this.currentSelection) {
       return;
     }
@@ -334,34 +341,27 @@ class ChineseHoverPopupManager {
     const offsetDiff = isSameTextNode ? Math.abs(offset - this.lastHoveredOffset) : 1;
     return !isSameTextNode || offsetDiff >= 0.5;
   }
+
+  private injectStyles(): void {
+    if (this.document.getElementById('chinese-hover-styles')) {
+      return;
+    }
+
+    const style = createElement<HTMLStyleElement>({
+      tag: 'style',
+      id: 'chinese-hover-styles'
+    });
+    style.textContent = popupStyles;
+    this.document.head.appendChild(style);
+  }
 }
 
 const popupManager = new ChineseHoverPopupManager(document, chrome.runtime);
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', () => popupManager.init());
 } else {
-  init();
-}
-
-function init(): void {
-  injectStyles();
-  document.addEventListener('mousemove', (e) => popupManager.handleMouseMove(e), true);
-  document.addEventListener('mouseout', (e) => popupManager.handleMouseOut(e), true);
-  document.addEventListener('mouseup', (e) => popupManager.handleSelection(e), true);
-}
-
-function injectStyles(): void {
-  if (document.getElementById('chinese-hover-styles')) {
-    return;
-  }
-
-  const style = createElement<HTMLStyleElement>({
-    tag: 'style',
-    id: 'chinese-hover-styles'
-  });
-  style.textContent = popupStyles;
-  document.head.appendChild(style);
+  popupManager.init();
 }
 
 function getTextNodeAtCursor(event: MouseEvent): { textNode: Text; offset: number } | null {
