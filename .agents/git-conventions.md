@@ -19,7 +19,7 @@ type(domain): Description
 - `refactor`: Code refactoring
 - `test`: Adding or updating tests
 - `chore`: Maintenance tasks
-- `ai`: AI-related changes or documentation
+- `ai`: AI-related changes or documentation (use when modifying files in `.agents/` directory or AI-specific files)
 
 ### Domain
 
