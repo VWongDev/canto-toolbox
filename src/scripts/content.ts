@@ -41,7 +41,6 @@ function init(): void {
   document.addEventListener('mousemove', handleMouseMove, true);
   document.addEventListener('mouseout', handleMouseOut, true);
   document.addEventListener('mouseup', handleSelection, true);
-  console.log('Canto Toolbox extension initialized');
 }
 
 function injectStyles(): void {

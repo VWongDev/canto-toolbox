@@ -26,7 +26,6 @@ function preloadDictionaries(): Promise<void> {
   dictionariesLoading = true;
   dictionariesLoadPromise = loadDictionaries()
     .then(() => {
-      console.log('[Background] Dictionaries pre-loaded successfully');
       dictionariesLoading = false;
     })
     .catch(error => {
@@ -46,10 +45,8 @@ function isCacheValid(cached: CacheEntry | undefined): boolean {
 }
 
 function handleLookupWordMessage(word: string, sendResponse: (response: BackgroundResponse) => void): void {
-  console.log('[Background] Looking up word:', word);
   lookupWord(word)
     .then(definition => {
-      console.log('[Background] Lookup successful, definition:', definition);
       const wordToTrack = definition?.word || word;
       updateStatistics(wordToTrack).catch(error => {
         console.error('[Background] Failed to track statistics:', error);
@@ -68,12 +65,9 @@ function handleLookupWordMessage(word: string, sendResponse: (response: Backgrou
 }
 
 function handleGetStatisticsMessage(sendResponse: (response: BackgroundResponse) => void): void {
-  console.log('[Background] Handling get_statistics request');
   getStatistics()
     .then(stats => {
-      console.log('[Background] Returning statistics:', Object.keys(stats).length, 'words');
       const response: StatisticsResponse = { success: true, statistics: stats };
-      console.log('[Background] Sending response:', response);
       sendResponse(response);
     })
     .catch(error => {
@@ -98,9 +92,6 @@ chrome.runtime.onMessage.addListener((
   sender: chrome.runtime.MessageSender,
   sendResponse: (response: BackgroundResponse) => void
 ): boolean => {
-  console.log('[Background] Received message:', message.type, message);
-  console.log('[Background] Sender:', sender);
-  
   if (message.type === 'lookup_word') {
     handleLookupWordMessage(message.word, sendResponse);
     return true;
@@ -175,7 +166,6 @@ async function findLongestMatchingWord(word: string): Promise<{ definition: Defi
     const subDefinition = await lookupWordInDictionaries(substring);
     
     if (hasValidDefinition(subDefinition)) {
-      console.log('[Dict] Found exact match:', substring, 'for word', word);
       return { definition: subDefinition, matchedWord: substring };
     }
   }
@@ -184,7 +174,6 @@ async function findLongestMatchingWord(word: string): Promise<{ definition: Defi
     const firstChar = word[0];
     const charDefinition = await lookupWordInDictionaries(firstChar);
     if (hasValidDefinition(charDefinition)) {
-      console.log('[Dict] Found single character match:', firstChar);
       return { definition: charDefinition, matchedWord: firstChar };
     }
   }
@@ -195,11 +184,8 @@ async function findLongestMatchingWord(word: string): Promise<{ definition: Defi
 async function lookupWord(word: string): Promise<DefinitionResult> {
   const cached = lookupCache.get(word);
   if (isCacheValid(cached)) {
-    console.log('[Dict] Using cached definition for:', word);
     return cached!.data;
   }
-
-  console.log('[Dict] Looking up word in local dictionaries:', word);
 
   try {
     const matchResult = await findLongestMatchingWord(word);
@@ -207,7 +193,6 @@ async function lookupWord(word: string): Promise<DefinitionResult> {
     if (matchResult) {
       const { definition, matchedWord } = matchResult;
       definition.word = matchedWord;
-      console.log('[Dict] Found definition for:', matchedWord);
       
       lookupCache.set(word, {
         data: definition,
@@ -252,7 +237,6 @@ async function updateStatisticsInStorage(storage: chrome.storage.StorageArea, wo
   const stats: Statistics = result.wordStatistics || {};
   updateWordStat(stats, word);
   await storage.set({ wordStatistics: stats });
-  console.log('[Background] Updated statistics for word:', word, 'count:', stats[word].count);
 }
 
 async function updateStatistics(word: string): Promise<void> {
@@ -278,7 +262,6 @@ async function loadStatisticsFromStorage(storage: chrome.storage.StorageArea, st
   try {
     const result = await storage.get([STORAGE_KEY]);
     const stats = (result.wordStatistics || {}) as Statistics;
-    console.log(`[Background] Loaded from ${storageName} storage:`, Object.keys(stats).length, 'words');
     return stats;
   } catch (error) {
     console.warn(`[Background] Failed to get statistics from ${storageName} storage:`, error);
@@ -307,6 +290,5 @@ async function getStatistics(): Promise<Statistics> {
   const localStats = await loadStatisticsFromStorage(chrome.storage.local, 'local');
   const mergedStats = mergeStatistics(syncStats, localStats);
   
-  console.log('[Background] Total merged statistics:', Object.keys(mergedStats).length, 'words');
   return mergedStats;
 }

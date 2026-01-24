@@ -13,10 +13,7 @@ const STORAGE_KEY = 'wordStatistics';
 const EXPAND_ICON_COLLAPSED = '▶';
 const EXPAND_ICON_EXPANDED = '▼';
 
-console.log('[Stats] Script loaded');
-
 function init(): void {
-  console.log('[Stats] Initializing...');
   loadStatistics();
   setupClearButton();
 }
@@ -84,7 +81,6 @@ function displayStatistics(statistics: Record<string, WordStatistics>, elements:
 
   const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
   const words = Object.keys(statistics);
-  console.log('[Stats] Loaded statistics:', words.length, 'words', statistics);
 
   loadingEl.style.display = 'none';
 
@@ -117,14 +113,10 @@ function sortWordsByCount(words: string[], statistics: Record<string, WordStatis
 }
 
 function loadStatistics(): void {
-  console.log('[Stats] loadStatistics called');
   const elements = getRequiredElements();
   if (!elements) return;
 
-  console.log('[Stats] Requesting statistics from background script...');
-  console.log('[Stats] chrome.runtime available:', !!chrome.runtime);
   chrome.runtime.sendMessage({ type: 'get_statistics' }, (response: StatisticsResponse | undefined) => {
-    console.log('[Stats] Received response:', response);
     handleStatisticsResponse(response, elements);
   });
 }

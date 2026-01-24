@@ -17,7 +17,6 @@ async function loadDictionary(url: string): Promise<Dictionary | null> {
     const response = await fetch(url);
     if (response.ok) {
       const dict = await response.json() as Dictionary;
-      console.log('[Dict] Loaded dictionary:', Object.keys(dict).length, 'entries');
       return dict;
     } else {
       console.error('[Dict] Failed to load dictionary:', response.status);
@@ -157,18 +156,12 @@ function processDictionaryLookup(
   const entries = lookupInDict(dict, word);
   
   if (!entries) {
-    console.log(`[Dict] No exact ${name} entry found for`, word);
     return null;
   }
 
   const processedEntries = filterCantonese 
     ? filterOutCantoneseDefinitions(entries)
     : entries;
-  
-  const logMessage = filterCantonese
-    ? `[Dict] Found ${entries.length} ${name} entry/entries for ${word} (${processedEntries.length} after filtering Cantonese definitions)`
-    : `[Dict] Found ${processedEntries.length} ${name} entry/entries for ${word}`;
-  console.log(logMessage);
   
   if (processedEntries.length === 0) {
     return null;
@@ -195,8 +188,6 @@ function setNotFoundMessages(result: DefinitionResult): void {
 
 export async function lookupWordInDictionaries(word: string): Promise<DefinitionResult> {
   await loadDictionaries();
-
-  console.log('[Dict] Looking up word:', word);
 
   const result: DefinitionResult = {
     word: word,
