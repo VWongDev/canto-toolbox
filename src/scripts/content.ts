@@ -1,30 +1,35 @@
-// content.ts - Content script for detecting Chinese words on hover
-
 import type { DefinitionResult } from '../types';
 import { createElement, clearElement } from './dom-utils';
 
-// Chinese character regex pattern
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
+const MAX_WORD_LENGTH = 4;
+const THROTTLE_INTERVAL_MS = 16;
+const HOVER_DEBOUNCE_MS = 50;
+const SELECTION_HIDE_DELAY_MS = 200;
+const SELECTION_TRACKING_DELAY_MS = 300;
+const POPUP_OFFSET_PX = 15;
+const SELECTION_PADDING_PX = 10;
+const VIEWPORT_MARGIN_PX = 10;
 
-// Debounce timer
 let hoverTimer: ReturnType<typeof setTimeout> | null = null;
-let hideTimer: ReturnType<typeof setTimeout> | null = null; // Timer for hiding popup
+let hideTimer: ReturnType<typeof setTimeout> | null = null;
 let lastHoveredWord: string | null = null;
-let lastHoveredOffset = -1; // Track last cursor offset for horizontal movement detection
+let lastHoveredOffset = -1;
 let currentPopup: HTMLElement | null = null;
+
 interface SelectionData {
   rect: DOMRect;
 }
-let currentSelection: SelectionData | null = null; // Track current selection for popup
-let selectionPopupTimer: ReturnType<typeof setTimeout> | null = null;
-let isHoveringChinese = false; // Track if currently hovering over Chinese text
-let lastHoveredElement: Node | null = null; // Track last element we were hovering over
-let mousemoveThrottle: number | null = null; // Throttle mousemove handler
-let lastMouseMoveTime = 0; // Track last mousemove execution time
-let cachedSelection: boolean | null = null; // Cache selection check
-let cachedPopupElement: HTMLElement | null = null; // Cache popup element reference
 
-// Initialize on page load
+let currentSelection: SelectionData | null = null;
+let selectionPopupTimer: ReturnType<typeof setTimeout> | null = null;
+let isHoveringChinese = false;
+let lastHoveredElement: Node | null = null;
+let mousemoveThrottle: number | null = null;
+let lastMouseMoveTime = 0;
+let cachedSelection: boolean | null = null;
+let cachedPopupElement: HTMLElement | null = null;
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
@@ -32,27 +37,16 @@ if (document.readyState === 'loading') {
 }
 
 function init(): void {
-  // Inject CSS styles
   injectStyles();
-  
-  // Use mousemove as primary detection method (like Zhongwen)
-  // This allows real-time checking of character under cursor
   document.addEventListener('mousemove', handleMouseMove, true);
   document.addEventListener('mouseout', handleMouseOut, true);
-  
-  // Add selection listener for multi-word searches
   document.addEventListener('mouseup', handleSelection, true);
-  
-  // Debug: log initialization
   console.log('Canto Toolbox extension initialized');
 }
 
-/**
- * Inject CSS styles into the page
- */
 function injectStyles(): void {
   if (document.getElementById('chinese-hover-styles')) {
-    return; // Already injected
+    return;
   }
 
   const style = createElement<HTMLStyleElement>({
@@ -218,68 +212,45 @@ interface CursorResult {
   offset: number;
 }
 
-/**
- * Get the Chinese character/word at the exact cursor position
- * Inspired by Zhongwen's approach: check character first, then extract word
- * Returns {word, textNode, offset} or null if not over Chinese text
- */
-function getChineseWordAtCursor(event: MouseEvent): CursorResult | null {
-  // Get the text node at cursor position using the most reliable method
-  let textNode: Text | null = null;
-  let offset = -1;
-  
+function getTextNodeAtCursor(event: MouseEvent): { textNode: Text; offset: number } | null {
   if (document.caretRangeFromPoint) {
     const range = document.caretRangeFromPoint(event.clientX, event.clientY);
     if (range && range.startContainer.nodeType === Node.TEXT_NODE) {
-      textNode = range.startContainer as Text;
-      offset = range.startOffset;
+      return {
+        textNode: range.startContainer as Text,
+        offset: range.startOffset
+      };
     }
   } else if ((document as any).caretPositionFromPoint) {
     const pos = (document as any).caretPositionFromPoint(event.clientX, event.clientY);
     if (pos && pos.offsetNode.nodeType === Node.TEXT_NODE) {
-      textNode = pos.offsetNode as Text;
-      offset = pos.offset;
+      return {
+        textNode: pos.offsetNode as Text,
+        offset: pos.offset
+      };
     }
   }
-  
-  // Must have a valid text node with valid offset
-  if (!textNode || offset < 0 || !textNode.textContent) {
-    return null;
-  }
-  
-  const text = textNode.textContent;
-  
-  // CRITICAL: Check the exact character at cursor position FIRST
-  // This is the key - we must verify the character is Chinese before doing anything else
-  const charAtOffset = text.charAt(offset);
-  
-  // Only proceed if the character at the exact cursor position is Chinese
-  if (!/[\u4e00-\u9fff]/.test(charAtOffset)) {
-    return null;
-  }
-  
-  // Find the Chinese character sequence containing this position
+  return null;
+}
+
+function isChineseCharacter(char: string): boolean {
+  return /[\u4e00-\u9fff]/.test(char);
+}
+
+function extractChineseWordFromText(text: string, offset: number): string | null {
   const chineseRegex = /[\u4e00-\u9fff]+/g;
   let match;
+  
   while ((match = chineseRegex.exec(text)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
     
-    // Check if cursor is within this Chinese sequence
     if (offset >= start && offset < end) {
-      // Extract up to 4 characters starting from cursor position
       const relativeOffset = offset - start;
-      const maxLength = Math.min(4, match[0].length - relativeOffset);
-      const word = match[0].substring(relativeOffset, relativeOffset + maxLength);
-      
-      return {
-        word: word,
-        textNode: textNode,
-        offset: offset
-      };
+      const maxLength = Math.min(MAX_WORD_LENGTH, match[0].length - relativeOffset);
+      return match[0].substring(relativeOffset, relativeOffset + maxLength);
     }
     
-    // Early exit optimization: if we've passed the cursor position, no need to continue
     if (start > offset) {
       break;
     }
@@ -288,11 +259,53 @@ function getChineseWordAtCursor(event: MouseEvent): CursorResult | null {
   return null;
 }
 
+function getChineseWordAtCursor(event: MouseEvent): CursorResult | null {
+  const cursorData = getTextNodeAtCursor(event);
+  if (!cursorData || cursorData.offset < 0 || !cursorData.textNode.textContent) {
+    return null;
+  }
+  
+  const text = cursorData.textNode.textContent;
+  const charAtOffset = text.charAt(cursorData.offset);
+  
+  if (!isChineseCharacter(charAtOffset)) {
+    return null;
+  }
+  
+  const word = extractChineseWordFromText(text, cursorData.offset);
+  if (!word) {
+    return null;
+  }
+  
+  return {
+    word,
+    textNode: cursorData.textNode,
+    offset: cursorData.offset
+  };
+}
 
-/**
- * Handle text selection for multi-word searches
- * Preserves default highlight behavior and shows popup
- */
+
+function extractChineseWordsFromText(text: string): string[] {
+  const matches = text.match(CHINESE_REGEX);
+  return matches || [];
+}
+
+function clearSelectionPopupTimer(): void {
+  if (selectionPopupTimer) {
+    clearTimeout(selectionPopupTimer);
+    selectionPopupTimer = null;
+  }
+}
+
+function scheduleSelectionHide(): void {
+  clearSelectionPopupTimer();
+  selectionPopupTimer = setTimeout(() => {
+    if (!currentSelection) {
+      hidePopup();
+    }
+  }, SELECTION_HIDE_DELAY_MS);
+}
+
 function handleSelection(event: MouseEvent): void {
   const selection = window.getSelection();
   if (!selection) {
@@ -300,44 +313,28 @@ function handleSelection(event: MouseEvent): void {
   }
   
   const selectedText = selection.toString().trim();
-  cachedSelection = selectedText.length > 0; // Update cache
+  cachedSelection = selectedText.length > 0;
   
   if (!selectedText || selectedText.length === 0) {
-    // Selection cleared - hide popup if it was from selection
-    cachedSelection = false; // Update cache
+    cachedSelection = false;
     if (currentSelection) {
       currentSelection = null;
-      // Don't hide immediately, wait to see if user is moving to popup
-      if (selectionPopupTimer) {
-        clearTimeout(selectionPopupTimer);
-      }
-      selectionPopupTimer = setTimeout(() => {
-        if (!currentSelection) {
-          hidePopup();
-        }
-      }, 200);
+      scheduleSelectionHide();
     }
     return;
   }
 
-  // Check if selection contains Chinese characters
-  if (!/[\u4e00-\u9fff]/.test(selectedText)) {
+  if (!isChineseCharacter(selectedText)) {
     return;
   }
 
-  // Extract Chinese words from selection
-  const chineseRegex = /[\u4e00-\u9fff]+/g;
-  const matches = selectedText.match(chineseRegex);
-  
-  if (!matches || matches.length === 0) {
+  const chineseWords = extractChineseWordsFromText(selectedText);
+  if (chineseWords.length === 0) {
     return;
   }
 
-  // Use the first Chinese word sequence found in selection
-  // Or combine all if they form a phrase
-  const word = matches.length === 1 ? matches[0] : matches.join('');
+  const word = chineseWords.length === 1 ? chineseWords[0] : chineseWords.join('');
   
-  // Get selection position for popup placement
   if (selection.rangeCount === 0) {
     return;
   }
@@ -345,23 +342,13 @@ function handleSelection(event: MouseEvent): void {
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
   
-  // Store selection info for tracking
-  currentSelection = {
-    rect: rect
-  };
-  
-  // Lookup and show popup
+  currentSelection = { rect };
   lookupAndShowWord(word, rect.left + rect.width / 2, rect.top - 10);
 }
 
-/**
- * Handle mouse movement - primary detection method (like Zhongwen)
- * Throttled for performance
- */
 function handleMouseMove(event: MouseEvent): void {
-  // Throttle mousemove handler to max 60fps (16ms intervals)
   const now = Date.now();
-  if (now - lastMouseMoveTime < 16) {
+  if (now - lastMouseMoveTime < THROTTLE_INTERVAL_MS) {
     if (!mousemoveThrottle) {
       mousemoveThrottle = requestAnimationFrame(() => {
         handleMouseMoveThrottled(event);
@@ -375,293 +362,213 @@ function handleMouseMove(event: MouseEvent): void {
   handleMouseMoveThrottled(event);
 }
 
+function getCachedPopupElement(): HTMLElement | null {
+  if (!cachedPopupElement) {
+    cachedPopupElement = document.getElementById('chinese-hover-popup');
+  }
+  return cachedPopupElement;
+}
+
+function isMouseOverSelection(mouseX: number, mouseY: number, rect: DOMRect): boolean {
+  return mouseX >= rect.left - SELECTION_PADDING_PX && 
+         mouseX <= rect.right + SELECTION_PADDING_PX &&
+         mouseY >= rect.top - SELECTION_PADDING_PX && 
+         mouseY <= rect.bottom + SELECTION_PADDING_PX;
+}
+
+function isMouseOverPopup(mouseX: number, mouseY: number, popup: HTMLElement | null): boolean {
+  if (!popup) return false;
+  return mouseX >= popup.offsetLeft && 
+         mouseX <= popup.offsetLeft + popup.offsetWidth &&
+         mouseY >= popup.offsetTop && 
+         mouseY <= popup.offsetTop + popup.offsetHeight;
+}
+
+function updateCachedSelection(): void {
+  if (cachedSelection === null) {
+    const selection = window.getSelection();
+    cachedSelection = selection ? selection.toString().trim().length > 0 : false;
+  }
+}
+
+function handleSelectionTracking(event: MouseEvent): void {
+  const mouseX = event.clientX;
+  const mouseY = event.clientY;
+  const rect = currentSelection!.rect;
+  const popup = getCachedPopupElement();
+  
+  const overSelection = isMouseOverSelection(mouseX, mouseY, rect);
+  const overPopup = isMouseOverPopup(mouseX, mouseY, popup);
+  
+  if (!overSelection && !overPopup) {
+    clearSelectionPopupTimer();
+    selectionPopupTimer = setTimeout(() => {
+      updateCachedSelection();
+      if (!cachedSelection || (!overSelection && !overPopup)) {
+        currentSelection = null;
+        hidePopup();
+      }
+    }, SELECTION_TRACKING_DELAY_MS);
+  } else {
+    clearSelectionPopupTimer();
+  }
+}
+
+function isNonTextElement(tagName: string): boolean {
+  return tagName === 'SCRIPT' || tagName === 'STYLE' || tagName === 'NOSCRIPT';
+}
+
+function clearHideTimer(): void {
+  if (hideTimer) {
+    clearTimeout(hideTimer);
+    hideTimer = null;
+  }
+}
+
+function clearHoverTimer(): void {
+  if (hoverTimer) {
+    clearTimeout(hoverTimer);
+    hoverTimer = null;
+  }
+}
+
+function resetHoverState(): void {
+  isHoveringChinese = false;
+  lastHoveredElement = null;
+  lastHoveredOffset = -1;
+}
+
+function hasCharacterChanged(textNode: Node, offset: number): boolean {
+  const isSameTextNode = textNode === lastHoveredElement;
+  const offsetDiff = isSameTextNode ? Math.abs(offset - lastHoveredOffset) : 1;
+  return !isSameTextNode || offsetDiff >= 0.5;
+}
+
 function handleMouseMoveThrottled(event: MouseEvent): void {
   const target = event.target as HTMLElement | null;
   if (!target) {
     return;
   }
   
-  // Handle selection tracking
   if (currentSelection) {
-    const mouseX = event.clientX;
-    const mouseY = event.clientY;
-    const rect = currentSelection.rect;
-    
-    if (!cachedPopupElement) {
-      cachedPopupElement = document.getElementById('chinese-hover-popup');
-    }
-    const popup = cachedPopupElement;
-    
-    const padding = 10;
-    const isOverSelection = mouseX >= rect.left - padding && 
-                           mouseX <= rect.right + padding &&
-                           mouseY >= rect.top - padding && 
-                           mouseY <= rect.bottom + padding;
-    
-    const isOverPopup = popup && (
-      mouseX >= popup.offsetLeft && 
-      mouseX <= popup.offsetLeft + popup.offsetWidth &&
-      mouseY >= popup.offsetTop && 
-      mouseY <= popup.offsetTop + popup.offsetHeight
-    );
-    
-    if (!isOverSelection && !isOverPopup) {
-      if (selectionPopupTimer) {
-        clearTimeout(selectionPopupTimer);
-      }
-      selectionPopupTimer = setTimeout(() => {
-        if (cachedSelection === null) {
-          const selection = window.getSelection();
-          cachedSelection = selection ? selection.toString().trim().length > 0 : false;
-        }
-        if (!cachedSelection || (!isOverSelection && !isOverPopup)) {
-          currentSelection = null;
-          hidePopup();
-        }
-      }, 300);
-    } else {
-      if (selectionPopupTimer) {
-        clearTimeout(selectionPopupTimer);
-      }
-    }
+    handleSelectionTracking(event);
     return;
   }
   
-  // Skip if hovering over popup
   if (target.closest('#chinese-hover-popup')) {
-    if (hideTimer) {
-      clearTimeout(hideTimer);
-    }
+    clearHideTimer();
     isHoveringChinese = true;
     return;
   }
   
-  // Skip if there's a text selection
-  if (cachedSelection === null) {
-    const selection = window.getSelection();
-    cachedSelection = selection ? selection.toString().trim().length > 0 : false;
-  }
+  updateCachedSelection();
   if (cachedSelection) {
     return;
   }
   
-  // Skip script, style, and other non-text elements
-  if (target.tagName === 'SCRIPT' || target.tagName === 'STYLE' || target.tagName === 'NOSCRIPT') {
-    // Not over text - hide popup
+  if (isNonTextElement(target.tagName)) {
     if (isHoveringChinese) {
-      isHoveringChinese = false;
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-      }
+      resetHoverState();
+      clearHideTimer();
       hidePopup();
-      lastHoveredElement = null;
-      lastHoveredOffset = -1;
     }
     return;
   }
   
-  // Get Chinese word at current cursor position (primary detection)
   const result = getChineseWordAtCursor(event);
   
   if (!result) {
-    // Not over Chinese text - hide popup immediately
     if (isHoveringChinese || currentPopup) {
-      isHoveringChinese = false;
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-      }
+      resetHoverState();
+      clearHideTimer();
       hidePopup();
-      lastHoveredElement = null;
-      lastHoveredOffset = -1;
     }
     return;
   }
   
   const { word, textNode, offset } = result;
   
-  // We're hovering over Chinese text
   isHoveringChinese = true;
-  if (hideTimer) {
-    clearTimeout(hideTimer);
-  }
+  clearHideTimer();
   cachedSelection = false;
   
-  // Check if we moved to a different character/word
-  const isSameTextNode = textNode === lastHoveredElement;
-  const offsetDiff = isSameTextNode ? Math.abs(offset - lastHoveredOffset) : 1;
-  const isDifferentChar = !isSameTextNode || offsetDiff >= 0.5;
+  const characterChanged = hasCharacterChanged(textNode, offset);
   
-  // Update tracking
   lastHoveredElement = textNode;
   lastHoveredOffset = offset;
   
-  // Update popup if word or character changed
-  if (word !== lastHoveredWord || isDifferentChar) {
+  if (word !== lastHoveredWord || characterChanged) {
     lastHoveredWord = word;
-    if (hoverTimer) {
-      clearTimeout(hoverTimer);
-    }
+    clearHoverTimer();
     const isDifferentWord = lastHoveredWord && lastHoveredWord !== word;
-    if (isDifferentWord || isDifferentChar) {
-      // Different word/character - update immediately
+    if (isDifferentWord || characterChanged) {
       lookupAndShowWord(word, event.clientX, event.clientY);
     } else {
-      // First word - small debounce
       hoverTimer = setTimeout(() => {
         lookupAndShowWord(word, event.clientX, event.clientY);
-      }, 50);
+      }, HOVER_DEBOUNCE_MS);
     }
   }
 }
 
-/**
- * Handle mouseout events
- */
 function handleMouseOut(event: MouseEvent): void {
-  // Don't hide popup if it's from a selection (handleMouseMove handles that)
   if (currentSelection) {
     return;
   }
   
-  // Check if moving to popup
   const relatedTarget = event.relatedTarget as HTMLElement | null;
   if (relatedTarget && relatedTarget.closest('#chinese-hover-popup')) {
-    // Moving to popup - don't hide
-    if (hideTimer) {
-      clearTimeout(hideTimer);
-    }
+    clearHideTimer();
     return;
   }
   
-  // Hide popup immediately when moving away from Chinese text
-  if (hideTimer) {
-    clearTimeout(hideTimer);
-  }
+  clearHideTimer();
   if (!isHoveringChinese && currentPopup) {
-    // Use cached popup element if available
     const popup = cachedPopupElement || document.getElementById('chinese-hover-popup');
     if (!popup || !popup.matches(':hover')) {
       hidePopup();
-      lastHoveredWord = null; // Reset so we can show popup again if hovering same word
-      lastHoveredElement = null;
-      lastHoveredOffset = -1;
+      resetHoverState();
+      lastHoveredWord = null;
     }
   }
 }
 
-/**
- * Get text content and cursor position at the mouse point
- * Returns {text, offset} where offset is the character position in the text
- * Optimized for performance
- */
-function getTextAtPoint(element: Element, event: MouseEvent): { text: string; offset: number } | null {
-  // Try to get text from text nodes using caretRangeFromPoint
-  let range = null;
-  
-  if (document.caretRangeFromPoint) {
-    range = document.caretRangeFromPoint(event.clientX, event.clientY);
-  } else if ((document as any).caretPositionFromPoint) {
-    const pos = (document as any).caretPositionFromPoint(event.clientX, event.clientY);
-    if (pos) {
-      range = document.createRange();
-      range.setStart(pos.offsetNode, pos.offset);
-      range.setEnd(pos.offsetNode, pos.offset);
-    }
-  }
-  
-  if (range) {
-    const textNode = range.startContainer;
-    if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-      const text = textNode.textContent || '';
-      // Calculate offset in the text node
-      const textOffset = range.startOffset;
-      return { text, offset: textOffset };
-    }
-    // If we have a range, try to get the parent element's text
-    // Optimize: only walk tree if we have a valid container
-    const container = range.commonAncestorContainer;
-    if (container) {
-      const actualContainer = container.nodeType === Node.TEXT_NODE 
-        ? container.parentElement 
-        : container;
-      if (actualContainer && actualContainer.nodeType === Node.ELEMENT_NODE) {
-        const text = actualContainer.textContent || '';
-        // Optimize: only walk tree if startContainer is not the text node itself
-        if (range.startContainer.nodeType === Node.TEXT_NODE) {
-          // Fast path: calculate offset by walking only if necessary
-          let offset = 0;
-          const walker = document.createTreeWalker(
-            actualContainer,
-            NodeFilter.SHOW_TEXT,
-            null
-          );
-          let node: Node | null;
-          while ((node = walker.nextNode())) {
-            if (node === range.startContainer) {
-              offset += range.startOffset;
-              break;
-            }
-            offset += (node.textContent?.length || 0);
-          }
-          return { text, offset };
-        }
+function trackWordStatistics(word: string): void {
+  chrome.runtime.sendMessage(
+    { type: 'track_word', word: word },
+    (response) => {
+      if (chrome.runtime.lastError) {
+        console.warn('[Content] Statistics tracking error:', chrome.runtime.lastError);
+      } else if (response && !response.success) {
+        console.warn('[Content] Statistics tracking failed:', response.error);
       }
     }
-  }
-
-  // Fallback: get text from element (no precise offset)
-  const text = element.textContent || (element as HTMLElement).innerText || '';
-  return { text, offset: -1 };
+  );
 }
 
-/**
- * Extract Chinese word at cursor position with lookahead
- * For hover: tries up to 4 characters ahead from cursor position
- * Returns the longest possible substring (up to 4 chars) starting from cursor
- * Background script will check for exact matches
- */
-
-/**
- * Lookup word and show popup
- */
 function lookupAndShowWord(word: string, x: number, y: number): void {
-  // Don't lookup if we're already showing this word (unless forced)
   if (currentPopup && currentPopup.dataset.word === word) {
-    // Same word already showing, just update position
     positionPopup(currentPopup, x, y);
-    // Still track statistics even if popup is already showing
-    chrome.runtime.sendMessage(
-      { type: 'track_word', word: word },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          console.warn('[Content] Statistics tracking error:', chrome.runtime.lastError);
-        } else if (response && !response.success) {
-          console.warn('[Content] Statistics tracking failed:', response.error);
-        }
-      }
-    );
+    trackWordStatistics(word);
     return;
   }
 
-  // Send message to background script
   chrome.runtime.sendMessage(
     { type: 'lookup_word', word: word },
     (response) => {
       if (chrome.runtime.lastError) {
         console.error('Extension error:', chrome.runtime.lastError);
-        // Show error popup
-        showErrorPopup(word, x, y, chrome.runtime.lastError.message || 'Unknown error');
+        const errorMessage = chrome.runtime.lastError.message || 'Unknown error';
+        showErrorPopup(word, x, y, errorMessage);
         return;
       }
 
       if (response && response.success && 'definition' in response && response.definition) {
-        // Use the matched word from definition if available, otherwise use original word
         const displayWord = response.definition.word || word;
         showPopup(displayWord, response.definition, x, y);
       } else {
         const errorMsg = response && 'error' in response ? response.error : 'Lookup failed';
         console.error('Lookup failed:', errorMsg);
-        // Show error popup even on failure
         const errorDef: DefinitionResult = {
           word: word,
           mandarin: { definition: errorMsg || 'Lookup failed', romanisation: '', entries: [] },
@@ -673,9 +580,6 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
   );
 }
 
-/**
- * Show error popup
- */
 function showErrorPopup(word: string, x: number, y: number, error: string): void {
   const errorDef: DefinitionResult = {
     word: word,
@@ -685,126 +589,79 @@ function showErrorPopup(word: string, x: number, y: number, error: string): void
   showPopup(word, errorDef, x, y);
 }
 
-/**
- * Show popup with word definition
- */
-function showPopup(word: string, definition: DefinitionResult, x: number, y: number): void {
-  // Remove existing popup
-  hidePopup();
-  
-  // Clear any pending hide timer
-  if (hideTimer) {
-    clearTimeout(hideTimer);
-  }
-
-  // Use the matched word from definition if available (for accurate display)
-  const displayWord = definition.word || word;
-
-  // Create popup element
-  const popup = createElement({
-    tag: 'div',
-    id: 'chinese-hover-popup',
-    className: 'chinese-hover-popup',
-    dataset: { word },
-    listeners: {
-      mouseenter: () => {
-        if (hideTimer) {
-          clearTimeout(hideTimer);
-        }
-        isHoveringChinese = true;
-      },
-      mouseleave: () => {
-        // When leaving popup, hide immediately if not over Chinese text
-        if (!isHoveringChinese) {
-          hidePopup();
-        }
-      }
-    }
-  });
-  
-  // Format definitions - split by semicolon and display each on a new line
-  const createDefinitionElement = (defText: string | undefined): HTMLElement => {
-    if (!defText || defText === 'Not found' || defText === 'N/A') {
-      return createElement({
-        className: 'popup-definition',
-        textContent: defText || 'Not found'
-      });
-    }
-    
-    // Split by semicolon and create separate lines
-    const definitions = defText.split(';').map(d => d.trim()).filter(d => d.length > 0);
-    if (definitions.length === 1) {
-      return createElement({
-        className: 'popup-definition',
-        textContent: definitions[0]
-      });
-    }
-    
-    // Multiple definitions - display each on a new line
+function createDefinitionElement(defText: string | undefined): HTMLElement {
+  if (!defText || defText === 'Not found' || defText === 'N/A') {
     return createElement({
       className: 'popup-definition',
-      children: definitions.map(def => 
-        createElement({
-          className: 'popup-definition-item',
-          textContent: def
-        })
-      )
+      textContent: defText || 'Not found'
     });
-  };
-
-  // Format Mandarin with multiple pronunciations
-  const createMandarinSection = (mandarinData: DefinitionResult['mandarin']): HTMLElement => {
-    if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
-      // Single pronunciation or no entries
-      return createElement({
-        className: 'popup-section',
-        children: [
-          createElement({
-            className: 'popup-label',
-            textContent: 'Mandarin'
-          }),
-          createElement({
-            className: 'popup-pinyin',
-            textContent: mandarinData?.romanisation || 'N/A'
-          }),
-          createDefinitionElement(mandarinData?.definition)
-        ]
-      });
-    }
-    
-    // Multiple pronunciations - display each separately
-    const entries = mandarinData.entries;
-    const byPinyin: Record<string, string[]> = {};
-    for (const entry of entries) {
-      const pinyin = entry.romanisation || '';
-      if (!byPinyin[pinyin]) {
-        byPinyin[pinyin] = [];
-      }
-      const defs = entry.definitions || [];
-      byPinyin[pinyin].push(...defs.filter(d => d && String(d).trim().length > 0));
-    }
-    
-    const pinyinKeys = Object.keys(byPinyin);
-    const pronunciationCount = Math.min(pinyinKeys.length, 2);
-    
-    const grid = createElement({
-      className: 'popup-pronunciations-grid',
-      dataset: { count: String(pronunciationCount) },
-      children: Object.entries(byPinyin).map(([pinyin, defs]) => {
-        const defsStr = defs.join('; ');
-        return createElement({
-          className: 'popup-pronunciation-group',
-          children: [
-            createElement({
-              className: 'popup-pinyin',
-              textContent: pinyin
-            }),
-            createDefinitionElement(defsStr)
-          ]
-        });
+  }
+  
+  const definitions = defText.split(';').map(d => d.trim()).filter(d => d.length > 0);
+  if (definitions.length === 1) {
+    return createElement({
+      className: 'popup-definition',
+      textContent: definitions[0]
+    });
+  }
+  
+  return createElement({
+    className: 'popup-definition',
+    children: definitions.map(def => 
+      createElement({
+        className: 'popup-definition-item',
+        textContent: def
       })
-    });
-    
+    )
+  });
+}
+
+function groupEntriesByPronunciation(entries: Array<{ romanisation?: string; definitions?: string[] }>): Record<string, string[]> {
+  const grouped: Record<string, string[]> = {};
+  for (const entry of entries) {
+    const pronunciation = entry.romanisation || '';
+    if (!grouped[pronunciation]) {
+      grouped[pronunciation] = [];
+    }
+    const defs = entry.definitions || [];
+    grouped[pronunciation].push(...defs.filter(d => d && String(d).trim().length > 0));
+  }
+  return grouped;
+}
+
+function createPronunciationGrid(groupedPronunciations: Record<string, string[]>, pronunciationKey: 'pinyin' | 'jyutping'): HTMLElement {
+  const pronunciationKeys = Object.keys(groupedPronunciations);
+  const pronunciationCount = Math.min(pronunciationKeys.length, 2);
+  const className = pronunciationKey === 'pinyin' ? 'popup-pinyin' : 'popup-jyutping';
+  
+  return createElement({
+    className: 'popup-pronunciations-grid',
+    dataset: { count: String(pronunciationCount) },
+    children: Object.entries(groupedPronunciations).map(([pronunciation, defs]) => {
+      const defsStr = defs.join('; ');
+      const hasDefinition = defsStr && defsStr.trim().length > 0;
+      
+      const groupChildren: HTMLElement[] = [
+        createElement({
+          className,
+          textContent: pronunciation
+        })
+      ];
+      
+      if (hasDefinition) {
+        groupChildren.push(createDefinitionElement(defsStr));
+      }
+      
+      return createElement({
+        className: 'popup-pronunciation-group',
+        children: groupChildren
+      });
+    })
+  });
+}
+
+function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTMLElement {
+  if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
     return createElement({
       className: 'popup-section',
       children: [
@@ -812,93 +669,96 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
           className: 'popup-label',
           textContent: 'Mandarin'
         }),
-        grid
+        createElement({
+          className: 'popup-pinyin',
+          textContent: mandarinData?.romanisation || 'N/A'
+        }),
+        createDefinitionElement(mandarinData?.definition)
       ]
     });
-  };
+  }
+  
+  const groupedByPinyin = groupEntriesByPronunciation(mandarinData.entries);
+  const grid = createPronunciationGrid(groupedByPinyin, 'pinyin');
+  
+  return createElement({
+    className: 'popup-section',
+    children: [
+      createElement({
+        className: 'popup-label',
+        textContent: 'Mandarin'
+      }),
+      grid
+    ]
+  });
+}
 
-  // Format Cantonese with multiple pronunciations
-  const createCantoneseSection = (cantoneseData: DefinitionResult['cantonese']): HTMLElement => {
-    if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
-      // Single pronunciation or no entries
-      const hasDefinition = cantoneseData?.definition && 
-                            cantoneseData.definition !== 'Not found' && 
-                            cantoneseData.definition.trim().length > 0;
-      
-      const children: HTMLElement[] = [
-        createElement({
-          className: 'popup-label',
-          textContent: 'Cantonese'
-        }),
-        createElement({
-          className: 'popup-jyutping',
-          textContent: cantoneseData?.romanisation || 'N/A'
-        })
-      ];
-      
-      if (hasDefinition) {
-        children.push(createDefinitionElement(cantoneseData.definition));
-      }
-      
-      return createElement({
-        className: 'popup-section',
-        children
-      });
-    }
+function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): HTMLElement {
+  if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
+    const hasDefinition = cantoneseData?.definition && 
+                          cantoneseData.definition !== 'Not found' && 
+                          cantoneseData.definition.trim().length > 0;
     
-    // Multiple pronunciations - display each separately
-    const entries = cantoneseData.entries;
-    const byJyutping: Record<string, string[]> = {};
-    for (const entry of entries) {
-      const jyutping = entry.romanisation || '';
-      if (!byJyutping[jyutping]) {
-        byJyutping[jyutping] = [];
-      }
-      const defs = entry.definitions || [];
-      byJyutping[jyutping].push(...defs.filter(d => d && String(d).trim().length > 0));
-    }
-    
-    const jyutpingKeys = Object.keys(byJyutping);
-    const pronunciationCount = Math.min(jyutpingKeys.length, 2);
-    
-    const grid = createElement({
-      className: 'popup-pronunciations-grid',
-      dataset: { count: String(pronunciationCount) },
-      children: Object.entries(byJyutping).map(([jyutping, defs]) => {
-        const defsStr = defs.join('; ');
-        const hasDefinition = defsStr && defsStr.trim().length > 0;
-        
-        const groupChildren: HTMLElement[] = [
-          createElement({
-            className: 'popup-jyutping',
-            textContent: jyutping
-          })
-        ];
-        
-        if (hasDefinition) {
-          groupChildren.push(createDefinitionElement(defsStr));
-        }
-        
-        return createElement({
-          className: 'popup-pronunciation-group',
-          children: groupChildren
-        });
+    const children: HTMLElement[] = [
+      createElement({
+        className: 'popup-label',
+        textContent: 'Cantonese'
+      }),
+      createElement({
+        className: 'popup-jyutping',
+        textContent: cantoneseData?.romanisation || 'N/A'
       })
-    });
+    ];
+    
+    if (hasDefinition) {
+      children.push(createDefinitionElement(cantoneseData.definition));
+    }
     
     return createElement({
       className: 'popup-section',
-      children: [
-        createElement({
-          className: 'popup-label',
-          textContent: 'Cantonese'
-        }),
-        grid
-      ]
+      children
     });
-  };
+  }
+  
+  const groupedByJyutping = groupEntriesByPronunciation(cantoneseData.entries);
+  const grid = createPronunciationGrid(groupedByJyutping, 'jyutping');
+  
+  return createElement({
+    className: 'popup-section',
+    children: [
+      createElement({
+        className: 'popup-label',
+        textContent: 'Cantonese'
+      }),
+      grid
+    ]
+  });
+}
 
-  // Build popup content with side-by-side layout
+function showPopup(word: string, definition: DefinitionResult, x: number, y: number): void {
+  hidePopup();
+  clearHideTimer();
+
+  const displayWord = definition.word || word;
+
+  const popup = createElement({
+    tag: 'div',
+    id: 'chinese-hover-popup',
+    className: 'chinese-hover-popup',
+    dataset: { word },
+    listeners: {
+      mouseenter: () => {
+        clearHideTimer();
+        isHoveringChinese = true;
+      },
+      mouseleave: () => {
+        if (!isHoveringChinese) {
+          hidePopup();
+        }
+      }
+    }
+  });
+  
   const wordEl = createElement({
     className: 'popup-word',
     textContent: displayWord
@@ -915,59 +775,48 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
   popup.appendChild(wordEl);
   popup.appendChild(sectionsContainer);
 
-  // Add popup to page
   document.body.appendChild(popup);
   currentPopup = popup;
-  cachedPopupElement = popup; // Cache popup reference
+  cachedPopupElement = popup;
 
-  // Position popup near cursor
   positionPopup(popup, x, y);
 }
 
-/**
- * Position popup near cursor, ensuring it stays within viewport
- * Positioned above cursor by default to avoid blocking horizontal movement
- */
-function positionPopup(popup: HTMLElement, x: number, y: number): void {
-  const popupRect = popup.getBoundingClientRect();
+function calculatePopupPosition(x: number, y: number, popupRect: DOMRect): { left: number; top: number } {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
-  const offset = 15; // Offset from cursor
 
-  // Position horizontally - prefer right side, but adjust if needed
-  let left = x + offset;
+  let left = x + POPUP_OFFSET_PX;
   if (left + popupRect.width > viewportWidth) {
-    // If popup would go off right edge, position to the left of cursor
-    left = x - popupRect.width - offset;
+    left = x - popupRect.width - POPUP_OFFSET_PX;
   }
 
-  // Position vertically - always above cursor by default
-  let top = y - popupRect.height - offset;
+  let top = y - popupRect.height - POPUP_OFFSET_PX;
 
-  // If popup would go off top edge, position below cursor instead
-  if (top < 10) {
-    top = y + offset;
-    // If it still doesn't fit below, constrain to viewport
+  if (top < VIEWPORT_MARGIN_PX) {
+    top = y + POPUP_OFFSET_PX;
     if (top + popupRect.height > viewportHeight) {
-      top = Math.max(10, viewportHeight - popupRect.height - 10);
+      top = Math.max(VIEWPORT_MARGIN_PX, viewportHeight - popupRect.height - VIEWPORT_MARGIN_PX);
     }
   }
 
-  // Ensure popup doesn't go off left or right edges
-  left = Math.max(10, Math.min(left, viewportWidth - popupRect.width - 10));
+  left = Math.max(VIEWPORT_MARGIN_PX, Math.min(left, viewportWidth - popupRect.width - VIEWPORT_MARGIN_PX));
 
+  return { left, top };
+}
+
+function positionPopup(popup: HTMLElement, x: number, y: number): void {
+  const popupRect = popup.getBoundingClientRect();
+  const { left, top } = calculatePopupPosition(x, y, popupRect);
   popup.style.left = `${left}px`;
   popup.style.top = `${top}px`;
 }
 
-/**
- * Hide popup
- */
 function hidePopup(): void {
   if (currentPopup) {
     currentPopup.remove();
     currentPopup = null;
-    cachedPopupElement = null; // Clear cached reference
+    cachedPopupElement = null;
     lastHoveredWord = null;
     lastHoveredElement = null;
     lastHoveredOffset = -1;
