@@ -634,28 +634,6 @@ function createDefinitionElement(definitions: string[] | undefined): HTMLElement
   });
 }
 
-function getRomanisationFromEntries(entries: DictionaryEntry[]): string {
-  if (entries.length === 0) return 'N/A';
-  if (entries.length === 1) return entries[0].romanisation || 'N/A';
-  
-  const pronunciations = new Set<string>();
-  for (const entry of entries) {
-    if (entry.romanisation) {
-      pronunciations.add(entry.romanisation);
-    }
-  }
-  return Array.from(pronunciations).join(', ');
-}
-
-function getDefinitionsFromEntries(entries: DictionaryEntry[]): string[] {
-  const allDefinitions: string[] = [];
-  for (const entry of entries) {
-    const defs = entry.definitions || [];
-    allDefinitions.push(...defs.filter(d => d && String(d).trim().length > 0));
-  }
-  return allDefinitions;
-}
-
 function groupEntriesByPronunciation(entries: Array<{ romanisation?: string; definitions?: string[] }>): Record<string, string[]> {
   const grouped: Record<string, string[]> = {};
   for (const entry of entries) {
@@ -700,28 +678,8 @@ function createPronunciationGrid(groupedPronunciations: Record<string, string[]>
 }
 
 function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTMLElement {
-  if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
-    const entries = mandarinData?.entries || [];
-    const romanisation = getRomanisationFromEntries(entries);
-    const definitions = getDefinitionsFromEntries(entries);
-    
-    return createElement({
-      className: 'popup-section',
-      children: [
-        createElement({
-          className: 'popup-label',
-          textContent: 'Mandarin'
-        }),
-        createElement({
-          className: 'popup-pinyin',
-          textContent: romanisation
-        }),
-        createDefinitionElement(definitions)
-      ]
-    });
-  }
-  
-  const groupedByPinyin = groupEntriesByPronunciation(mandarinData.entries);
+  const entries = mandarinData?.entries || [];
+  const groupedByPinyin = groupEntriesByPronunciation(entries);
   const grid = createPronunciationGrid(groupedByPinyin, 'pinyin');
   
   return createElement({
@@ -737,34 +695,8 @@ function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTML
 }
 
 function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): HTMLElement {
-  if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
-    const entries = cantoneseData?.entries || [];
-    const romanisation = getRomanisationFromEntries(entries);
-    const definitions = getDefinitionsFromEntries(entries);
-    const hasDefinition = definitions.length > 0;
-    
-    const children: HTMLElement[] = [
-      createElement({
-        className: 'popup-label',
-        textContent: 'Cantonese'
-      }),
-      createElement({
-        className: 'popup-jyutping',
-        textContent: romanisation
-      })
-    ];
-    
-    if (hasDefinition) {
-      children.push(createDefinitionElement(definitions));
-    }
-    
-    return createElement({
-      className: 'popup-section',
-      children
-    });
-  }
-  
-  const groupedByJyutping = groupEntriesByPronunciation(cantoneseData.entries);
+  const entries = cantoneseData?.entries || [];
+  const groupedByJyutping = groupEntriesByPronunciation(entries);
   const grid = createPronunciationGrid(groupedByJyutping, 'jyutping');
   
   return createElement({
