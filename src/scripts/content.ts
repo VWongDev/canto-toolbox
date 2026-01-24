@@ -559,9 +559,7 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
     { type: 'lookup_word', word: word },
     (response) => {
       if (chrome.runtime.lastError) {
-        console.error('Extension error:', chrome.runtime.lastError);
-        const errorMessage = chrome.runtime.lastError.message || 'Unknown error';
-        showErrorPopup(word, x, y, errorMessage);
+        console.error('[Content] Extension error:', chrome.runtime.lastError);
         return;
       }
 
@@ -570,45 +568,10 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
         showPopup(displayWord, response.definition, x, y);
       } else {
         const errorMsg = response && 'error' in response ? response.error : 'Lookup failed';
-        console.error('Lookup failed:', errorMsg);
-        const errorDef: DefinitionResult = {
-          word: word,
-          mandarin: { entries: [{
-            traditional: word,
-            simplified: word,
-            romanisation: '',
-            definitions: [errorMsg || 'Lookup failed']
-          }] },
-          cantonese: { entries: [{
-            traditional: word,
-            simplified: word,
-            romanisation: '',
-            definitions: ['Not available']
-          }] }
-        };
-        showPopup(word, errorDef, x, y);
+        console.error('[Content] Lookup failed:', errorMsg);
       }
     }
   );
-}
-
-function showErrorPopup(word: string, x: number, y: number, error: string): void {
-  const errorDef: DefinitionResult = {
-    word: word,
-    mandarin: { entries: [{
-      traditional: word,
-      simplified: word,
-      romanisation: '',
-      definitions: [`Error: ${error}`]
-    }] },
-    cantonese: { entries: [{
-      traditional: word,
-      simplified: word,
-      romanisation: '',
-      definitions: ['Not available']
-    }] }
-  };
-  showPopup(word, errorDef, x, y);
 }
 
 function createDefinitionElement(definitions: string[]): HTMLElement {
