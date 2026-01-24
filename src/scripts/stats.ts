@@ -274,27 +274,11 @@ function sortWordsByCount(words: string[], statistics: Record<string, WordStatis
 }
 
 function createDefinitionTextElement(definitions: string[] | undefined): HTMLElement {
-  if (!definitions || definitions.length === 0) {
-    return createElement({
-      className: 'definition-text',
-      textContent: 'Not found'
-    });
-  }
-  
-  if (definitions.length === 1) {
-    return createElement({
-      className: 'definition-text',
-      textContent: definitions[0]
-    });
-  }
-  
+  const defs = definitions && definitions.length > 0 ? definitions : ['Not found'];
   return createElement({
     className: 'definition-text',
-    children: definitions.map(def =>
-      createElement({
-        className: 'definition-item',
-        textContent: def
-      })
+    children: defs.map(def =>
+      createElement({ className: 'definition-item', textContent: def })
     )
   });
 }
