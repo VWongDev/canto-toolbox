@@ -30,8 +30,11 @@ export function addDictionaryEntry(
       dict[entry.simplified] = [];
     }
     // Only add if not already present (avoid duplicates)
+    // Check traditional, simplified, AND romanisation to allow multiple pronunciations
     const exists = dict[entry.simplified].some(
-      e => e.traditional === entry.traditional && e.simplified === entry.simplified
+      e => e.traditional === entry.traditional && 
+           e.simplified === entry.simplified && 
+           e.romanisation === entry.romanisation
     );
     if (!exists) {
       dict[entry.simplified].push(entry);
@@ -42,7 +45,9 @@ export function addDictionaryEntry(
       dict[entry.traditional] = [];
     }
     const exists = dict[entry.traditional].some(
-      e => e.traditional === entry.traditional && e.simplified === entry.simplified
+      e => e.traditional === entry.traditional && 
+           e.simplified === entry.simplified && 
+           e.romanisation === entry.romanisation
     );
     if (!exists) {
       dict[entry.traditional].push(entry);
