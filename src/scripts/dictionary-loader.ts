@@ -1,61 +1,19 @@
 import type { Dictionary, DictionaryEntry, DefinitionResult } from '../types';
-
-const DICTIONARY_PATHS = {
-  mandarin: 'src/data/mandarin.json',
-  cantonese: 'src/data/cantonese.json'
-} as const;
+import mandarinDictData from '../data/mandarin.json';
+import cantoneseDictData from '../data/cantonese.json';
 
 const CANTONESE_MARKER = '(cantonese)';
 const NOT_FOUND_MESSAGE = 'Word not found in dictionary';
 
-let mandarinDict: Dictionary | null = null;
-let cantoneseDict: Dictionary | null = null;
-let dictionariesLoaded = false;
+const mandarinDict = mandarinDictData as Dictionary;
+const cantoneseDict = cantoneseDictData as Dictionary;
 
-async function loadDictionary(url: string): Promise<Dictionary | null> {
-  try {
-    const response = await fetch(url);
-    if (response.ok) {
-      const dict = await response.json() as Dictionary;
-      return dict;
-    } else {
-      console.error('[Dict] Failed to load dictionary:', response.status);
-      return null;
-    }
-  } catch (error) {
-    console.error('[Dict] Error loading dictionary:', error);
-    return null;
-  }
-}
-
-export async function loadDictionaries(): Promise<{ mandarinDict: Dictionary | null; cantoneseDict: Dictionary | null }> {
-  if (dictionariesLoaded) {
-    return { mandarinDict, cantoneseDict };
-  }
-
-  const mandarinUrl = chrome.runtime.getURL(DICTIONARY_PATHS.mandarin);
-  const cantoneseUrl = chrome.runtime.getURL(DICTIONARY_PATHS.cantonese);
-
-  mandarinDict = await loadDictionary(mandarinUrl);
-  cantoneseDict = await loadDictionary(cantoneseUrl);
-
-  dictionariesLoaded = true;
-  return { mandarinDict, cantoneseDict };
-}
-
-function lookupInDict(dict: Dictionary | null, word: string): DictionaryEntry[] {
-  if (!dict || typeof dict !== 'object') {
-    return [];
-  }
-
+function lookupInDict(dict: Dictionary, word: string): DictionaryEntry[] {
   const entries = dict[word];
   if (!entries) {
     return [];
   }
-
-  const entryArray = Array.isArray(entries) ? entries : [entries];
-  
-  return entryArray;
+  return Array.isArray(entries) ? entries : [entries];
 }
 
 function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): DictionaryEntry[] {
@@ -78,18 +36,12 @@ function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): Dict
 }
 
 function processDictionaryLookup(
-  dict: Dictionary | null,
+  dict: Dictionary,
   word: string,
-  name: string,
   filterCantonese: boolean
 ): DictionaryEntry[] {
   const entries = lookupInDict(dict, word);
-  
-  const processedEntries = filterCantonese 
-    ? filterOutCantoneseDefinitions(entries)
-    : entries;
-  
-  return processedEntries;
+  return filterCantonese ? filterOutCantoneseDefinitions(entries) : entries;
 }
 
 function setNotFoundMessages(result: DefinitionResult): void {
@@ -107,17 +59,15 @@ function setNotFoundMessages(result: DefinitionResult): void {
   }
 }
 
-export async function lookupWordInDictionaries(word: string): Promise<DefinitionResult> {
-  await loadDictionaries();
-
+export function lookupWordInDictionaries(word: string): DefinitionResult {
   const result: DefinitionResult = {
     word: word,
     mandarin: { entries: [] },
     cantonese: { entries: [] }
   };
 
-  result.mandarin.entries = processDictionaryLookup(mandarinDict, word, 'Mandarin', true);
-  result.cantonese.entries = processDictionaryLookup(cantoneseDict, word, 'Cantonese', false);
+  result.mandarin.entries = processDictionaryLookup(mandarinDict, word, true);
+  result.cantonese.entries = processDictionaryLookup(cantoneseDict, word, false);
 
   setNotFoundMessages(result);
 

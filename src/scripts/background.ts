@@ -1,4 +1,4 @@
-import { loadDictionaries, lookupWordInDictionaries } from './dictionary-loader.js';
+import { lookupWordInDictionaries } from './dictionary-loader.js';
 import type { DefinitionResult, BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, DictionaryEntry, LookupResponse, ErrorResponse } from '../types';
 
 export class MessageManager {
@@ -47,33 +47,16 @@ export class MessageManager {
 const STORAGE_KEY = 'wordStatistics';
 const MAX_WORD_LENGTH = 4;
 
-let dictionariesLoadPromise: Promise<void> | null = null;
-
-function preloadDictionaries(): Promise<void> {
-  if (dictionariesLoadPromise) return dictionariesLoadPromise;
-  
-  dictionariesLoadPromise = loadDictionaries()
-    .then(() => {})
-    .catch(error => {
-      console.error('[Background] Failed to pre-load dictionaries:', error);
-      dictionariesLoadPromise = null;
-    });
-  
-  return dictionariesLoadPromise;
-}
-
-preloadDictionaries();
-
 function handleLookupWordMessage(word: string, sendResponse: (response: BackgroundResponse) => void): void {
-  lookupWord(word)
-    .then(definition => {
-      updateStatistics(definition?.word || word).catch(() => {});
-      sendResponse({ success: true, definition });
-    })
-    .catch(error => {
-      console.error('[Background] Lookup error:', error);
-      sendResponse({ success: false, error: error.message || 'Unknown error', errorName: error.name });
-    });
+  try {
+    const definition = lookupWord(word);
+    updateStatistics(definition?.word || word).catch(() => {});
+    sendResponse({ success: true, definition });
+  } catch (error) {
+    console.error('[Background] Lookup error:', error);
+    const err = error as Error;
+    sendResponse({ success: false, error: err.message || 'Unknown error', errorName: err.name });
+  }
 }
 
 function handleGetStatisticsMessage(sendResponse: (response: BackgroundResponse) => void): void {
@@ -125,19 +108,17 @@ function hasValidDefinition(definition: DefinitionResult | null): boolean {
   return definition ? (isDefinitionValid(definition.mandarin.entries) || isDefinitionValid(definition.cantonese.entries)) : false;
 }
 
-async function findLongestMatchingWord(word: string): Promise<{ definition: DefinitionResult; matchedWord: string } | null> {
-  await preloadDictionaries();
-  
+function findLongestMatchingWord(word: string): { definition: DefinitionResult; matchedWord: string } | null {
   for (let len = Math.min(word.length, MAX_WORD_LENGTH); len >= 1; len--) {
     const substring = word.substring(0, len);
-    const definition = await lookupWordInDictionaries(substring);
+    const definition = lookupWordInDictionaries(substring);
     if (hasValidDefinition(definition)) {
       return { definition, matchedWord: substring };
     }
   }
   
   if (word.length > 1) {
-    const definition = await lookupWordInDictionaries(word[0]);
+    const definition = lookupWordInDictionaries(word[0]);
     if (hasValidDefinition(definition)) {
       return { definition, matchedWord: word[0] };
     }
@@ -146,8 +127,8 @@ async function findLongestMatchingWord(word: string): Promise<{ definition: Defi
   return null;
 }
 
-async function lookupWord(word: string): Promise<DefinitionResult> {
-  const matchResult = await findLongestMatchingWord(word);
+function lookupWord(word: string): DefinitionResult {
+  const matchResult = findLongestMatchingWord(word);
   if (matchResult) {
     matchResult.definition.word = matchResult.matchedWord;
     return matchResult.definition;
