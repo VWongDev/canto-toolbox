@@ -1,4 +1,4 @@
-import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse } from '../types';
+import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, DictionaryEntry } from '../types';
 import { createElement, clearElement } from './dom-utils';
 
 const ELEMENT_IDS = {
@@ -235,15 +235,36 @@ function loadDefinition(word: string, container: HTMLElement): void {
   });
 }
 
-function createDefinitionTextElement(defText: string | undefined): HTMLElement {
-  if (!defText || defText === 'Not found' || defText === 'N/A') {
+function getRomanisationFromEntries(entries: DictionaryEntry[]): string {
+  if (entries.length === 0) return 'N/A';
+  if (entries.length === 1) return entries[0].romanisation || 'N/A';
+  
+  const pronunciations = new Set<string>();
+  for (const entry of entries) {
+    if (entry.romanisation) {
+      pronunciations.add(entry.romanisation);
+    }
+  }
+  return Array.from(pronunciations).join(', ');
+}
+
+function getDefinitionsFromEntries(entries: DictionaryEntry[]): string[] {
+  const allDefinitions: string[] = [];
+  for (const entry of entries) {
+    const defs = entry.definitions || [];
+    allDefinitions.push(...defs.filter(d => d && String(d).trim().length > 0));
+  }
+  return allDefinitions;
+}
+
+function createDefinitionTextElement(definitions: string[] | undefined): HTMLElement {
+  if (!definitions || definitions.length === 0) {
     return createElement({
       className: 'definition-text',
-      textContent: defText || 'Not found'
+      textContent: 'Not found'
     });
   }
   
-  const definitions = defText.split(';').map(d => d.trim()).filter(d => d.length > 0);
   if (definitions.length === 1) {
     return createElement({
       className: 'definition-text',
@@ -277,6 +298,10 @@ function groupEntriesByPronunciation(entries: Array<{ romanisation?: string; def
 
 function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTMLElement {
   if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
+    const entries = mandarinData?.entries || [];
+    const romanisation = getRomanisationFromEntries(entries);
+    const definitions = getDefinitionsFromEntries(entries);
+    
     return createElement({
       className: 'definition-section',
       children: [
@@ -286,9 +311,9 @@ function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTML
         }),
         createElement({
           className: 'definition-pinyin',
-          textContent: mandarinData?.romanisation || 'N/A'
+          textContent: romanisation
         }),
-        createDefinitionTextElement(mandarinData?.definition)
+        createDefinitionTextElement(definitions)
       ]
     });
   }
@@ -303,7 +328,6 @@ function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTML
         textContent: 'Mandarin'
       }),
       ...Object.entries(byPinyin).map(([pinyin, defs]) => {
-        const defsStr = defs.join('; ');
         return createElement({
           className: 'pronunciation-group',
           children: [
@@ -311,7 +335,7 @@ function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTML
               className: 'definition-pinyin',
               textContent: pinyin
             }),
-            createDefinitionTextElement(defsStr)
+            createDefinitionTextElement(defs)
           ]
         });
       })
@@ -321,9 +345,10 @@ function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTML
 
 function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): HTMLElement {
   if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
-    const hasDefinition = cantoneseData?.definition && 
-                          cantoneseData.definition !== 'Not found' && 
-                          cantoneseData.definition.trim().length > 0;
+    const entries = cantoneseData?.entries || [];
+    const romanisation = getRomanisationFromEntries(entries);
+    const definitions = getDefinitionsFromEntries(entries);
+    const hasDefinition = definitions.length > 0;
     
     const children: HTMLElement[] = [
       createElement({
@@ -332,12 +357,12 @@ function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): H
       }),
       createElement({
         className: 'definition-jyutping',
-        textContent: cantoneseData?.romanisation || 'N/A'
+        textContent: romanisation
       })
     ];
     
     if (hasDefinition) {
-      children.push(createDefinitionTextElement(cantoneseData.definition));
+      children.push(createDefinitionTextElement(definitions));
     }
     
     return createElement({
@@ -354,8 +379,7 @@ function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): H
       textContent: 'Cantonese'
     }),
     ...Object.entries(byJyutping).map(([jyutping, defs]) => {
-      const defsStr = defs.join('; ');
-      const hasDefinition = defsStr && defsStr.trim().length > 0;
+      const hasDefinition = defs && defs.length > 0;
       
       const groupChildren: HTMLElement[] = [
         createElement({
@@ -365,7 +389,7 @@ function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): H
       ];
       
       if (hasDefinition) {
-        groupChildren.push(createDefinitionTextElement(defsStr));
+        groupChildren.push(createDefinitionTextElement(defs));
       }
       
       return createElement({

@@ -22,14 +22,10 @@ export interface Statistics {
 export interface DefinitionResult {
   word: string;
   mandarin: {
-    definition: string;
-    romanisation: string;
-    entries?: DictionaryEntry[];
+    entries: DictionaryEntry[];
   };
   cantonese: {
-    definition: string;
-    romanisation: string;
-    entries?: DictionaryEntry[];
+    entries: DictionaryEntry[];
   };
 }
 

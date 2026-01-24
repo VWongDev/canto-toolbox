@@ -75,58 +75,6 @@ function groupEntriesByPronunciation(entries: DictionaryEntry[]): Record<string,
   return byPronunciation;
 }
 
-function formatMultipleEntries(entries: DictionaryEntry[]): {
-  definition: string;
-  romanisation: string;
-  entries: DictionaryEntry[];
-} {
-  const byPronunciation = groupEntriesByPronunciation(entries);
-  const pronunciationList = Object.keys(byPronunciation).join(', ');
-  const formatted = Object.entries(byPronunciation)
-    .map(([pronunciation, defs]) => {
-      const defsStr = defs.join('; ');
-      return `${pronunciation}: ${defsStr}`;
-    })
-    .join(' | ');
-
-  return {
-    romanisation: pronunciationList,
-    definition: formatted,
-    entries: entries
-  };
-}
-
-function formatSingleEntry(entry: DictionaryEntry): {
-  definition: string;
-  romanisation: string;
-  entries: DictionaryEntry[];
-} {
-  const pronunciation = entry.romanisation || '';
-  const defs = entry.definitions || [];
-  const definition = defs.filter(d => d && String(d).trim().length > 0).join('; ');
-
-  return {
-    romanisation: pronunciation,
-    definition: definition,
-    entries: [entry]
-  };
-}
-
-function formatEntries(entries: DictionaryEntry[]): {
-  definition: string;
-  romanisation: string;
-  entries: DictionaryEntry[];
-} {
-  if (!entries || entries.length === 0) {
-    return { definition: '', romanisation: '', entries: [] };
-  }
-
-  if (entries.length > 1) {
-    return formatMultipleEntries(entries);
-  } else {
-    return formatSingleEntry(entries[0]);
-  }
-}
 
 function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): DictionaryEntry[] {
   const filteredEntries: DictionaryEntry[] = [];
@@ -152,7 +100,7 @@ function processDictionaryLookup(
   word: string,
   name: string,
   filterCantonese: boolean
-): { definition: string; romanisation: string; entries: DictionaryEntry[] } | null {
+): DictionaryEntry[] | null {
   const entries = lookupInDict(dict, word);
   
   if (!entries) {
@@ -167,22 +115,21 @@ function processDictionaryLookup(
     return null;
   }
 
-  const formatted = formatEntries(processedEntries);
-  return {
-    definition: formatted.definition,
-    romanisation: formatted.romanisation,
-    entries: formatted.entries
-  };
+  return processedEntries;
 }
 
 function setNotFoundMessages(result: DefinitionResult): void {
-  if (!result.mandarin.definition && !result.cantonese.definition) {
-    result.mandarin.definition = NOT_FOUND_MESSAGE;
-    if (!result.cantonese.romanisation || result.cantonese.romanisation.trim().length === 0) {
-      result.cantonese.definition = 'Not found';
-    }
-  } else if (!result.cantonese.definition && result.cantonese.romanisation && result.cantonese.romanisation.trim().length > 0) {
-    result.cantonese.definition = '';
+  const hasMandarin = result.mandarin.entries.length > 0;
+  const hasCantonese = result.cantonese.entries.length > 0;
+  
+  if (!hasMandarin && !hasCantonese) {
+    // Add a not-found entry for mandarin
+    result.mandarin.entries = [{
+      traditional: result.word,
+      simplified: result.word,
+      romanisation: '',
+      definitions: [NOT_FOUND_MESSAGE]
+    }];
   }
 }
 
@@ -191,18 +138,18 @@ export async function lookupWordInDictionaries(word: string): Promise<Definition
 
   const result: DefinitionResult = {
     word: word,
-    mandarin: { definition: '', romanisation: '' },
-    cantonese: { definition: '', romanisation: '' }
+    mandarin: { entries: [] },
+    cantonese: { entries: [] }
   };
 
   const mandarinResult = processDictionaryLookup(mandarinDict, word, 'Mandarin', true);
   if (mandarinResult) {
-    result.mandarin = mandarinResult;
+    result.mandarin.entries = mandarinResult;
   }
 
   const cantoneseResult = processDictionaryLookup(cantoneseDict, word, 'Cantonese', false);
   if (cantoneseResult) {
-    result.cantonese = cantoneseResult;
+    result.cantonese.entries = cantoneseResult;
   }
 
   setNotFoundMessages(result);

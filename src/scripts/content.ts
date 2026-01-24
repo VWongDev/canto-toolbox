@@ -1,4 +1,4 @@
-import type { DefinitionResult } from '../types';
+import type { DefinitionResult, DictionaryEntry } from '../types';
 import { createElement, clearElement } from './dom-utils';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
@@ -570,8 +570,18 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
         console.error('Lookup failed:', errorMsg);
         const errorDef: DefinitionResult = {
           word: word,
-          mandarin: { definition: errorMsg || 'Lookup failed', romanisation: '', entries: [] },
-          cantonese: { definition: 'Not available', romanisation: '', entries: [] }
+          mandarin: { entries: [{
+            traditional: word,
+            simplified: word,
+            romanisation: '',
+            definitions: [errorMsg || 'Lookup failed']
+          }] },
+          cantonese: { entries: [{
+            traditional: word,
+            simplified: word,
+            romanisation: '',
+            definitions: ['Not available']
+          }] }
         };
         showPopup(word, errorDef, x, y);
       }
@@ -582,21 +592,30 @@ function lookupAndShowWord(word: string, x: number, y: number): void {
 function showErrorPopup(word: string, x: number, y: number, error: string): void {
   const errorDef: DefinitionResult = {
     word: word,
-    mandarin: { definition: `Error: ${error}`, romanisation: '', entries: [] },
-    cantonese: { definition: 'Not available', romanisation: '', entries: [] }
+    mandarin: { entries: [{
+      traditional: word,
+      simplified: word,
+      romanisation: '',
+      definitions: [`Error: ${error}`]
+    }] },
+    cantonese: { entries: [{
+      traditional: word,
+      simplified: word,
+      romanisation: '',
+      definitions: ['Not available']
+    }] }
   };
   showPopup(word, errorDef, x, y);
 }
 
-function createDefinitionElement(defText: string | undefined): HTMLElement {
-  if (!defText || defText === 'Not found' || defText === 'N/A') {
+function createDefinitionElement(definitions: string[] | undefined): HTMLElement {
+  if (!definitions || definitions.length === 0) {
     return createElement({
       className: 'popup-definition',
-      textContent: defText || 'Not found'
+      textContent: 'Not found'
     });
   }
   
-  const definitions = defText.split(';').map(d => d.trim()).filter(d => d.length > 0);
   if (definitions.length === 1) {
     return createElement({
       className: 'popup-definition',
@@ -613,6 +632,28 @@ function createDefinitionElement(defText: string | undefined): HTMLElement {
       })
     )
   });
+}
+
+function getRomanisationFromEntries(entries: DictionaryEntry[]): string {
+  if (entries.length === 0) return 'N/A';
+  if (entries.length === 1) return entries[0].romanisation || 'N/A';
+  
+  const pronunciations = new Set<string>();
+  for (const entry of entries) {
+    if (entry.romanisation) {
+      pronunciations.add(entry.romanisation);
+    }
+  }
+  return Array.from(pronunciations).join(', ');
+}
+
+function getDefinitionsFromEntries(entries: DictionaryEntry[]): string[] {
+  const allDefinitions: string[] = [];
+  for (const entry of entries) {
+    const defs = entry.definitions || [];
+    allDefinitions.push(...defs.filter(d => d && String(d).trim().length > 0));
+  }
+  return allDefinitions;
 }
 
 function groupEntriesByPronunciation(entries: Array<{ romanisation?: string; definitions?: string[] }>): Record<string, string[]> {
@@ -637,8 +678,7 @@ function createPronunciationGrid(groupedPronunciations: Record<string, string[]>
     className: 'popup-pronunciations-grid',
     dataset: { count: String(pronunciationCount) },
     children: Object.entries(groupedPronunciations).map(([pronunciation, defs]) => {
-      const defsStr = defs.join('; ');
-      const hasDefinition = defsStr && defsStr.trim().length > 0;
+      const hasDefinition = defs && defs.length > 0;
       
       const groupChildren: HTMLElement[] = [
         createElement({
@@ -648,7 +688,7 @@ function createPronunciationGrid(groupedPronunciations: Record<string, string[]>
       ];
       
       if (hasDefinition) {
-        groupChildren.push(createDefinitionElement(defsStr));
+        groupChildren.push(createDefinitionElement(defs));
       }
       
       return createElement({
@@ -661,6 +701,10 @@ function createPronunciationGrid(groupedPronunciations: Record<string, string[]>
 
 function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTMLElement {
   if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
+    const entries = mandarinData?.entries || [];
+    const romanisation = getRomanisationFromEntries(entries);
+    const definitions = getDefinitionsFromEntries(entries);
+    
     return createElement({
       className: 'popup-section',
       children: [
@@ -670,9 +714,9 @@ function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTML
         }),
         createElement({
           className: 'popup-pinyin',
-          textContent: mandarinData?.romanisation || 'N/A'
+          textContent: romanisation
         }),
-        createDefinitionElement(mandarinData?.definition)
+        createDefinitionElement(definitions)
       ]
     });
   }
@@ -694,9 +738,10 @@ function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTML
 
 function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): HTMLElement {
   if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
-    const hasDefinition = cantoneseData?.definition && 
-                          cantoneseData.definition !== 'Not found' && 
-                          cantoneseData.definition.trim().length > 0;
+    const entries = cantoneseData?.entries || [];
+    const romanisation = getRomanisationFromEntries(entries);
+    const definitions = getDefinitionsFromEntries(entries);
+    const hasDefinition = definitions.length > 0;
     
     const children: HTMLElement[] = [
       createElement({
@@ -705,12 +750,12 @@ function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): H
       }),
       createElement({
         className: 'popup-jyutping',
-        textContent: cantoneseData?.romanisation || 'N/A'
+        textContent: romanisation
       })
     ];
     
     if (hasDefinition) {
-      children.push(createDefinitionElement(cantoneseData.definition));
+      children.push(createDefinitionElement(definitions));
     }
     
     return createElement({

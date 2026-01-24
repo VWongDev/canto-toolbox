@@ -1,5 +1,5 @@
 import { loadDictionaries, lookupWordInDictionaries } from './dictionary-loader.js';
-import type { DefinitionResult, BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse } from '../types';
+import type { DefinitionResult, BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, DictionaryEntry } from '../types';
 
 interface CacheEntry {
   data: DefinitionResult;
@@ -111,12 +111,13 @@ chrome.runtime.onMessage.addListener((
   return false;
 });
 
-function isDefinitionValid(definition: string | undefined): boolean {
-  if (!definition) return false;
-  const lowerDef = definition.toLowerCase();
-  return !lowerDef.includes('not found') &&
-         !lowerDef.includes('not loaded') &&
-         definition.trim().length > 0;
+function isDefinitionValid(entries: DictionaryEntry[] | undefined): boolean {
+  if (!entries || entries.length === 0) return false;
+  const allDefinitions = entries.flatMap(e => e.definitions || []);
+  const joinedDef = allDefinitions.join(' ').toLowerCase();
+  return !joinedDef.includes('not found') &&
+         !joinedDef.includes('not loaded') &&
+         joinedDef.trim().length > 0;
 }
 
 function hasValidDefinition(definition: DefinitionResult | null): boolean {
@@ -124,8 +125,8 @@ function hasValidDefinition(definition: DefinitionResult | null): boolean {
     return false;
   }
   
-  const hasMandarin = isDefinitionValid(definition.mandarin.definition);
-  const hasCantonese = isDefinitionValid(definition.cantonese.definition);
+  const hasMandarin = isDefinitionValid(definition.mandarin.entries);
+  const hasCantonese = isDefinitionValid(definition.cantonese.entries);
   
   return hasMandarin || hasCantonese;
 }
@@ -134,12 +135,15 @@ function createNotFoundResult(word: string): DefinitionResult {
   return {
     word: word,
     mandarin: { 
-      definition: 'Word not found in dictionary',
-      romanisation: '' 
+      entries: [{
+        traditional: word,
+        simplified: word,
+        romanisation: '',
+        definitions: ['Word not found in dictionary']
+      }]
     },
     cantonese: { 
-      definition: '',
-      romanisation: '' 
+      entries: []
     }
   };
 }
@@ -148,12 +152,20 @@ function createErrorResult(word: string): DefinitionResult {
   return {
     word: word,
     mandarin: { 
-      definition: 'Dictionary files not loaded. Please ensure dictionaries submodules are initialized.',
-      romanisation: '' 
+      entries: [{
+        traditional: word,
+        simplified: word,
+        romanisation: '',
+        definitions: ['Dictionary files not loaded. Please ensure dictionaries submodules are initialized.']
+      }]
     },
     cantonese: { 
-      definition: 'Dictionary files not loaded',
-      romanisation: '' 
+      entries: [{
+        traditional: word,
+        simplified: word,
+        romanisation: '',
+        definitions: ['Dictionary files not loaded']
+      }]
     }
   };
 }
