@@ -44,13 +44,6 @@ export class MessageManager {
   }
 }
 
-interface CacheEntry {
-  data: DefinitionResult;
-  timestamp: number;
-}
-
-const lookupCache = new Map<string, CacheEntry>();
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 const STORAGE_KEY = 'wordStatistics';
 const MAX_WORD_LENGTH = 4;
 
@@ -154,15 +147,9 @@ async function findLongestMatchingWord(word: string): Promise<{ definition: Defi
 }
 
 async function lookupWord(word: string): Promise<DefinitionResult> {
-  const cached = lookupCache.get(word);
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION_MS) {
-    return cached.data;
-  }
-
   const matchResult = await findLongestMatchingWord(word);
   if (matchResult) {
     matchResult.definition.word = matchResult.matchedWord;
-    lookupCache.set(word, { data: matchResult.definition, timestamp: Date.now() });
     return matchResult.definition;
   }
   
