@@ -9,8 +9,8 @@ import type { Dictionary, DictionaryEntry } from '../types.js';
 export function getRootDir(): string {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
-  // Compiled output is in scripts/dist/, so go up 3 levels to reach root
-  // For source files in scripts/processors/, go up 2 levels
+  // Compiled output is in build-tools/dist/, so go up 3 levels to reach root
+  // For source files in build-tools/processors/, go up 2 levels
   // This handles both cases
   if (__dirname.includes('dist')) {
     return join(__dirname, '../../..');

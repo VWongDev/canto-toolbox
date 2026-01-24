@@ -10,7 +10,7 @@ import type { Dictionary } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-// Compiled output is in scripts/dist/, so go up 2 levels to reach root
+// Compiled output is in build-tools/dist/, so go up 2 levels to reach root
 const rootDir = join(__dirname, '../..');
 
 /**

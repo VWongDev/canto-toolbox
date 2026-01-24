@@ -17,7 +17,7 @@
   },
   "include": [
     "src/**/*",
-    "scripts/**/*",
+    "build-tools/**/*",
     "vite.config.ts"
   ],
   "exclude": [
