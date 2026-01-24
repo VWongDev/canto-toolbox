@@ -273,28 +273,6 @@ function sortWordsByCount(words: string[], statistics: Record<string, WordStatis
   });
 }
 
-function getRomanisationFromEntries(entries: DictionaryEntry[]): string {
-  if (entries.length === 0) return 'N/A';
-  if (entries.length === 1) return entries[0].romanisation || 'N/A';
-  
-  const pronunciations = new Set<string>();
-  for (const entry of entries) {
-    if (entry.romanisation) {
-      pronunciations.add(entry.romanisation);
-    }
-  }
-  return Array.from(pronunciations).join(', ');
-}
-
-function getDefinitionsFromEntries(entries: DictionaryEntry[]): string[] {
-  const allDefinitions: string[] = [];
-  for (const entry of entries) {
-    const defs = entry.definitions || [];
-    allDefinitions.push(...defs.filter(d => d && String(d).trim().length > 0));
-  }
-  return allDefinitions;
-}
-
 function createDefinitionTextElement(definitions: string[] | undefined): HTMLElement {
   if (!definitions || definitions.length === 0) {
     return createElement({
