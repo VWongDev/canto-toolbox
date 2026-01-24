@@ -334,113 +334,40 @@ function groupEntriesByPronunciation(entries: Array<{ romanisation?: string; def
   return grouped;
 }
 
-function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTMLElement {
-  if (!mandarinData || !mandarinData.entries || mandarinData.entries.length <= 1) {
-    const entries = mandarinData?.entries || [];
-    const romanisation = getRomanisationFromEntries(entries);
-    const definitions = getDefinitionsFromEntries(entries);
-    
-    return createElement({
-      className: 'definition-section',
-      children: [
-        createElement({
-          className: 'definition-label',
-          textContent: 'Mandarin'
-        }),
-        createElement({
-          className: 'definition-pinyin',
-          textContent: romanisation
-        }),
-        createDefinitionTextElement(definitions)
-      ]
-    });
-  }
-  
-  const byPinyin = groupEntriesByPronunciation(mandarinData.entries);
-  
-  return createElement({
-    className: 'definition-section',
-    children: [
-      createElement({
-        className: 'definition-label',
-        textContent: 'Mandarin'
-      }),
-      ...Object.entries(byPinyin).map(([pinyin, defs]) => {
-        return createElement({
-          className: 'pronunciation-group',
-          children: [
-            createElement({
-              className: 'definition-pinyin',
-              textContent: pinyin
-            }),
-            createDefinitionTextElement(defs)
-          ]
-        });
-      })
-    ]
-  });
-}
-
-function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): HTMLElement {
-  if (!cantoneseData || !cantoneseData.entries || cantoneseData.entries.length <= 1) {
-    const entries = cantoneseData?.entries || [];
-    const romanisation = getRomanisationFromEntries(entries);
-    const definitions = getDefinitionsFromEntries(entries);
-    const hasDefinition = definitions.length > 0;
-    
-    const children: HTMLElement[] = [
-      createElement({
-        className: 'definition-label',
-        textContent: 'Cantonese'
-      }),
-      createElement({
-        className: 'definition-jyutping',
-        textContent: romanisation
-      })
-    ];
-    
-    if (hasDefinition) {
-      children.push(createDefinitionTextElement(definitions));
-    }
-    
-    return createElement({
-      className: 'definition-section',
-      children
-    });
-  }
-  
-  const byJyutping = groupEntriesByPronunciation(cantoneseData.entries);
+function createPronunciationSection(
+  data: DefinitionResult['mandarin'] | DefinitionResult['cantonese'],
+  label: string,
+  pronunciationKey: 'pinyin' | 'jyutping'
+): HTMLElement {
+  const entries = data?.entries || [];
+  const pronunciationClassName = `definition-${pronunciationKey}`;
+  const grouped = groupEntriesByPronunciation(entries);
   
   const children: HTMLElement[] = [
-    createElement({
-      className: 'definition-label',
-      textContent: 'Cantonese'
-    }),
-    ...Object.entries(byJyutping).map(([jyutping, defs]) => {
+    createElement({ className: 'definition-label', textContent: label }),
+    ...Object.entries(grouped).map(([pronunciation, defs]) => {
       const hasDefinition = defs && defs.length > 0;
-      
       const groupChildren: HTMLElement[] = [
-        createElement({
-          className: 'definition-jyutping',
-          textContent: jyutping
-        })
+        createElement({ className: pronunciationClassName, textContent: pronunciation })
       ];
       
-      if (hasDefinition) {
+      if (hasDefinition || pronunciationKey === 'pinyin') {
         groupChildren.push(createDefinitionTextElement(defs));
       }
       
-      return createElement({
-        className: 'pronunciation-group',
-        children: groupChildren
-      });
+      return createElement({ className: 'pronunciation-group', children: groupChildren });
     })
   ];
   
-  return createElement({
-    className: 'definition-section',
-    children
-  });
+  return createElement({ className: 'definition-section', children });
+}
+
+function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTMLElement {
+  return createPronunciationSection(mandarinData, 'Mandarin', 'pinyin');
+}
+
+function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): HTMLElement {
+  return createPronunciationSection(cantoneseData, 'Cantonese', 'jyutping');
 }
 
 function createDefinitionElement(word: string, definition: DefinitionResult): HTMLElement {
