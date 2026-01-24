@@ -5,25 +5,14 @@ import type { Dictionary, DictionaryEntry } from '../../src/types.js';
 
 const rootDir = getRootDir();
 
-/**
- * Raw Mandarin dictionary entry tuple
- * [traditional, simplified, pinyin, definition, variantIndices, classifierIndices]
- */
 type MandarinRawEntry = [string, string, string, string | string[], number[], number[]];
 
-/**
- * Structure of all.js file from Mandarin dictionary
- */
 interface AllDataStructure {
   all: MandarinRawEntry[];
 }
 
-/**
- * Load Mandarin dictionary file as a JavaScript module
- */
 async function loadMandarinFiles(): Promise<MandarinRawEntry[]> {
   const filePath = join(rootDir, 'dictionaries/mandarin/data/all.js');
-  // Use pathToFileURL for proper file:// URL conversion
   const fileUrl = pathToFileURL(filePath).href;
   
   const module = await import(fileUrl);
@@ -36,29 +25,31 @@ async function loadMandarinFiles(): Promise<MandarinRawEntry[]> {
   return data.all;
 }
 
-/**
- * Convert Mandarin entry array to dictionary entry
- */
+function normalizeDefinitions(definition: string | string[]): string[] {
+  const definitions = Array.isArray(definition) ? definition : [definition];
+  return definitions.filter(d => d && String(d).trim().length > 0).map(String);
+}
+
 function convertMandarinEntry(entry: MandarinRawEntry): DictionaryEntry | null {
   const [traditional, simplified, pinyin, definition] = entry;
-  const definitions = Array.isArray(definition) ? definition : [definition];
+  const definitions = normalizeDefinitions(definition);
+  
+  if (definitions.length === 0) {
+    return null;
+  }
   
   return {
     traditional: String(traditional),
     simplified: String(simplified),
     romanisation: String(pinyin || ''),
-    definitions: definitions.filter(d => d && String(d).trim().length > 0).map(String)
+    definitions
   };
 }
 
-/**
- * Process Mandarin dictionary into unified format
- */
 export async function processMandarinDict(): Promise<Dictionary> {
   const dataArray = await loadMandarinFiles();
   const mandarinDict: Dictionary = {};
 
-  // Convert to unified format
   for (const entry of dataArray) {
     const dictEntry = convertMandarinEntry(entry);
     if (dictEntry) {

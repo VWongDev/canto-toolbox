@@ -6,9 +6,6 @@ import type { Dictionary, DictionaryEntry } from '../../src/types.js';
 
 const rootDir = getRootDir();
 
-/**
- * Load Cantonese dictionary file contents
- */
 function loadCantoneseFiles(): { mainText: string; readingsText: string } {
   const mainPath = join(rootDir, 'dictionaries/cantonese/cccanto-webdist.txt');
   const readingsPath = join(rootDir, 'dictionaries/cantonese/cccedict-canto-readings.txt');
@@ -19,67 +16,74 @@ function loadCantoneseFiles(): { mainText: string; readingsText: string } {
   return { mainText, readingsText };
 }
 
-/**
- * Merge readings dictionary into main dictionary
- * Matches entries by traditional + simplified, and adds romanisation if missing
- * If a reading entry has a different pronunciation than existing entries, adds it as a new entry
- * If a reading entry doesn't match any main entry, adds it as a new entry
- */
+function normalizeToArray<T>(value: T | T[] | undefined): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function findExactMatch(mainEntries: DictionaryEntry[], readingEntry: DictionaryEntry): DictionaryEntry | undefined {
+  return mainEntries.find(
+    mainEntry => mainEntry.traditional === readingEntry.traditional &&
+                 mainEntry.simplified === readingEntry.simplified &&
+                 mainEntry.romanisation === readingEntry.romanisation
+  );
+}
+
+function findMatchWithSameCharacters(mainEntries: DictionaryEntry[], readingEntry: DictionaryEntry): DictionaryEntry | undefined {
+  return mainEntries.find(
+    mainEntry => mainEntry.traditional === readingEntry.traditional &&
+                 mainEntry.simplified === readingEntry.simplified
+  );
+}
+
+function hasPronunciation(entry: DictionaryEntry): boolean {
+  return Boolean(entry.romanisation && entry.romanisation.trim().length > 0);
+}
+
+function pronunciationAlreadyExists(mainEntries: DictionaryEntry[], readingEntry: DictionaryEntry): boolean {
+  return mainEntries.some(
+    e => e.traditional === readingEntry.traditional &&
+         e.simplified === readingEntry.simplified &&
+         e.romanisation === readingEntry.romanisation
+  );
+}
+
+function shouldAddReadingEntry(readingEntry: DictionaryEntry): boolean {
+  const hasDefinitions = readingEntry.definitions && readingEntry.definitions.length > 0;
+  return hasDefinitions || hasPronunciation(readingEntry);
+}
+
+function mergeReadingEntryIntoMain(mainDict: Dictionary, mainEntries: DictionaryEntry[], readingEntry: DictionaryEntry): void {
+  const exactMatch = findExactMatch(mainEntries, readingEntry);
+  if (exactMatch) {
+    return;
+  }
+  
+  const matchWithDifferentPron = findMatchWithSameCharacters(mainEntries, readingEntry);
+  
+  if (matchWithDifferentPron) {
+    if (hasPronunciation(readingEntry) && readingEntry.romanisation !== matchWithDifferentPron.romanisation) {
+      if (!pronunciationAlreadyExists(mainEntries, readingEntry)) {
+        addDictionaryEntry(mainDict, readingEntry);
+      }
+    } else if (!hasPronunciation(matchWithDifferentPron) && hasPronunciation(readingEntry)) {
+      matchWithDifferentPron.romanisation = readingEntry.romanisation;
+    }
+  } else if (shouldAddReadingEntry(readingEntry)) {
+    addDictionaryEntry(mainDict, readingEntry);
+  }
+}
+
 function mergeReadings(mainDict: Dictionary, readingsDict: Dictionary): void {
   for (const [word, readingEntries] of Object.entries(readingsDict)) {
-    const readingEntryArray = Array.isArray(readingEntries) ? readingEntries : [readingEntries];
-    const mainEntries = mainDict[word];
-    const mainEntryArray = Array.isArray(mainEntries) ? mainEntries : (mainEntries ? [mainEntries] : []);
+    const readingEntryArray = normalizeToArray(readingEntries);
+    const mainEntries = normalizeToArray(mainDict[word]);
     
-    if (mainEntryArray.length > 0) {
-      // Entry exists in main dict - try to match and merge romanisation
+    if (mainEntries.length > 0) {
       for (const readingEntry of readingEntryArray) {
-        // Find matching main entry by traditional + simplified AND romanisation
-        const matchingMainEntry = mainEntryArray.find(
-          mainEntry => mainEntry.traditional === readingEntry.traditional &&
-                       mainEntry.simplified === readingEntry.simplified &&
-                       mainEntry.romanisation === readingEntry.romanisation
-        );
-        
-        if (matchingMainEntry) {
-          // Exact match found (same traditional, simplified, AND romanisation) - skip duplicate
-          continue;
-        }
-        
-        // Check if there's a matching entry with same traditional/simplified but different romanisation
-        const matchingEntryDifferentPron = mainEntryArray.find(
-          mainEntry => mainEntry.traditional === readingEntry.traditional &&
-                       mainEntry.simplified === readingEntry.simplified
-        );
-        
-        if (matchingEntryDifferentPron) {
-          // Same word but different pronunciation - add as new entry if reading has romanisation
-          if (readingEntry.romanisation && readingEntry.romanisation !== matchingEntryDifferentPron.romanisation) {
-            // Check if this pronunciation already exists
-            const pronunciationExists = mainEntryArray.some(
-              e => e.traditional === readingEntry.traditional &&
-                   e.simplified === readingEntry.simplified &&
-                   e.romanisation === readingEntry.romanisation
-            );
-            if (!pronunciationExists) {
-              addDictionaryEntry(mainDict, readingEntry);
-            }
-          } else if (!matchingEntryDifferentPron.romanisation && readingEntry.romanisation) {
-            // Main entry missing romanisation - add it
-            matchingEntryDifferentPron.romanisation = readingEntry.romanisation;
-          }
-        } else {
-          // No match found - add reading entry as new entry (if it has definitions or romanisation)
-          if (readingEntry.definitions && readingEntry.definitions.length > 0) {
-            addDictionaryEntry(mainDict, readingEntry);
-          } else if (readingEntry.romanisation) {
-            // Even without definitions, add if it has a pronunciation (might be useful)
-            addDictionaryEntry(mainDict, readingEntry);
-          }
-        }
+        mergeReadingEntryIntoMain(mainDict, mainEntries, readingEntry);
       }
     } else {
-      // Entry only in readings dict - add all reading entries
       for (const readingEntry of readingEntryArray) {
         addDictionaryEntry(mainDict, readingEntry);
       }
@@ -87,9 +91,6 @@ function mergeReadings(mainDict: Dictionary, readingsDict: Dictionary): void {
   }
 }
 
-/**
- * Process Cantonese dictionary into unified format
- */
 export async function processCantoneseDict(): Promise<Dictionary> {
   const { mainText, readingsText } = loadCantoneseFiles();
   
