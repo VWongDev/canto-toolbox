@@ -13,95 +13,259 @@ const STORAGE_KEY = 'wordStatistics';
 const EXPAND_ICON_COLLAPSED = '▶';
 const EXPAND_ICON_EXPANDED = '▼';
 
-function init(): void {
-  loadStatistics();
-  setupClearButton();
-}
+class StatsManager {
+  private readonly document: Document;
+  private readonly chromeRuntime: typeof chrome.runtime;
+  private readonly chromeStorage: typeof chrome.storage;
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
-
-function getRequiredElements() {
-  const loadingEl = document.getElementById(ELEMENT_IDS.loading);
-  const emptyStateEl = document.getElementById(ELEMENT_IDS.emptyState);
-  const statsListEl = document.getElementById(ELEMENT_IDS.statsList);
-  const wordCountEl = document.getElementById(ELEMENT_IDS.wordCount);
-
-  if (!loadingEl || !emptyStateEl || !statsListEl || !wordCountEl) {
-    console.error('[Stats] Required DOM elements not found!', { loadingEl, emptyStateEl, statsListEl, wordCountEl });
-    return null;
+  constructor(document: Document, chromeRuntime: typeof chrome.runtime, chromeStorage: typeof chrome.storage) {
+    this.document = document;
+    this.chromeRuntime = chromeRuntime;
+    this.chromeStorage = chromeStorage;
   }
 
-  return { loadingEl, emptyStateEl, statsListEl, wordCountEl };
-}
-
-function showError(loadingEl: HTMLElement, message: string): void {
-  loadingEl.textContent = message;
-  loadingEl.style.color = '#dc3545';
-}
-
-function handleStatisticsResponse(response: StatisticsResponse | undefined, elements: ReturnType<typeof getRequiredElements>): void {
-  if (!elements) return;
-
-  const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
-
-  if (chrome.runtime.lastError) {
-    console.error('[Stats] Error getting statistics:', chrome.runtime.lastError);
-    showError(loadingEl, 'Error loading statistics: ' + chrome.runtime.lastError.message);
-    return;
+  init(): void {
+    this.loadStatistics();
+    this.setupClearButton();
   }
 
-  if (!response) {
-    console.error('[Stats] No response received');
-    showError(loadingEl, 'No response from background script. Please try again.');
-    return;
+  private getRequiredElements() {
+    const loadingEl = this.document.getElementById(ELEMENT_IDS.loading);
+    const emptyStateEl = this.document.getElementById(ELEMENT_IDS.emptyState);
+    const statsListEl = this.document.getElementById(ELEMENT_IDS.statsList);
+    const wordCountEl = this.document.getElementById(ELEMENT_IDS.wordCount);
+
+    if (!loadingEl || !emptyStateEl || !statsListEl || !wordCountEl) {
+      console.error('[Stats] Required DOM elements not found!', { loadingEl, emptyStateEl, statsListEl, wordCountEl });
+      return null;
+    }
+
+    return { loadingEl, emptyStateEl, statsListEl, wordCountEl };
   }
 
-  if (!response.success) {
-    console.error('[Stats] Failed to load statistics:', response);
-    const errorMsg = 'error' in response ? response.error : 'Unknown error';
-    showError(loadingEl, 'Failed to load statistics: ' + errorMsg);
-    return;
+  private showError(loadingEl: HTMLElement, message: string): void {
+    loadingEl.textContent = message;
+    loadingEl.style.color = '#dc3545';
   }
 
-  if (!('statistics' in response)) {
-    console.error('[Stats] Invalid response format');
-    showError(loadingEl, 'Invalid response from background script.');
-    return;
+  private handleStatisticsResponse(response: StatisticsResponse | undefined, elements: ReturnType<typeof this.getRequiredElements>): void {
+    if (!elements) return;
+
+    const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
+
+    if (this.chromeRuntime.lastError) {
+      console.error('[Stats] Error getting statistics:', this.chromeRuntime.lastError);
+      this.showError(loadingEl, 'Error loading statistics: ' + this.chromeRuntime.lastError.message);
+      return;
+    }
+
+    if (!response) {
+      console.error('[Stats] No response received');
+      this.showError(loadingEl, 'No response from background script. Please try again.');
+      return;
+    }
+
+    if (!response.success) {
+      console.error('[Stats] Failed to load statistics:', response);
+      const errorMsg = 'error' in response ? response.error : 'Unknown error';
+      this.showError(loadingEl, 'Failed to load statistics: ' + errorMsg);
+      return;
+    }
+
+    if (!('statistics' in response)) {
+      console.error('[Stats] Invalid response format');
+      this.showError(loadingEl, 'Invalid response from background script.');
+      return;
+    }
+
+    this.displayStatistics(response.statistics, elements);
   }
 
-  displayStatistics(response.statistics, elements);
-}
+  private displayStatistics(statistics: Record<string, WordStatistics>, elements: ReturnType<typeof this.getRequiredElements>): void {
+    if (!elements) return;
 
-function displayStatistics(statistics: Record<string, WordStatistics>, elements: ReturnType<typeof getRequiredElements>): void {
-  if (!elements) return;
+    const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
+    const words = Object.keys(statistics);
 
-  const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
-  const words = Object.keys(statistics);
+    loadingEl.style.display = 'none';
 
-  loadingEl.style.display = 'none';
+    if (words.length === 0) {
+      emptyStateEl.style.display = 'block';
+      statsListEl.style.display = 'none';
+      wordCountEl.textContent = '0 words tracked';
+    } else {
+      emptyStateEl.style.display = 'none';
+      statsListEl.style.display = 'flex';
+      wordCountEl.textContent = `${words.length} ${words.length === 1 ? 'word' : 'words'} tracked`;
 
-  if (words.length === 0) {
-    emptyStateEl.style.display = 'block';
-    statsListEl.style.display = 'none';
-    wordCountEl.textContent = '0 words tracked';
-  } else {
-    emptyStateEl.style.display = 'none';
-    statsListEl.style.display = 'flex';
-    wordCountEl.textContent = `${words.length} ${words.length === 1 ? 'word' : 'words'} tracked`;
+      const sortedWords = sortWordsByCount(words, statistics);
+      clearElement(statsListEl);
 
-    const sortedWords = sortWordsByCount(words, statistics);
-    clearElement(statsListEl);
+      sortedWords.forEach(word => {
+        const stat = statistics[word];
+        const item = this.createStatItem(word, stat);
+        statsListEl.appendChild(item);
+      });
+    }
+  }
 
-    sortedWords.forEach(word => {
-      const stat = statistics[word];
-      const item = createStatItem(word, stat);
-      statsListEl.appendChild(item);
+  private loadStatistics(): void {
+    const elements = this.getRequiredElements();
+    if (!elements) return;
+
+    this.chromeRuntime.sendMessage({ type: 'get_statistics' }, (response: StatisticsResponse | undefined) => {
+      this.handleStatisticsResponse(response, elements);
     });
   }
+
+  private createStatItem(word: string, stat: WordStatistics): HTMLElement {
+    const item = createElement({
+      className: 'stat-item',
+      dataset: { word }
+    });
+
+    const header = createElement({
+      className: 'stat-header',
+      style: { cursor: 'pointer' }
+    });
+
+    const wordEl = createElement({
+      className: 'stat-word',
+      textContent: word
+    });
+
+    const expandIcon = createElement({
+      className: 'stat-expand-icon',
+      textContent: EXPAND_ICON_COLLAPSED
+    });
+
+    const detailsEl = createElement({
+      className: 'stat-details',
+      children: [
+        createElement({
+          className: 'stat-count',
+          textContent: String(stat.count || 0)
+        }),
+        createElement({
+          className: 'stat-label',
+          textContent: 'Hover Count'
+        }),
+        expandIcon
+      ]
+    });
+
+    header.appendChild(wordEl);
+    header.appendChild(detailsEl);
+
+    const expandedContent = createElement({
+      className: 'stat-expanded',
+      style: { display: 'none' }
+    });
+
+    item.appendChild(header);
+    item.appendChild(expandedContent);
+
+    header.addEventListener('click', () => {
+      this.toggleExpansion(item, word, expandedContent, expandIcon);
+    });
+
+    return item;
+  }
+
+  private toggleExpansion(item: HTMLElement, word: string, expandedContent: HTMLElement, expandIcon: HTMLElement): void {
+    const isExpanded = expandedContent.style.display !== 'none';
+    
+    if (isExpanded) {
+      expandedContent.style.display = 'none';
+      expandIcon.textContent = EXPAND_ICON_COLLAPSED;
+      item.classList.remove('expanded');
+    } else {
+      if (!expandedContent.dataset.loaded) {
+        this.loadDefinition(word, expandedContent);
+      } else {
+        expandedContent.style.display = 'block';
+      }
+      expandIcon.textContent = EXPAND_ICON_EXPANDED;
+      item.classList.add('expanded');
+    }
+  }
+
+  private handleDefinitionResponse(response: LookupResponse | undefined, container: HTMLElement, word: string): void {
+    clearElement(container);
+    
+    if (this.chromeRuntime.lastError) {
+      const errorEl = createElement({
+        className: 'stat-error',
+        textContent: `Error: ${this.chromeRuntime.lastError.message}`
+      });
+      container.appendChild(errorEl);
+      return;
+    }
+
+    if (!response || !response.success || !('definition' in response) || !response.definition) {
+      const errorEl = createElement({
+        className: 'stat-error',
+        textContent: 'Definition not found'
+      });
+      container.appendChild(errorEl);
+      return;
+    }
+
+    const definition = response.definition;
+    const definitionEl = createDefinitionElement(word, definition);
+    container.appendChild(definitionEl);
+    container.dataset.loaded = 'true';
+  }
+
+  private loadDefinition(word: string, container: HTMLElement): void {
+    clearElement(container);
+    
+    const loadingEl = createElement({
+      className: 'stat-loading',
+      textContent: 'Loading definition...'
+    });
+    container.appendChild(loadingEl);
+    container.style.display = 'block';
+
+    this.chromeRuntime.sendMessage({ type: 'lookup_word', word: word }, (response: LookupResponse | undefined) => {
+      this.handleDefinitionResponse(response, container, word);
+    });
+  }
+
+  private async clearStatistics(): Promise<void> {
+    await this.chromeStorage.sync.set({ [STORAGE_KEY]: {} });
+    await this.chromeStorage.local.set({ [STORAGE_KEY]: {} });
+    this.loadStatistics();
+  }
+
+  private setupClearButton(): void {
+    const clearBtn = this.document.getElementById(ELEMENT_IDS.clearBtn);
+    if (!clearBtn) {
+      console.error('[Stats] Clear button not found');
+      return;
+    }
+    
+    clearBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to clear all statistics? This action cannot be undone.')) {
+        return;
+      }
+
+      try {
+        await this.clearStatistics();
+      } catch (error) {
+        console.error('Error clearing statistics:', error);
+        alert('Failed to clear statistics. Please try again.');
+      }
+    });
+  }
+}
+
+const statsManager = new StatsManager(document, chrome.runtime, chrome.storage);
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => statsManager.init());
+} else {
+  statsManager.init();
 }
 
 function sortWordsByCount(words: string[], statistics: Record<string, WordStatistics>): string[] {
@@ -109,129 +273,6 @@ function sortWordsByCount(words: string[], statistics: Record<string, WordStatis
     const countA = statistics[a]?.count || 0;
     const countB = statistics[b]?.count || 0;
     return countB - countA;
-  });
-}
-
-function loadStatistics(): void {
-  const elements = getRequiredElements();
-  if (!elements) return;
-
-  chrome.runtime.sendMessage({ type: 'get_statistics' }, (response: StatisticsResponse | undefined) => {
-    handleStatisticsResponse(response, elements);
-  });
-}
-
-function createStatItem(word: string, stat: WordStatistics): HTMLElement {
-  const item = createElement({
-    className: 'stat-item',
-    dataset: { word }
-  });
-
-  const header = createElement({
-    className: 'stat-header',
-    style: { cursor: 'pointer' }
-  });
-
-  const wordEl = createElement({
-    className: 'stat-word',
-    textContent: word
-  });
-
-  const expandIcon = createElement({
-    className: 'stat-expand-icon',
-    textContent: EXPAND_ICON_COLLAPSED
-  });
-
-  const detailsEl = createElement({
-    className: 'stat-details',
-    children: [
-      createElement({
-        className: 'stat-count',
-        textContent: String(stat.count || 0)
-      }),
-      createElement({
-        className: 'stat-label',
-        textContent: 'Hover Count'
-      }),
-      expandIcon
-    ]
-  });
-
-  header.appendChild(wordEl);
-  header.appendChild(detailsEl);
-
-  const expandedContent = createElement({
-    className: 'stat-expanded',
-    style: { display: 'none' }
-  });
-
-  item.appendChild(header);
-  item.appendChild(expandedContent);
-
-  header.addEventListener('click', () => {
-    toggleExpansion(item, word, expandedContent, expandIcon);
-  });
-
-  return item;
-}
-
-function toggleExpansion(item: HTMLElement, word: string, expandedContent: HTMLElement, expandIcon: HTMLElement): void {
-  const isExpanded = expandedContent.style.display !== 'none';
-  
-  if (isExpanded) {
-    expandedContent.style.display = 'none';
-    expandIcon.textContent = EXPAND_ICON_COLLAPSED;
-    item.classList.remove('expanded');
-  } else {
-    if (!expandedContent.dataset.loaded) {
-      loadDefinition(word, expandedContent);
-    } else {
-      expandedContent.style.display = 'block';
-    }
-    expandIcon.textContent = EXPAND_ICON_EXPANDED;
-    item.classList.add('expanded');
-  }
-}
-
-function handleDefinitionResponse(response: LookupResponse | undefined, container: HTMLElement, word: string): void {
-  clearElement(container);
-  
-  if (chrome.runtime.lastError) {
-    const errorEl = createElement({
-      className: 'stat-error',
-      textContent: `Error: ${chrome.runtime.lastError.message}`
-    });
-    container.appendChild(errorEl);
-    return;
-  }
-
-  if (!response || !response.success || !('definition' in response) || !response.definition) {
-    const errorEl = createElement({
-      className: 'stat-error',
-      textContent: 'Definition not found'
-    });
-    container.appendChild(errorEl);
-    return;
-  }
-
-  const definition = response.definition;
-  const definitionEl = createDefinitionElement(word, definition);
-  container.appendChild(definitionEl);
-  container.dataset.loaded = 'true';
-}
-
-function loadDefinition(word: string, container: HTMLElement): void {
-  clearElement(container);
-  
-  const loadingEl = createElement({
-    className: 'stat-loading',
-    textContent: 'Loading definition...'
-  });
-  container.appendChild(loadingEl);
-  container.style.display = 'block';
-
-  chrome.runtime.sendMessage({ type: 'lookup_word', word: word }, (response: LookupResponse | undefined) => {
-    handleDefinitionResponse(response, container, word);
   });
 }
 
@@ -423,32 +464,5 @@ function createDefinitionElement(word: string, definition: DefinitionResult): HT
         ]
       })
     ]
-  });
-}
-
-async function clearStatistics(): Promise<void> {
-  await chrome.storage.sync.set({ [STORAGE_KEY]: {} });
-  await chrome.storage.local.set({ [STORAGE_KEY]: {} });
-  loadStatistics();
-}
-
-function setupClearButton(): void {
-  const clearBtn = document.getElementById(ELEMENT_IDS.clearBtn);
-  if (!clearBtn) {
-    console.error('[Stats] Clear button not found');
-    return;
-  }
-  
-  clearBtn.addEventListener('click', async () => {
-    if (!confirm('Are you sure you want to clear all statistics? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      await clearStatistics();
-    } catch (error) {
-      console.error('Error clearing statistics:', error);
-      alert('Failed to clear statistics. Please try again.');
-    }
   });
 }
