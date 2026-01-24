@@ -19,6 +19,7 @@ type(domain): Description
 - `refactor`: Code refactoring
 - `test`: Adding or updating tests
 - `chore`: Maintenance tasks
+- `ci`: Continuous integration changes (CI/CD configuration, workflows, etc.)
 - `ai`: AI-related changes or documentation (use when modifying files in `.agents/` directory or AI-specific files)
 
 ### Domain
@@ -27,11 +28,13 @@ The domain specifies the area of the codebase affected:
 - `manifest`: Extension manifest configuration
 - `icons`: Extension icons
 - `background`: Background service worker
+- `build`: Build system and tooling
 - `content`: Content script
 - `popup`: Popup UI components
 - `stats`: Statistics page
 - `dict`: Dictionary-related functionality
 - `api`: API integration
+- `git`: Git configuration and conventions
 - `global`: Repository-wide changes
 
 Multiple domains can be specified when a change affects multiple areas (e.g., `refactor(content, stats)`). Domains should be listed in alphabetical order (e.g., `refactor(background, dict)` not `refactor(dict, background)`). If more than 3 domains would be specified, use `global` instead.
@@ -54,6 +57,9 @@ feat(background): Implement dictionary API and statistics tracking
 fix(api): Improve error handling and logging for API failures
 refactor(background, dict): Replace runtime fetching with static imports
 refactor(content, stats): Extract shared pronunciation section utilities
+fix(build): Fix build path resolution and memory limit
+ci(build): Add GitHub Actions workflow for automated builds
+ai(git): Add ci commit type and build domain to git conventions
 ai(global): Add agent documentation files
 ```
 
