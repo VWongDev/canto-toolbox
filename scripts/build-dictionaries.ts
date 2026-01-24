@@ -20,7 +20,7 @@ async function buildDictionaries(): Promise<void> {
   console.log('[Build] Starting dictionary preprocessing...');
   
   // Dictionary configuration: name -> processor
-  const dictionaries: Record<string, () => Dictionary> = {
+  const dictionaries: Record<string, () => Promise<Dictionary>> = {
     mandarin: processMandarinDict,
     cantonese: processCantoneseDict
   };
@@ -34,7 +34,7 @@ async function buildDictionaries(): Promise<void> {
   // Process and write each dictionary
   for (const [name, processor] of Object.entries(dictionaries)) {
     try {
-      const dict = processor();
+      const dict = await processor();
       
       const outputPath = join(outputDir, `${name}.json`);
       writeFileSync(outputPath, JSON.stringify(dict, null, 2), 'utf-8');

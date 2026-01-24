@@ -48,7 +48,7 @@ function mergeReadings(mainDict: Dictionary, readingsDict: Dictionary): void {
 /**
  * Process Cantonese dictionary into unified format
  */
-export function processCantoneseDict(): Dictionary {
+export async function processCantoneseDict(): Promise<Dictionary> {
   const { mainText, readingsText } = loadCantoneseFiles();
   
   const cantoneseDict = parseCedictFormat(mainText);
