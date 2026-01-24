@@ -2,7 +2,6 @@ import type { DefinitionResult } from '../types';
 import { createElement } from './dom-utils';
 import { MessageManager } from './background.js';
 import popupStyles from '../css/popup.css?raw';
-import { groupEntriesByRomanisation } from '../utils/dictionary-utils.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/ui-helpers.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;

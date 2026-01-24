@@ -1,7 +1,6 @@
 import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, DictionaryEntry, ErrorResponse } from '../types';
 import { createElement, clearElement } from './dom-utils';
 import { MessageManager } from './background.js';
-import { groupEntriesByRomanisation } from '../utils/dictionary-utils.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/ui-helpers.js';
 
 const ELEMENT_IDS = {
