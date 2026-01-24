@@ -73,10 +73,6 @@ function getTextNodeAtCursor(event: MouseEvent): { textNode: Text; offset: numbe
   return null;
 }
 
-function isChineseCharacter(char: string): boolean {
-  return /[\u4e00-\u9fff]/.test(char);
-}
-
 function extractChineseWordFromText(text: string, offset: number): string | null {
   const chineseRegex = /[\u4e00-\u9fff]+/g;
   let match;
@@ -106,12 +102,6 @@ function getChineseWordAtCursor(event: MouseEvent): CursorResult | null {
   }
   
   const text = cursorData.textNode.textContent;
-  const charAtOffset = text.charAt(cursorData.offset);
-  
-  if (!isChineseCharacter(charAtOffset)) {
-    return null;
-  }
-  
   const word = extractChineseWordFromText(text, cursorData.offset);
   if (!word) {
     return null;
@@ -159,10 +149,6 @@ function handleSelection(event: MouseEvent): void {
       currentSelection = null;
       scheduleSelectionHide();
     }
-    return;
-  }
-
-  if (!isChineseCharacter(selectedText)) {
     return;
   }
 
