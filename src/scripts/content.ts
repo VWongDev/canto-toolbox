@@ -446,38 +446,33 @@ function createPronunciationGrid(groupedPronunciations: Record<string, string[]>
   });
 }
 
-function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTMLElement {
-  const entries = mandarinData?.entries || [];
-  const groupedByPinyin = groupEntriesByPronunciation(entries);
-  const grid = createPronunciationGrid(groupedByPinyin, 'pinyin');
+function createPronunciationSection(
+  data: DefinitionResult['mandarin'] | DefinitionResult['cantonese'],
+  label: string,
+  pronunciationKey: 'pinyin' | 'jyutping'
+): HTMLElement {
+  const entries = data?.entries || [];
+  const grouped = groupEntriesByPronunciation(entries);
+  const grid = createPronunciationGrid(grouped, pronunciationKey);
   
   return createElement({
     className: 'popup-section',
     children: [
       createElement({
         className: 'popup-label',
-        textContent: 'Mandarin'
+        textContent: label
       }),
       grid
     ]
   });
 }
 
+function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTMLElement {
+  return createPronunciationSection(mandarinData, 'Mandarin', 'pinyin');
+}
+
 function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): HTMLElement {
-  const entries = cantoneseData?.entries || [];
-  const groupedByJyutping = groupEntriesByPronunciation(entries);
-  const grid = createPronunciationGrid(groupedByJyutping, 'jyutping');
-  
-  return createElement({
-    className: 'popup-section',
-    children: [
-      createElement({
-        className: 'popup-label',
-        textContent: 'Cantonese'
-      }),
-      grid
-    ]
-  });
+  return createPronunciationSection(cantoneseData, 'Cantonese', 'jyutping');
 }
 
 function showPopup(word: string, definition: DefinitionResult, x: number, y: number): void {
