@@ -109,7 +109,7 @@ function injectStyles(): void {
     }
     .popup-pronunciations-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
       max-width: 100%;
       width: 100%;
@@ -124,12 +124,6 @@ function injectStyles(): void {
     @media (max-width: 600px) {
       .popup-pronunciations-grid {
         grid-template-columns: 1fr;
-      }
-    }
-    @media (min-width: 601px) and (max-width: 800px) {
-      .popup-pronunciations-grid[data-count="3"],
-      .popup-pronunciations-grid[data-count="4"] {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
     .popup-pronunciation-group {
@@ -835,7 +829,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
     }
     
     const pinyinKeys = Object.keys(byPinyin);
-    const pronunciationCount = Math.min(pinyinKeys.length, 3); // Use count for responsive layout (max 3 columns)
+    const pronunciationCount = Math.min(pinyinKeys.length, 2); // Use count for responsive layout (max 2 columns)
     
     let html = '<div class="popup-label">Mandarin</div>';
     html += `<div class="popup-pronunciations-grid" data-count="${pronunciationCount}">`;
@@ -882,7 +876,7 @@ function showPopup(word: string, definition: DefinitionResult, x: number, y: num
     }
     
     const jyutpingKeys = Object.keys(byJyutping);
-    const pronunciationCount = Math.min(jyutpingKeys.length, 3); // Use count for responsive layout (max 3 columns)
+    const pronunciationCount = Math.min(jyutpingKeys.length, 2); // Use count for responsive layout (max 2 columns)
     
     let html = '<div class="popup-label">Cantonese</div>';
     html += `<div class="popup-pronunciations-grid" data-count="${pronunciationCount}">`;
