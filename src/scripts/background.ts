@@ -104,8 +104,7 @@ messageManager.init();
 
 function isDefinitionValid(entries: DictionaryEntry[]): boolean {
   if (!entries.length) return false;
-  const defs = entries.flatMap(e => e.definitions || []).join(' ').toLowerCase();
-  return defs.trim().length > 0 && !defs.includes('not found') && !defs.includes('not loaded');
+  return entries.some(e => e.definitions.some(d => d.trim().length > 0));
 }
 
 function hasValidDefinition(definition: DefinitionResult): boolean {

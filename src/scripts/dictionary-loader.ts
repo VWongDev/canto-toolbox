@@ -20,7 +20,7 @@ function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): Dict
   
   for (const entry of mandarinEntries) {
     const filteredDefs = (entry.definitions || []).filter(
-      def => !def.toLowerCase().includes(CANTONESE_MARKER.toLowerCase())
+      def => def && def.trim().length > 0 && !def.toLowerCase().includes(CANTONESE_MARKER.toLowerCase())
     );
     
     if (filteredDefs.length > 0) {

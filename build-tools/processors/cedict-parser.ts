@@ -10,7 +10,7 @@ function createEntry(traditional: string, simplified: string, pinyin: string, jy
     traditional,
     simplified,
     romanisation: jyutping || pinyin || '',
-    definitions: definitions.filter(d => d?.trim())
+    definitions: definitions.filter(d => d && d.trim().length > 0)
   };
 }
 
