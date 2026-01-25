@@ -120,13 +120,6 @@ function findLongestMatchingWord(word: string): { definition: DefinitionResult; 
     }
   }
   
-  if (word.length > 1) {
-    const definition = lookupWordInDictionaries(word[0]);
-    if (hasValidDefinition(definition)) {
-      return { definition, matchedWord: word[0] };
-    }
-  }
-  
   return null;
 }
 
