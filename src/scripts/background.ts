@@ -102,14 +102,14 @@ function handleTrackWordMessage(word: string, sendResponse: (response: Backgroun
 export const messageManager = new MessageManager(chrome.runtime);
 messageManager.init();
 
-function isDefinitionValid(entries: DictionaryEntry[] | undefined): boolean {
-  if (!entries?.length) return false;
+function isDefinitionValid(entries: DictionaryEntry[]): boolean {
+  if (!entries.length) return false;
   const defs = entries.flatMap(e => e.definitions || []).join(' ').toLowerCase();
   return defs.trim().length > 0 && !defs.includes('not found') && !defs.includes('not loaded');
 }
 
-function hasValidDefinition(definition: DefinitionResult | null): boolean {
-  return definition ? (isDefinitionValid(definition.mandarin.entries) || isDefinitionValid(definition.cantonese.entries)) : false;
+function hasValidDefinition(definition: DefinitionResult): boolean {
+  return isDefinitionValid(definition.mandarin.entries) || isDefinitionValid(definition.cantonese.entries);
 }
 
 function findLongestMatchingWord(word: string): { definition: DefinitionResult; matchedWord: string } | null {
