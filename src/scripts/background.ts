@@ -100,6 +100,13 @@ export class MessageManager {
 
 export class StorageManager {
   private readonly STORAGE_KEY = 'wordStatistics';
+  private readonly syncStorage: chrome.storage.StorageArea;
+  private readonly localStorage: chrome.storage.StorageArea;
+
+  constructor(syncStorage: chrome.storage.StorageArea, localStorage: chrome.storage.StorageArea) {
+    this.syncStorage = syncStorage;
+    this.localStorage = localStorage;
+  }
 
   private async updateStatisticsInStorage(storage: chrome.storage.StorageArea, word: string): Promise<void> {
     const result = await storage.get([this.STORAGE_KEY]);
@@ -147,11 +154,11 @@ export class StorageManager {
     }
 
     try {
-      await this.updateStatisticsInStorage(chrome.storage.sync, word);
+      await this.updateStatisticsInStorage(this.syncStorage, word);
     } catch (error) {
       console.error('[Background] Failed to update statistics in sync storage:', error);
       try {
-        await this.updateStatisticsInStorage(chrome.storage.local, word);
+        await this.updateStatisticsInStorage(this.localStorage, word);
       } catch (localError) {
         console.error('[Background] Failed to update local statistics:', localError);
         throw localError;
@@ -161,12 +168,12 @@ export class StorageManager {
 
   async getStatistics(): Promise<Statistics> {
     const [syncStats, localStats] = await Promise.all([
-      this.loadStatisticsFromStorage(chrome.storage.sync),
-      this.loadStatisticsFromStorage(chrome.storage.local)
+      this.loadStatisticsFromStorage(this.syncStorage),
+      this.loadStatisticsFromStorage(this.localStorage)
     ]);
     return this.mergeStatistics(syncStats, localStats);
   }
 }
 
-export const messageManager = new MessageManager(chrome.runtime, new StorageManager());
+export const messageManager = new MessageManager(chrome.runtime, new StorageManager(chrome.storage.sync, chrome.storage.local));
 messageManager.init();
