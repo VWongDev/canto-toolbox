@@ -99,7 +99,7 @@ function handleTrackWordMessage(word: string, sendResponse: (response: Backgroun
     });
 }
 
-const messageManager = new MessageManager(chrome.runtime);
+export const messageManager = new MessageManager(chrome.runtime);
 messageManager.init();
 
 function isDefinitionValid(entries: DictionaryEntry[] | undefined): boolean {

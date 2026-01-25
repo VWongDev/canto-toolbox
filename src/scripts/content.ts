@@ -1,6 +1,6 @@
-import type { DefinitionResult } from '../types';
+import type { DefinitionResult, LookupResponse, ErrorResponse } from '../types';
 import { createElement } from './dom-utils';
-import { MessageManager } from './background.js';
+import { messageManager, type MessageManager } from './background.js';
 import popupStyles from '../css/popup.css?raw';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/ui-helpers.js';
 
@@ -24,7 +24,7 @@ interface CursorResult {
   offset: number;
 }
 
-class ChineseHoverPopupManager {
+export class ChineseHoverPopupManager {
   private readonly document: Document;
   private readonly messageManager: MessageManager;
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
@@ -39,9 +39,9 @@ class ChineseHoverPopupManager {
   private mousemoveThrottle: number | null = null;
   private lastMouseMoveTime = 0;
 
-  constructor(document: Document, chromeRuntime: typeof chrome.runtime) {
+  constructor(document: Document, messageManager: MessageManager) {
     this.document = document;
-    this.messageManager = new MessageManager(chromeRuntime);
+    this.messageManager = messageManager;
   }
 
   init(): void {
@@ -181,7 +181,7 @@ class ChineseHoverPopupManager {
       return;
     }
 
-    this.messageManager.lookupWord(word, (response) => {
+    this.messageManager.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
       if (response.success && 'definition' in response) {
         this.showPopup(response.definition.word || word, response.definition, x, y);
       } else {
@@ -266,7 +266,7 @@ class ChineseHoverPopupManager {
   }
 }
 
-const popupManager = new ChineseHoverPopupManager(document, chrome.runtime);
+export const popupManager = new ChineseHoverPopupManager(document, messageManager);
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => popupManager.init());

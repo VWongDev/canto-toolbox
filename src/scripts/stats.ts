@@ -1,6 +1,6 @@
 import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, DictionaryEntry, ErrorResponse } from '../types';
 import { createElement, clearElement } from './dom-utils';
-import { MessageManager } from './background.js';
+import { messageManager, type MessageManager } from './background.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/ui-helpers.js';
 
 const ELEMENT_IDS = {
@@ -15,14 +15,14 @@ const STORAGE_KEY = 'wordStatistics';
 const EXPAND_ICON_COLLAPSED = '▶';
 const EXPAND_ICON_EXPANDED = '▼';
 
-class StatsManager {
+export class StatsManager {
   private readonly document: Document;
   private readonly messageManager: MessageManager;
   private readonly chromeStorage: typeof chrome.storage;
 
-  constructor(document: Document, chromeRuntime: typeof chrome.runtime, chromeStorage: typeof chrome.storage) {
+  constructor(document: Document, messageManager: MessageManager, chromeStorage: typeof chrome.storage) {
     this.document = document;
-    this.messageManager = new MessageManager(chromeRuntime);
+    this.messageManager = messageManager;
     this.chromeStorage = chromeStorage;
   }
 
@@ -102,7 +102,7 @@ class StatsManager {
     const elements = this.getRequiredElements();
     if (!elements) return;
 
-    this.messageManager.getStatistics((response) => {
+    this.messageManager.getStatistics((response: StatisticsResponse | ErrorResponse) => {
       this.handleStatisticsResponse(response, elements);
     });
   }
@@ -205,7 +205,7 @@ class StatsManager {
     container.appendChild(loadingEl);
     container.style.display = 'block';
 
-    this.messageManager.lookupWord(word, (response) => {
+    this.messageManager.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
       this.handleDefinitionResponse(response, container, word);
     });
   }
@@ -238,7 +238,7 @@ class StatsManager {
   }
 }
 
-const statsManager = new StatsManager(document, chrome.runtime, chrome.storage);
+export const statsManager = new StatsManager(document, messageManager, chrome.storage);
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => statsManager.init());
