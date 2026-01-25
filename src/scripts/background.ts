@@ -1,7 +1,5 @@
-import { lookupWordInDictionaries } from './dictionary-loader.js';
-import type { DefinitionResult, BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, DictionaryEntry, LookupResponse, ErrorResponse } from '../types';
-
-const MAX_WORD_LENGTH = 4;
+import { lookupWord } from '../utils/dictionary-utils.js';
+import type { BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, LookupResponse, ErrorResponse } from '../types';
 
 export class MessageManager {
   private readonly chromeRuntime: typeof chrome.runtime;
@@ -172,35 +170,3 @@ export class StorageManager {
 
 export const messageManager = new MessageManager(chrome.runtime, new StorageManager());
 messageManager.init();
-
-function isDefinitionValid(entries: DictionaryEntry[]): boolean {
-  if (!entries.length) return false;
-  return entries.some(e => e.definitions.some(d => d.trim().length > 0));
-}
-
-function hasValidDefinition(definition: DefinitionResult): boolean {
-  return isDefinitionValid(definition.mandarin.entries) || isDefinitionValid(definition.cantonese.entries);
-}
-
-function findLongestMatchingWord(word: string): { definition: DefinitionResult; matchedWord: string } | null {
-  for (let len = Math.min(word.length, MAX_WORD_LENGTH); len >= 1; len--) {
-    const substring = word.substring(0, len);
-    const definition = lookupWordInDictionaries(substring);
-    if (hasValidDefinition(definition)) {
-      return { definition, matchedWord: substring };
-    }
-  }
-  
-  return null;
-}
-
-function lookupWord(word: string): DefinitionResult {
-  const matchResult = findLongestMatchingWord(word);
-  if (matchResult) {
-    matchResult.definition.word = matchResult.matchedWord;
-    return matchResult.definition;
-  }
-  
-  console.error('[Dict] Word not found:', word);
-  throw new Error(`Word "${word}" not found in dictionary`);
-}
