@@ -1,7 +1,7 @@
 import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, DictionaryEntry, ErrorResponse } from '../types';
 import { createElement, clearElement } from './dom-utils';
 import { messageManager, type MessageManager } from './background.js';
-import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/ui-helpers.js';
+import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/pronunciation-section.js';
 
 const ELEMENT_IDS = {
   loading: 'loading',
