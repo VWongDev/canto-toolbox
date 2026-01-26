@@ -11,9 +11,11 @@ canto-toolbox/
 │   ├── scripts/
 │   │   ├── background.ts     # Service worker for dictionary lookups and statistics
 │   │   ├── content.ts        # Content script for hover detection
-│   │   ├── dictionary-loader.ts  # Dictionary lookup functions
-│   │   ├── dom-utils.ts      # DOM manipulation utilities
 │   │   └── stats.ts          # Statistics page logic
+│   ├── utils/
+│   │   ├── dictionary.ts     # Dictionary lookup functions
+│   │   ├── dom-element.ts    # DOM element creation utilities
+│   │   └── pronunciation-section.ts  # Pronunciation section UI components
 │   ├── css/
 │   │   ├── popup.css         # Popup styling
 │   │   └── stats.css         # Statistics page styling
@@ -22,9 +24,6 @@ canto-toolbox/
 │   ├── data/
 │   │   ├── mandarin.json     # Pre-processed Mandarin dictionary
 │   │   └── cantonese.json    # Pre-processed Cantonese dictionary
-│   ├── utils/
-│   │   ├── dictionary-utils.ts  # Dictionary data transformation utilities
-│   │   └── ui-helpers.ts     # Shared UI component creation utilities
 │   ├── types.ts              # TypeScript type definitions
 │   └── vite-env.d.ts         # Vite environment type declarations
 ├── build-tools/              # Build-time dictionary processing
@@ -48,7 +47,7 @@ canto-toolbox/
 flowchart TD
     A[Web Page] -->|Hover Event| B[Content Script]
     B -->|Detect Chinese Word| C[Background Service Worker]
-    C -->|Lookup Definition| D[Dictionary Loader]
+    C -->|Lookup Definition| D[Dictionary Utils]
     D -->|Static Import| E[Dictionary JSON Files]
     E -->|Return Data| D
     D -->|Definition| C
@@ -83,7 +82,7 @@ flowchart TD
   - Provide statistics data to stats page
   - Handle longest matching word algorithm for multi-character lookups
 
-### Dictionary Loader (`dictionary-loader.ts`)
+### Dictionary Utils (`utils/dictionary.ts`)
 
 - **Purpose**: Search statically imported dictionary data
 - **Responsibilities**:
@@ -112,7 +111,7 @@ flowchart TD
 
 2. **Dictionary Lookup**:
    - Background script receives lookup request
-   - Dictionary loader searches statically imported dictionary data
+   - Dictionary utils searches statically imported dictionary data
    - Definition, pinyin, and jyutping are extracted
    - Result is returned synchronously (no caching needed)
 
@@ -162,6 +161,6 @@ Both dictionaries are included as git submodules and processed at build time int
 - **`ChineseHoverPopupManager`**: Manages popup display and selection logic in content script
 - **`StatsManager`**: Handles statistics page UI and data loading
 - **`MessageManager`**: Centralizes typed message passing between content/background scripts
-- **`dom-utils.ts`**: Shared DOM manipulation utilities (`createElement`, `clearElement`)
-- **`dictionary-utils.ts`**: Dictionary data transformation utilities (`groupEntriesByRomanisation`)
-- **`ui-helpers.ts`**: Shared UI component creation (`createPronunciationSection`)
+- **`dom-element.ts`**: Shared DOM element creation utilities (`createElement`, `clearElement`)
+- **`dictionary.ts`**: Dictionary lookup functions (`lookupWord`, `lookupWordInDictionaries`)
+- **`pronunciation-section.ts`**: Pronunciation section UI component creation (`createPronunciationSection`, `groupEntriesByRomanisation`)
