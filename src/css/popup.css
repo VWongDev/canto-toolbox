@@ -30,6 +30,7 @@
   align-items: flex-start;
   min-width: 0;
   width: 100%;
+  container-type: inline-size;
 }
 
 .popup-word {
@@ -50,27 +51,13 @@
   max-width: 100%;
   overflow: hidden;
   box-sizing: border-box;
-}
-
-.popup-pronunciations-grid {
-  column-count: 2;
-  column-gap: 12px;
-  max-width: 100%;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.popup-pronunciations-grid[data-count="1"] {
   column-count: 1;
+  column-gap: 12px;
 }
 
-.popup-pronunciations-grid[data-count="2"] {
-  column-count: 2;
-}
-
-@media (max-width: 600px) {
-  .popup-pronunciations-grid {
-    column-count: 1;
+@container (min-width: 400px) {
+  .popup-section {
+    column-count: 2;
   }
 }
 
@@ -97,6 +84,7 @@
   overflow-wrap: break-word;
   word-wrap: break-word;
   max-width: 100%;
+  column-span: all;
 }
 
 .popup-pinyin,

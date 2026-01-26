@@ -347,8 +347,6 @@ const popupPronunciationConfig: PronunciationSectionConfig = {
   labelClassName: 'popup-label',
   pronunciationClassName: (key) => key === 'pinyin' ? 'popup-pinyin' : 'popup-jyutping',
   groupClassName: 'popup-pronunciation-group',
-  useGrid: true,
-  gridClassName: 'popup-pronunciations-grid',
   createDefinitionElement: createPopupDefinitionElement
 };
 
