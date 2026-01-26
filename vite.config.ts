@@ -15,7 +15,6 @@ export default defineConfig({
         // TypeScript entry points
         background: 'src/scripts/background.ts',
         content: 'src/scripts/content.ts',
-        dictionaryLoader: 'src/scripts/dictionary-loader.ts',
         stats: 'src/html/stats.html',
         'stats-script': 'src/scripts/stats.ts'
       }
