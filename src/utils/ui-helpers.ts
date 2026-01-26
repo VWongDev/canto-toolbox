@@ -1,6 +1,6 @@
 import type { DefinitionResult } from '../types';
 import { createElement } from '../scripts/dom-utils';
-import { groupEntriesByRomanisation } from './dictionary-utils';
+import { groupEntriesByRomanisation } from './dictionary';
 
 export interface PronunciationSectionConfig {
   sectionClassName: string;

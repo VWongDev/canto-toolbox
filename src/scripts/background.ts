@@ -1,4 +1,4 @@
-import { lookupWord } from '../utils/dictionary-utils.js';
+import { lookupWord } from '../utils/dictionary.js';
 import type { BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, LookupResponse, ErrorResponse } from '../types';
 
 export class MessageManager {
