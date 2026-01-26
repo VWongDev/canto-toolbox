@@ -1,5 +1,5 @@
 import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, DictionaryEntry, ErrorResponse } from '../types';
-import { createElement, clearElement } from './dom-utils';
+import { createElement, clearElement } from '../utils/dom-element';
 import { messageManager, type MessageManager } from './background.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/pronunciation-section.js';
 

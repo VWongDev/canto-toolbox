@@ -1,5 +1,5 @@
 import type { DefinitionResult } from '../types';
-import { createElement } from '../scripts/dom-utils';
+import { createElement } from './dom-element';
 import { groupEntriesByRomanisation } from './dictionary';
 
 export interface PronunciationSectionConfig {
