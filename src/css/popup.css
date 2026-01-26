@@ -110,10 +110,13 @@
   max-width: 100%;
   hyphens: auto;
   box-sizing: border-box;
+  list-style-type: disc;
+  padding-left: 18px;
+  margin: 0;
 }
 
 .popup-definition-item {
-  margin-bottom: 1px;
+  margin-bottom: 2px;
 }
 
 .popup-definition-item:last-child {

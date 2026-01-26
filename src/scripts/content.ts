@@ -335,9 +335,10 @@ function hasActiveSelection(): boolean {
 
 function createPopupDefinitionElement(definitions: string[]): HTMLElement {
   return createElement({
+    tag: 'ul',
     className: 'popup-definition',
-    children: definitions.map(def => 
-      createElement({ className: 'popup-definition-item', textContent: def })
+    children: definitions.map(def =>
+      createElement({ tag: 'li', className: 'popup-definition-item', textContent: def })
     )
   });
 }

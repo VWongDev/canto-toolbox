@@ -224,6 +224,9 @@ h1 {
   font-size: 13px;
   color: #555;
   line-height: 1.6;
+  list-style-type: disc;
+  padding-left: 18px;
+  margin: 0;
 }
 
 .pronunciation-group {

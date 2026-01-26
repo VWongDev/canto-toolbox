@@ -257,9 +257,10 @@ function sortWordsByCount(words: string[], statistics: Record<string, WordStatis
 function createDefinitionTextElement(definitions: string[] | undefined): HTMLElement {
   const defs = definitions && definitions.length > 0 ? definitions : ['Not found'];
   return createElement({
+    tag: 'ul',
     className: 'definition-text',
     children: defs.map(def =>
-      createElement({ className: 'definition-item', textContent: def })
+      createElement({ tag: 'li', className: 'definition-item', textContent: def })
     )
   });
 }
