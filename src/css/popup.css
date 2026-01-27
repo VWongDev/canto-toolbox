@@ -6,7 +6,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 12px;
-  min-width: 700px;
+  min-width: 500px;
   max-width: 1200px;
   width: auto;
   height: auto;
@@ -55,9 +55,17 @@
   column-gap: 12px;
 }
 
+.popup-section.single-pronunciation {
+  column-count: 1 !important;
+}
+
 @container (min-width: 400px) {
   .popup-section {
     column-count: 2;
+  }
+
+  .popup-section.single-pronunciation {
+    column-count: 1;
   }
 }
 
