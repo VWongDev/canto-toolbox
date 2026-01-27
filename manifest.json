@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Canto Toolbox",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Hover over Chinese words to see definitions in Mandarin and Cantonese with pronunciations",
   "permissions": [
     "storage"
@@ -12,8 +12,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["src/scripts/content.ts"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/scripts/content.ts"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -35,7 +39,9 @@
       "resources": [
         "src/data/*.json"
       ],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }
