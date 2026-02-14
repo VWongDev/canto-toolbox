@@ -1,5 +1,6 @@
 import { lookupWord } from '../utils/dictionary.js';
 import { createBatchedDebounce } from '../utils/debounce.js';
+import { BoundedMap } from '../utils/bounded-map.js';
 import type { BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, LookupResponse, ErrorResponse } from '../types';
 
 export class MessageManager {
@@ -98,6 +99,7 @@ export class MessageManager {
 export class StorageManager {
   private readonly STORAGE_KEY = 'wordStatistics';
   private readonly DEBOUNCE_DELAY = 500;
+  private readonly MAX_WORDS = 500;
   private readonly syncStorage: chrome.storage.StorageArea;
   private readonly localStorage: chrome.storage.StorageArea;
   private readonly queueUpdate: (word: string) => void;
@@ -146,18 +148,23 @@ export class StorageManager {
 
   private async writeStatistics(storage: chrome.storage.StorageArea, updates: Map<string, number>): Promise<void> {
     const result = await storage.get([this.STORAGE_KEY]);
-    const stats: Statistics = result.wordStatistics || {};
+    const existing: Statistics = result.wordStatistics || {};
     const now = Date.now();
 
+    const stats = new BoundedMap<string, Statistics[string]>(
+      this.MAX_WORDS,
+      (entry) => entry.count,
+      Object.entries(existing)
+    );
+
     for (const [word, count] of updates) {
-      if (!stats[word]) {
-        stats[word] = { count: 0, firstSeen: now, lastSeen: now };
-      }
-      stats[word].count += count;
-      stats[word].lastSeen = now;
+      const entry = stats.get(word) ?? { count: 0, firstSeen: now, lastSeen: now };
+      entry.count += count;
+      entry.lastSeen = now;
+      stats.set(word, entry);
     }
 
-    await storage.set({ wordStatistics: stats });
+    await storage.set({ wordStatistics: stats.toObject() });
   }
 
   private mergeStatistics(syncStats: Statistics, localStats: Statistics): Statistics {
