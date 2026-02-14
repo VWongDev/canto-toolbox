@@ -1,6 +1,6 @@
 {
   "name": "canto-toolbox",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Hover over Chinese words to see definitions in Mandarin and Cantonese with pronunciations",
   "type": "module",
   "scripts": {
