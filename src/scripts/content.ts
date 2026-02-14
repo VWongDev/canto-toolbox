@@ -105,15 +105,16 @@ export class ChineseHoverPopupManager {
   }
 
   private handleMouseMoveThrottled(event: MouseEvent): void {
-    const target = event.target as HTMLElement | null;
+    const target = event.target;
     if (!target) return;
-    
+
     if (this.currentSelection) {
       this.handleSelectionTracking(event);
       return;
     }
-    
-    if (target.closest('#chinese-hover-popup')) {
+
+    const element = target instanceof Element ? target : (target as Node).parentElement;
+    if (element?.closest('#chinese-hover-popup')) {
       this.clearTimer('hide');
       this.isHoveringChinese = true;
       return;
