@@ -61,7 +61,7 @@ jobs:
       - name: Install xvfb and Chromium dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libgbm1 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libasound2
+          sudo apt-get install -y xvfb libgbm1 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libasound2t64
 
       - name: Generate screenshots
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x800x24" pnpm screenshots
