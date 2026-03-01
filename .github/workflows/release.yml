@@ -58,14 +58,22 @@ jobs:
       - name: Build extension
         run: pnpm build
 
+      - name: Install xvfb and Chromium dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgbm1 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libasound2
+
+      - name: Generate screenshots
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x800x24" pnpm screenshots
+
       - name: Create release zip
         run: zip -r canto-toolbox-${{ env.NEW_VERSION }}.zip dist/
 
-      - name: Commit version bump
+      - name: Commit version bump and screenshots
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add manifest.json package.json
+          git add manifest.json package.json screenshots/
           git commit -m "chore(global): Bump version to ${{ env.NEW_VERSION }}"
 
       - name: Push version bump and create tag
