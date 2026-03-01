@@ -3,6 +3,7 @@ import { createElement } from '../utils/dom-element';
 import { messageManager, type MessageManager } from './background.js';
 import popupStyles from '../css/popup.css?raw';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/pronunciation-section.js';
+import { createEtymologySection } from '../utils/etymology-section.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
 const MAX_WORD_LENGTH = 4;
@@ -212,6 +213,11 @@ export class ChineseHoverPopupManager {
     });
     
     popup.appendChild(createElement({ className: 'popup-word', textContent: definition.word || word }));
+
+    if (definition.etymology?.length) {
+      popup.appendChild(createEtymologySection(definition.etymology));
+    }
+
     popup.appendChild(createElement({
       className: 'popup-sections-container',
       children: [

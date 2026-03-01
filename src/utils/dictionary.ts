@@ -1,12 +1,14 @@
-import type { Dictionary, DictionaryEntry, DefinitionResult } from '../types';
+import type { Dictionary, DictionaryEntry, DefinitionResult, EtymologyDictionary, CharacterEtymology } from '../types';
 import mandarinDictData from '../data/mandarin.json';
 import cantoneseDictData from '../data/cantonese.json';
+import etymologyDictData from '../data/etymology.json';
 
 const CANTONESE_MARKER = '(cantonese)';
 const MAX_WORD_LENGTH = 4;
 
 const mandarinDict = mandarinDictData as Dictionary;
 const cantoneseDict = cantoneseDictData as Dictionary;
+const etymologyDict = etymologyDictData as EtymologyDictionary;
 
 function lookupInDict(dict: Dictionary, word: string): DictionaryEntry[] {
   const entries = dict[word];
@@ -44,6 +46,12 @@ function processDictionaryLookup(
   return filterCantonese ? filterOutCantoneseDefinitions(entries) : entries;
 }
 
+export function lookupEtymology(word: string): CharacterEtymology[] {
+  return [...word]
+    .map(char => etymologyDict[char])
+    .filter((entry): entry is CharacterEtymology => entry !== undefined);
+}
+
 export function lookupWordInDictionaries(word: string): DefinitionResult {
   const result: DefinitionResult = {
     word: word,
@@ -53,6 +61,11 @@ export function lookupWordInDictionaries(word: string): DefinitionResult {
 
   result.mandarin.entries = processDictionaryLookup(mandarinDict, word, true);
   result.cantonese.entries = processDictionaryLookup(cantoneseDict, word, false);
+
+  const etymology = lookupEtymology(word);
+  if (etymology.length > 0) {
+    result.etymology = etymology;
+  }
 
   return result;
 }

@@ -4,3 +4,6 @@
 [submodule "dictionaries/cantonese"]
 	path = dictionaries/cantonese
 	url = https://github.com/amadeusine/cc-canto-data.git
+[submodule "dictionaries/makemeahanzi"]
+	path = dictionaries/makemeahanzi
+	url = https://github.com/skishore/makemeahanzi.git

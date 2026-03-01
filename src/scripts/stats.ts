@@ -2,6 +2,7 @@ import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupRespon
 import { createElement, clearElement } from '../utils/dom-element';
 import { messageManager, type MessageManager } from './background.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/pronunciation-section.js';
+import { createEtymologySection } from '../utils/etymology-section.js';
 
 const ELEMENT_IDS = {
   loading: 'loading',
@@ -293,21 +294,28 @@ function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): H
 
 function createDefinitionElement(word: string, definition: DefinitionResult): HTMLElement {
   const displayWord = definition.word || word;
-  
+
+  const children: HTMLElement[] = [
+    createElement({
+      className: 'definition-word',
+      textContent: displayWord
+    })
+  ];
+
+  if (definition.etymology?.length) {
+    children.push(createEtymologySection(definition.etymology));
+  }
+
+  children.push(createElement({
+    className: 'definition-sections',
+    children: [
+      createMandarinSection(definition.mandarin),
+      createCantoneseSection(definition.cantonese)
+    ]
+  }));
+
   return createElement({
     className: 'definition-container',
-    children: [
-      createElement({
-        className: 'definition-word',
-        textContent: displayWord
-      }),
-      createElement({
-        className: 'definition-sections',
-        children: [
-          createMandarinSection(definition.mandarin),
-          createCantoneseSection(definition.cantonese)
-        ]
-      })
-    ]
+    children
   });
 }

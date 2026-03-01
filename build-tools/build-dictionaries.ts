@@ -6,7 +6,8 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { processMandarinDict } from './processors/mandarin-processor.js';
 import { processCantoneseDict } from './processors/cantonese-processor.js';
-import type { Dictionary } from '../src/types.js';
+import { processEtymologyDict } from './processors/etymology-processor.js';
+import type { Dictionary, EtymologyDictionary } from '../src/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,9 +22,10 @@ async function buildDictionaries(): Promise<void> {
   console.log('[Build] Starting dictionary preprocessing...');
   
   // Dictionary configuration: name -> processor
-  const dictionaries: Record<string, () => Promise<Dictionary>> = {
+  const dictionaries: Record<string, () => Promise<Dictionary | EtymologyDictionary>> = {
     mandarin: processMandarinDict,
-    cantonese: processCantoneseDict
+    cantonese: processCantoneseDict,
+    etymology: processEtymologyDict
   };
   
   // Create output directory

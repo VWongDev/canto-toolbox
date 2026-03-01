@@ -1,5 +1,19 @@
 // Type definitions for the extension
 
+export type EtymologyType = 'pictophonetic' | 'ideographic' | 'pictographic';
+
+export interface CharacterEtymology {
+  character: string;
+  decomposition: string;
+  radical: string;
+  etymologyType?: EtymologyType;
+  hint?: string;
+  phonetic?: string;
+  semantic?: string;
+}
+
+export type EtymologyDictionary = Record<string, CharacterEtymology>;
+
 export interface DictionaryEntry {
   traditional: string;
   simplified: string;
@@ -27,6 +41,7 @@ export interface DefinitionResult {
   cantonese: {
     entries: DictionaryEntry[];
   };
+  etymology?: CharacterEtymology[];
 }
 
 export interface LookupMessage {
