@@ -123,6 +123,12 @@ This extension uses high-quality, open-source dictionary data:
 - **Copyright**: CC-Canto and CC-CEDICT Cantonese readings are copyright (c) 2015-16 Pleco Software Incorporated
 - **Description**: A comprehensive Cantonese-English dictionary with Jyutping pronunciations.
 
+### Make Me a Hanzi (Etymology)
+- **Source**: [Make Me a Hanzi](https://www.skishore.me/makemeahanzi)
+- **Repository**: [skishore/makemeahanzi](https://github.com/skishore/makemeahanzi)
+- **License**: See [COPYING](https://github.com/skishore/makemeahanzi/blob/master/COPYING) in the repository
+- **Description**: Character etymology data (decomposition, radical, pictographic/pictophonetic hints) used in the extension’s etymology display.
+
 ## Inspiration
 
 The hover detection mechanism in this extension is inspired by [Zhongwen](https://github.com/cschiller/zhongwen), a popular Chinese-English popup dictionary extension. This extension adapts and extends that approach to support both Mandarin and Cantonese dictionaries.
