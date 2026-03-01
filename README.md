@@ -11,6 +11,7 @@ A Chrome extension that displays Chinese word definitions in both Mandarin and C
 - **Works Everywhere**: Functions on any website with Chinese text
 - **Word Statistics**: Tracks your most frequently looked-up words
 - **Multi-word Selection**: Select multiple characters to look up phrases
+- **Radical Breakdown**: Per-character etymology with radical, structure (IDS decomposition), and pictographic/ideographic/pictophonetic hints
 - **Dark Mode Support**: Automatically adapts to your system theme
 - **Offline Dictionary**: Uses local dictionary files - no API calls required
 - **Fast Lookups**: Pre-processed dictionaries for instant results
@@ -98,6 +99,7 @@ Screenshots are written to `screenshots/`. Chrome runs in headed mode because ex
    - The word in large text
    - Mandarin pronunciation (Pinyin) and definitions
    - Cantonese pronunciation (Jyutping) and definitions
+   - Radical breakdown and etymology for each character (when available)
 
 2. **Select multiple characters**: Click and drag to select multiple Chinese characters to look up phrases or compound words.
 
