@@ -3,6 +3,7 @@
 // Requires a headed Chrome (extensions are not supported in headless mode).
 
 import puppeteer, { type Browser, type Page } from 'puppeteer';
+import sharp from 'sharp';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, mkdirSync, readdirSync } from 'fs';
@@ -166,29 +167,37 @@ async function prepareHoverPopup(
   await waitForPopup(page);
 }
 
-const POPUP_CLIP_PADDING = 120; // px around popup to show page context
+const VIEWPORT_CLIP = { x: 0, y: 0, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT };
+const POPUP_CLIP_PADDING = 120;
+
+function getPopupClip(box: { x: number; y: number; width: number; height: number }) {
+  const pad = POPUP_CLIP_PADDING;
+  let x = Math.max(0, box.x - pad);
+  let y = Math.max(0, box.y - pad);
+  let width = Math.min(VIEWPORT_WIDTH, box.width + pad * 2);
+  let height = Math.min(VIEWPORT_HEIGHT, box.height + pad * 2);
+  width = Math.min(width, VIEWPORT_WIDTH - x);
+  height = Math.min(height, VIEWPORT_HEIGHT - y);
+  return { x, y, width, height };
+}
+
+async function captureClippedAndResize(page: Page, clip: { x: number; y: number; width: number; height: number }, outputPath: string): Promise<void> {
+  const buffer = await page.screenshot({ type: 'png', clip, encoding: 'binary' });
+  await sharp(buffer)
+    .resize(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, { fit: 'cover' })
+    .toFile(outputPath);
+}
 
 async function captureHoverPopupScreenshot(page: Page, outputPath: string): Promise<void> {
   await prepareHoverPopup(page, 'light');
 
-  console.log('[Screenshots] Capturing hover-popup.png (popup + page context)...');
+  console.log('[Screenshots] Capturing hover-popup.png (zoomed on popup, 1280×800)...');
   const popup = await page.$('#chinese-hover-popup');
   if (!popup) throw new Error('Popup element not found');
   const box = await popup.boundingBox();
   await popup.dispose();
   if (!box) throw new Error('Popup has no bounding box');
-
-  const pad = POPUP_CLIP_PADDING;
-  const clip = {
-    x: Math.max(0, box.x - pad),
-    y: Math.max(0, box.y - pad),
-    width: Math.min(VIEWPORT_WIDTH, box.width + pad * 2),
-    height: Math.min(VIEWPORT_HEIGHT, box.height + pad * 2),
-  };
-  clip.width = Math.min(clip.width, VIEWPORT_WIDTH - clip.x);
-  clip.height = Math.min(clip.height, VIEWPORT_HEIGHT - clip.y);
-
-  await page.screenshot({ path: outputPath, type: 'png', clip });
+  await captureClippedAndResize(page, getPopupClip(box), outputPath);
 }
 
 async function captureStatsScreenshot(
@@ -215,31 +224,20 @@ async function captureStatsScreenshot(
   });
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  console.log('[Screenshots] Capturing statistics.png...');
-  await page.screenshot({ path: outputPath, type: 'png' });
+  console.log('[Screenshots] Capturing statistics.png (1280×800)...');
+  await page.screenshot({ path: outputPath, type: 'png', clip: VIEWPORT_CLIP });
 }
 
 async function captureDarkModeScreenshot(page: Page, outputPath: string): Promise<void> {
   await prepareHoverPopup(page, 'dark');
 
-  console.log('[Screenshots] Capturing dark-mode.png (popup + page context)...');
+  console.log('[Screenshots] Capturing dark-mode.png (zoomed on popup, 1280×800)...');
   const popup = await page.$('#chinese-hover-popup');
   if (!popup) throw new Error('Popup element not found');
   const box = await popup.boundingBox();
   await popup.dispose();
   if (!box) throw new Error('Popup has no bounding box');
-
-  const pad = POPUP_CLIP_PADDING;
-  const clip = {
-    x: Math.max(0, box.x - pad),
-    y: Math.max(0, box.y - pad),
-    width: Math.min(VIEWPORT_WIDTH, box.width + pad * 2),
-    height: Math.min(VIEWPORT_HEIGHT, box.height + pad * 2),
-  };
-  clip.width = Math.min(clip.width, VIEWPORT_WIDTH - clip.x);
-  clip.height = Math.min(clip.height, VIEWPORT_HEIGHT - clip.y);
-
-  await page.screenshot({ path: outputPath, type: 'png', clip });
+  await captureClippedAndResize(page, getPopupClip(box), outputPath);
 }
 
 async function generateScreenshots(): Promise<void> {
