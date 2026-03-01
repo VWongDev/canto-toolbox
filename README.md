@@ -86,6 +86,12 @@ To clean build artifacts:
 pnpm clean
 ```
 
+To regenerate the screenshots used in the README and store listing (builds the extension, then launches Chrome to capture hover-popup, statistics, and dark-mode screenshots):
+```bash
+pnpm screenshots
+```
+Screenshots are written to `screenshots/`. Chrome runs in headed mode because extensions are not supported in headless.
+
 ## Usage
 
 1. **Hover over Chinese text**: Simply move your mouse over any Chinese characters on a webpage. A popup will appear showing:

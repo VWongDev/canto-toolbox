@@ -8,7 +8,8 @@
     "build:dict": "pnpm build:scripts && node build-tools/dist/build-tools/build-dictionaries.js",
     "build": "pnpm build:dict && NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist src/data build-tools/dist"
+    "clean": "rm -rf dist src/data build-tools/dist",
+    "screenshots": "pnpm build && pnpm build:scripts && node build-tools/dist/build-tools/generate-screenshots.js"
   },
   "keywords": [
     "chrome-extension",
@@ -23,6 +24,7 @@
     "@crxjs/vite-plugin": "^2.0.0-beta.25",
     "@types/chrome": "^0.0.268",
     "@types/node": "^20.14.0",
+    "puppeteer": "^24.37.5",
     "typescript": "^5.5.0",
     "vite": "^5.4.0"
   },
