@@ -1,0 +1,36 @@
+#!/bin/sh
+# Validates commit messages against the project's semantic commit format.
+# Format: type(domain): Description
+# See .agents/git-conventions.md for full spec.
+
+commit_msg=$(cat "$1")
+
+# Allow merge commits and fixup/squash commits unmodified
+case "$commit_msg" in
+  "Merge "* | "fixup! "* | "squash! "*)
+    exit 0
+    ;;
+esac
+
+valid_types="feat|fix|docs|style|refactor|test|chore|ci|ai"
+pattern="^($valid_types)\([a-zA-Z_, ]+\): [A-Z].+"
+
+if ! echo "$commit_msg" | grep -Eq "$pattern"; then
+  echo ""
+  echo "✗ Commit message does not match the required format."
+  echo ""
+  echo "  Expected:  type(domain): Description"
+  echo "  Got:       $commit_msg"
+  echo ""
+  echo "  Valid types: feat, fix, docs, style, refactor, test, chore, ci, ai"
+  echo "  Description must start with a capital letter."
+  echo ""
+  echo "  Examples:"
+  echo "    feat(popup): Add etymology section to hover popup"
+  echo "    fix(background, dict): Handle missing word in dictionary lookup"
+  echo "    test(global): Expand coverage for StorageManager"
+  echo ""
+  echo "  See .agents/git-conventions.md for the full spec."
+  echo ""
+  exit 1
+fi
