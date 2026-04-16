@@ -2,9 +2,23 @@
 
 ## Prerequisites
 
+The repo includes a `flake.nix`. With Nix installed, run:
+
+```sh
+nix develop
+```
+
+This drops you into a shell with the correct Node.js and pnpm versions already available. No manual version management needed.
+
+Without Nix, install manually:
 - Node.js >= 18
 - pnpm >= 8 (use `pnpm@8.15.0` as specified in `packageManager`)
-- Git submodules initialized: `git submodule update --init --recursive`
+
+Either way, initialize git submodules before building:
+
+```sh
+git submodule update --init --recursive
+```
 
 ## Build
 

@@ -1,5 +1,8 @@
 # Agent Instructions
 
+## Dev Environment
+Run `nix develop` to enter a shell with the correct Node.js and pnpm versions. Always work inside this shell.
+
 ## Package Manager
 Always use `pnpm`. Never use `npm` or `yarn`.
 
