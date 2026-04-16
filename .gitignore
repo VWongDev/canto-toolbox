@@ -39,3 +39,8 @@ Desktop.ini
 *.temp
 .cache/
 
+# Claude Code / AI tooling
+.claire/
+.claude/
+.workflows/
+
