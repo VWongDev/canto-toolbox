@@ -6,13 +6,13 @@
  * @param delay - Milliseconds to wait before executing
  * @returns A debounced function that resets its timer on each call
  */
-export function debounce<T extends (...args: Parameters<T>) => void>(
-  fn: T,
+export function debounce<A extends unknown[]>(
+  fn: (...args: A) => void,
   delay: number
-): (...args: Parameters<T>) => void {
+): (...args: A) => void {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  return (...args: Parameters<T>): void => {
+  return (...args: A): void => {
     if (timeoutId !== null) {
       clearTimeout(timeoutId);
     }

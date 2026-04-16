@@ -179,7 +179,11 @@ export class ChineseHoverPopupManager {
   private lookupAndShowWord(word: string, x: number, y: number): void {
     if (this.currentPopup?.dataset.word === word) {
       positionPopup(this.currentPopup, x, y);
-      this.messageManager.trackWord(word, () => {});
+      this.messageManager.trackWord(word, (response) => {
+      if (!response.success) {
+        console.error('[Content] Track word failed:', response.error);
+      }
+    });
       return;
     }
 

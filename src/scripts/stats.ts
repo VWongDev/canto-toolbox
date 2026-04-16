@@ -250,8 +250,8 @@ if (document.readyState === 'loading') {
 
 function sortWordsByCount(words: string[], statistics: Record<string, WordStatistics>): string[] {
   return words.sort((a, b) => {
-    const countA = statistics[a]?.count || 0;
-    const countB = statistics[b]?.count || 0;
+    const countA = statistics[a]?.count ?? 0;
+    const countB = statistics[b]?.count ?? 0;
     return countB - countA;
   });
 }

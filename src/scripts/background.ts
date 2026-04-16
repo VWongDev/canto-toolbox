@@ -54,8 +54,8 @@ export class MessageManager {
       sendResponse({ success: true, definition });
     } catch (error) {
       console.error('[Background] Lookup error:', error);
-      const err = error as Error;
-      sendResponse({ success: false, error: err.message || 'Unknown error', errorName: err.name });
+      const err = error instanceof Error ? error : new Error(String(error));
+      sendResponse({ success: false, error: err.message, errorName: err.name });
     }
   }
 
@@ -175,9 +175,9 @@ export class StorageManager {
       const localStat = localStats[word];
       if (syncStat && localStat) {
         merged[word] = {
-          count: (syncStat.count || 0) + (localStat.count || 0),
-          firstSeen: Math.min(syncStat.firstSeen || Date.now(), localStat.firstSeen || Date.now()),
-          lastSeen: Math.max(syncStat.lastSeen || 0, localStat.lastSeen || 0)
+          count: (syncStat.count ?? 0) + (localStat.count ?? 0),
+          firstSeen: Math.min(syncStat.firstSeen ?? Date.now(), localStat.firstSeen ?? Date.now()),
+          lastSeen: Math.max(syncStat.lastSeen ?? 0, localStat.lastSeen ?? 0)
         };
       }
     }

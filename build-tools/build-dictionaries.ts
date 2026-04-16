@@ -52,4 +52,4 @@ async function buildDictionaries(): Promise<void> {
   console.log('[Build] Dictionary preprocessing complete!');
 }
 
-buildDictionaries();
+void buildDictionaries();

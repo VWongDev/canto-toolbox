@@ -12,7 +12,8 @@
     "screenshots": "pnpm build && pnpm build:scripts && node build-tools/dist/build-tools/generate-screenshots.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/ build-tools/"
+    "lint": "eslint src/ build-tools/",
+    "test": "vitest run"
   },
   "keywords": [
     "chrome-extension",

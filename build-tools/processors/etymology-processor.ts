@@ -58,8 +58,8 @@ export async function processEtymologyDict(): Promise<EtymologyDictionary> {
       }
 
       dict[raw.character] = entry;
-    } catch {
-      // Skip invalid JSON lines
+    } catch (error) {
+      console.warn('[Build] Skipping invalid etymology line:', error);
       continue;
     }
   }
