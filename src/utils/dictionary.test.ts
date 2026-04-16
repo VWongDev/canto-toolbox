@@ -176,14 +176,14 @@ describe('lookupWordInDictionaries', () => {
   it('returns entries from mandarin dict', () => {
     const result = lookupWordInDictionaries('中文');
     expect(result.mandarin.entries).toHaveLength(1);
-    expect(result.mandarin.entries[0].romanisation).toBe('Zhong1 wen2');
+    expect(result.mandarin.entries[0]!.romanisation).toBe('Zhong1 wen2');
     expect(result.cantonese.entries).toHaveLength(0);
   });
 
   it('returns entries from cantonese dict', () => {
     const result = lookupWordInDictionaries('係');
     expect(result.cantonese.entries).toHaveLength(1);
-    expect(result.cantonese.entries[0].romanisation).toBe('hai6');
+    expect(result.cantonese.entries[0]!.romanisation).toBe('hai6');
     expect(result.mandarin.entries).toHaveLength(0);
   });
 
@@ -227,7 +227,7 @@ describe('lookupWordInDictionaries', () => {
   it('attaches etymology when available', () => {
     const result = lookupWordInDictionaries('好');
     expect(result.etymology).toBeDefined();
-    expect(result.etymology![0].character).toBe('好');
+    expect(result.etymology![0]!.character).toBe('好');
   });
 
   it('omits etymology field when no data exists for the word', () => {
@@ -244,15 +244,15 @@ describe('lookupEtymology', () => {
   it('returns etymology for a known character', () => {
     const result = lookupEtymology('好');
     expect(result).toHaveLength(1);
-    expect(result[0].character).toBe('好');
-    expect(result[0].radical).toBe('女');
+    expect(result[0]!.character).toBe('好');
+    expect(result[0]!.radical).toBe('女');
   });
 
   it('returns etymology for each character in a multi-character word', () => {
     // 中文: 中 has etymology, 文 does not
     const result = lookupEtymology('中文');
     expect(result).toHaveLength(1);
-    expect(result[0].character).toBe('中');
+    expect(result[0]!.character).toBe('中');
   });
 
   it('returns empty array for unknown characters', () => {
