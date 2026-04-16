@@ -43,7 +43,7 @@ async function findExtensionId(browser: Browser): Promise<string> {
     const url = extensionTarget.url();
     const match = url.match(/chrome-extension:\/\/([^/]+)/);
     if (match) {
-      return match[1];
+      return match[1]!;
     }
   }
 

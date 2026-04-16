@@ -93,6 +93,7 @@ export class StatsManager {
 
       sortedWords.forEach(word => {
         const stat = statistics[word];
+        if (!stat) return;
         const item = this.createStatItem(word, stat);
         statsListEl.appendChild(item);
       });

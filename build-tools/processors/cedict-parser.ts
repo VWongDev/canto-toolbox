@@ -24,15 +24,15 @@ export function parseCedictFormat(text: string): Dictionary {
     
     const match1 = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\{([^}]+)\}\s+\/(.+)\//);
     if (match1) {
-      entry = createEntry(match1[1], match1[2], match1[3], match1[4], parseDefinitions(match1[5]));
+      entry = createEntry(match1[1]!, match1[2]!, match1[3]!, match1[4]!, parseDefinitions(match1[5]!));
     } else {
       const match2 = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.+)\//);
       if (match2) {
-        entry = createEntry(match2[1], match2[2], match2[3], '', parseDefinitions(match2[4]));
+        entry = createEntry(match2[1]!, match2[2]!, match2[3]!, '', parseDefinitions(match2[4]!));
       } else {
         const match3 = line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\{([^}]+)\}$/);
         if (match3) {
-          entry = createEntry(match3[1], match3[2], match3[3], match3[4], []);
+          entry = createEntry(match3[1]!, match3[2]!, match3[3]!, match3[4]!, []);
         }
       }
     }

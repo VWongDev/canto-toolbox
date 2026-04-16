@@ -3,7 +3,9 @@ node_modules/
 
 # Generated files
 dist/
-src/data/
+src/data/mandarin.json
+src/data/cantonese.json
+src/data/etymology.json
 scripts/dist/
 
 # Build artifacts

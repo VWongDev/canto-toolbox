@@ -76,7 +76,7 @@ export class MessageManager {
   init(): void {
     this.chromeRuntime.onMessage.addListener((
       message: BackgroundMessage,
-      sender: chrome.runtime.MessageSender,
+      _sender: chrome.runtime.MessageSender,
       sendResponse: (response: BackgroundResponse) => void
     ): boolean => {
       if (message.type === 'lookup_word') {
@@ -171,11 +171,13 @@ export class StorageManager {
     const merged: Statistics = { ...localStats, ...syncStats };
 
     for (const word in localStats) {
-      if (syncStats[word]) {
+      const syncStat = syncStats[word];
+      const localStat = localStats[word];
+      if (syncStat && localStat) {
         merged[word] = {
-          count: (syncStats[word].count || 0) + (localStats[word].count || 0),
-          firstSeen: Math.min(syncStats[word].firstSeen || Date.now(), localStats[word].firstSeen || Date.now()),
-          lastSeen: Math.max(syncStats[word].lastSeen || 0, localStats[word].lastSeen || 0)
+          count: (syncStat.count || 0) + (localStat.count || 0),
+          firstSeen: Math.min(syncStat.firstSeen || Date.now(), localStat.firstSeen || Date.now()),
+          lastSeen: Math.max(syncStat.lastSeen || 0, localStat.lastSeen || 0)
         };
       }
     }
