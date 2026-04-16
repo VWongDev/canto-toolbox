@@ -6,3 +6,4 @@ This directory contains documentation for AI agents working with this codebase.
 
 - [@.agents/git-conventions.md](.agents/git-conventions.md) - Commit message format, branch naming, and git workflow conventions
 - [@.agents/architecture.md](.agents/architecture.md) - Overall codebase structure, component responsibilities, and data flow
+- [@.agents/dev-workflow.md](.agents/dev-workflow.md) - Build commands, dev loop, loading the extension, and build gotchas
