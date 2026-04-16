@@ -9,7 +9,8 @@
     "build": "pnpm build:dict && NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist src/data build-tools/dist",
-    "screenshots": "pnpm build && pnpm build:scripts && node build-tools/dist/build-tools/generate-screenshots.js"
+    "screenshots": "pnpm build && pnpm build:scripts && node build-tools/dist/build-tools/generate-screenshots.js",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "chrome-extension",

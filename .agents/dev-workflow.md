@@ -73,6 +73,16 @@ Removes `dist/`, `src/data/`, and `build-tools/dist/`.
 
 After code changes, rebuild and click the **reload** button on the extension card in `chrome://extensions`.
 
+## Type Checking
+
+Run type checking without a full build:
+
+```sh
+pnpm typecheck
+```
+
+This runs `tsc --noEmit` against all source files in `src/` and `build-tools/`. Use this to verify changes quickly before committing — it's much faster than `pnpm build`.
+
 ## Testing
 
 There are no automated tests for the extension itself. Verification is manual:
