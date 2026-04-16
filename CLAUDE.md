@@ -1,7 +1,7 @@
 # Agent Instructions
 
 ## Dev Environment
-Run `nix develop` to enter a shell with the correct Node.js and pnpm versions. Always work inside this shell.
+Node.js and pnpm are only available inside the Nix dev shell. Every shell command (pnpm, node, tsc, git commit, etc.) must be run as `nix develop --command <cmd>`. Never run these commands directly — they will fail with "node: No such file or directory".
 
 ## Package Manager
 Always use `pnpm`. Never use `npm` or `yarn`.
