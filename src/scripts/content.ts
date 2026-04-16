@@ -68,7 +68,7 @@ export class ChineseHoverPopupManager {
     this.handleMouseMoveThrottled(event);
   }
 
-  private handleSelection(event: MouseEvent): void {
+  private handleSelection(_event: MouseEvent): void {
     const selection = window.getSelection();
     if (!selection?.toString().trim()) {
       if (this.currentSelection) {

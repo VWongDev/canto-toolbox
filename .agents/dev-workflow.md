@@ -73,6 +73,14 @@ Removes `dist/`, `src/data/`, and `build-tools/dist/`.
 
 After code changes, rebuild and click the **reload** button on the extension card in `chrome://extensions`.
 
+## Linting
+
+```sh
+pnpm lint
+```
+
+Runs ESLint with `typescript-eslint` across `src/` and `build-tools/`. Use `_`-prefixed parameter names to suppress unused-arg warnings (e.g. `_event`).
+
 ## Type Checking
 
 Run type checking without a full build:

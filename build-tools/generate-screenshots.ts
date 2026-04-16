@@ -172,8 +172,8 @@ const POPUP_CLIP_PADDING = 120;
 
 function getPopupClip(box: { x: number; y: number; width: number; height: number }) {
   const pad = POPUP_CLIP_PADDING;
-  let x = Math.max(0, box.x - pad);
-  let y = Math.max(0, box.y - pad);
+  const x = Math.max(0, box.x - pad);
+  const y = Math.max(0, box.y - pad);
   let width = Math.min(VIEWPORT_WIDTH, box.width + pad * 2);
   let height = Math.min(VIEWPORT_HEIGHT, box.height + pad * 2);
   width = Math.min(width, VIEWPORT_WIDTH - x);

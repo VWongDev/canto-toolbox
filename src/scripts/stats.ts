@@ -1,4 +1,4 @@
-import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, DictionaryEntry, ErrorResponse } from '../types';
+import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, ErrorResponse } from '../types';
 import { createElement, clearElement } from '../utils/dom-element';
 import { messageManager, type MessageManager } from './background.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/pronunciation-section.js';
@@ -54,7 +54,7 @@ export class StatsManager {
   private handleStatisticsResponse(response: StatisticsResponse | ErrorResponse | undefined, elements: ReturnType<typeof this.getRequiredElements>): void {
     if (!elements) return;
 
-    const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
+    const { loadingEl } = elements;
 
     if (!response) {
       console.error('[Stats] No response received');

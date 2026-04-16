@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist src/data build-tools/dist",
     "screenshots": "pnpm build && pnpm build:scripts && node build-tools/dist/build-tools/generate-screenshots.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ build-tools/"
   },
   "keywords": [
     "chrome-extension",
@@ -23,11 +24,14 @@
   "license": "MIT",
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.25",
+    "@eslint/js": "^10.0.1",
     "@types/chrome": "^0.0.268",
     "@types/node": "^20.14.0",
+    "eslint": "^10.2.0",
     "puppeteer": "^24.37.5",
     "sharp": "^0.34.5",
     "typescript": "^5.5.0",
+    "typescript-eslint": "^8.58.2",
     "vite": "^5.4.0"
   },
   "engines": {
