@@ -49,7 +49,7 @@ describe('createBatchedDebounce', () => {
     queue('other');
     vi.advanceTimersByTime(100);
     expect(flush).toHaveBeenCalledOnce();
-    const batch: Map<string, number> = flush.mock.calls[0][0];
+    const batch: Map<string, number> = flush.mock.calls[0]![0];
     expect(batch.get('word')).toBe(2);
     expect(batch.get('other')).toBe(1);
   });
@@ -74,7 +74,7 @@ describe('createBatchedDebounce', () => {
     queue('y');
     vi.advanceTimersByTime(100);
     expect(flush).toHaveBeenCalledTimes(2);
-    const secondBatch: Map<string, number> = flush.mock.calls[1][0];
+    const secondBatch: Map<string, number> = flush.mock.calls[1]![0];
     expect(secondBatch.has('x')).toBe(false);
     expect(secondBatch.get('y')).toBe(1);
   });
