@@ -46,9 +46,41 @@ function processDictionaryLookup(
   return filterCantonese ? filterOutCantoneseDefinitions(entries) : entries;
 }
 
+const IDS_COMPONENT_RE = /[\u2FF0-\u2FFB？]/;
+
+function getFirstDefinition(char: string): string | undefined {
+  const entries = processDictionaryLookup(mandarinDict, char, true);
+  if (!entries.length) return undefined;
+  const raw = entries[0]?.definitions[0]?.trim();
+  if (!raw) return undefined;
+  return raw.split(/[;,]/)[0]?.trim();
+}
+
 export function lookupEtymology(word: string): CharacterEtymology[] {
   return [...word]
-    .map(char => etymologyDict[char])
+    .map(char => {
+      const entry = etymologyDict[char];
+      if (!entry) return undefined;
+
+      const toResolve = new Set<string>();
+      if (entry.semantic) toResolve.add(entry.semantic);
+      if (entry.phonetic) toResolve.add(entry.phonetic);
+      if (toResolve.size === 0) {
+        for (const ch of entry.decomposition) {
+          if (!IDS_COMPONENT_RE.test(ch)) toResolve.add(ch);
+        }
+      }
+
+      const componentDefinitions: Record<string, string> = {};
+      for (const comp of toResolve) {
+        const def = getFirstDefinition(comp);
+        if (def) componentDefinitions[comp] = def;
+      }
+
+      return Object.keys(componentDefinitions).length > 0
+        ? { ...entry, componentDefinitions }
+        : entry;
+    })
     .filter((entry): entry is CharacterEtymology => entry !== undefined);
 }
 

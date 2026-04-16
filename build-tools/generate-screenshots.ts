@@ -51,7 +51,7 @@ async function findExtensionId(browser: Browser): Promise<string> {
 }
 
 async function waitForPopup(page: Page): Promise<void> {
-  await page.waitForSelector('#chinese-hover-popup', { timeout: 5000 });
+  await page.waitForSelector('#chinese-hover-popup', { timeout: 15000 });
   // Wait a bit for any animations to complete
   await new Promise(resolve => setTimeout(resolve, 200));
 }
@@ -112,7 +112,7 @@ async function triggerChinesePopup(page: Page): Promise<void> {
 
 async function injectSampleStatistics(page: Page, extensionId: string): Promise<void> {
   // Navigate to stats page to inject sample data
-  const statsUrl = `chrome-extension://${extensionId}/src/html/stats.html`;
+  const statsUrl = `chrome-extension://${extensionId}/src/stats/stats.html`;
   await page.goto(statsUrl);
 
   // Inject sample statistics into chrome.storage.sync (key: wordStatistics)
@@ -282,6 +282,16 @@ async function generateScreenshots(): Promise<void> {
     console.log('[Screenshots] Finding extension ID...');
     const extensionId = await findExtensionId(browser);
     console.log(`[Screenshots] Extension ID: ${extensionId}`);
+
+    // Warm up the background service worker by visiting the extension page.
+    // The 48MB background bundle takes several seconds to parse on first load;
+    // without this, the first lookupWord message from the content script times out.
+    console.log('[Screenshots] Warming up background service worker...');
+    const warmupPage = await browser.newPage();
+    await warmupPage.goto(`chrome-extension://${extensionId}/src/stats/stats.html`);
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    await warmupPage.close();
+    console.log('[Screenshots] Background service worker ready');
 
     // Create a new page with the required viewport
     const page = await browser.newPage();

@@ -11,7 +11,7 @@
     "clean": "rm -rf dist src/data build-tools/dist",
     "screenshots": "pnpm build && pnpm build:scripts && node build-tools/dist/build-tools/generate-screenshots.js",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
     "lint": "eslint src/ build-tools/",
     "prepare": "husky"
   },

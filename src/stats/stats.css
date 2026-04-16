@@ -282,7 +282,7 @@ h1 {
 
 .popup-etymology-character {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   flex: 1;
   min-width: 200px;
@@ -297,24 +297,73 @@ h1 {
   font-weight: bold;
   color: #1a1a1a;
   flex-shrink: 0;
+  line-height: 1.2;
 }
 
 .popup-etymology-details {
-  font-size: 13px;
-  color: #222;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding-top: 2px;
 }
 
-.popup-etymology-radical,
-.popup-etymology-decomposition {
-  display: block;
-  margin-bottom: 2px;
+.popup-etymology-type {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #888;
 }
 
-.popup-etymology-description {
+.popup-etymology-hint {
   font-size: 12px;
   color: #333;
   line-height: 1.4;
-  margin-top: 2px;
+  font-style: italic;
+}
+
+.popup-etymology-components {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.popup-etymology-component {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 7px;
+  background: #e2e2e2;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.popup-etymology-component-glyph {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.popup-etymology-component-def {
+  font-size: 11px;
+  color: #555;
+}
+
+.popup-etymology-component-role--meaning {
+  font-size: 10px;
+  font-weight: 600;
+  color: #2a7a3b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.popup-etymology-component-role--sound {
+  font-size: 10px;
+  font-weight: 600;
+  color: #0055aa;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 /* Dark mode support */
@@ -419,11 +468,31 @@ h1 {
     color: #ffffff;
   }
 
-  .popup-etymology-details {
+  .popup-etymology-type {
+    color: #777;
+  }
+
+  .popup-etymology-hint {
     color: #ccc;
   }
 
-  .popup-etymology-description {
-    color: #bbb;
+  .popup-etymology-component {
+    background: #4a4a4a;
+  }
+
+  .popup-etymology-component-glyph {
+    color: #e8e8e8;
+  }
+
+  .popup-etymology-component-def {
+    color: #aaa;
+  }
+
+  .popup-etymology-component-role--meaning {
+    color: #5cb87a;
+  }
+
+  .popup-etymology-component-role--sound {
+    color: #5599dd;
   }
 }

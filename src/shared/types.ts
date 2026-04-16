@@ -10,6 +10,7 @@ export interface CharacterEtymology {
   hint?: string;
   phonetic?: string;
   semantic?: string;
+  componentDefinitions?: Record<string, string>;
 }
 
 export type EtymologyDictionary = Record<string, CharacterEtymology>;

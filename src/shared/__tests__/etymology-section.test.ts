@@ -26,68 +26,107 @@ describe('createEtymologySection', () => {
     expect(el.querySelector('.popup-etymology-char')?.textContent).toBe('好');
   });
 
-  it('renders the radical', () => {
+  it('renders no type badge when etymologyType is absent', () => {
     const el = createEtymologySection([makeEtymology()]);
-    expect(el.querySelector('.popup-etymology-radical')?.textContent).toBe('Radical: 女');
+    expect(el.querySelector('.popup-etymology-type')).toBeNull();
   });
 
-  it('renders the decomposition', () => {
-    const el = createEtymologySection([makeEtymology()]);
-    expect(el.querySelector('.popup-etymology-decomposition')?.textContent).toBe('Structure: ⿰女子');
+  it('renders Phonosemantic badge for pictophonetic type', () => {
+    const el = createEtymologySection([makeEtymology({ etymologyType: 'pictophonetic' })]);
+    expect(el.querySelector('.popup-etymology-type')?.textContent).toBe('Phonosemantic');
   });
 
-  it('renders no description element when etymologyType is absent', () => {
-    const el = createEtymologySection([makeEtymology()]);
-    expect(el.querySelector('.popup-etymology-description')).toBeNull();
+  it('renders Ideographic badge for ideographic type', () => {
+    const el = createEtymologySection([makeEtymology({ etymologyType: 'ideographic' })]);
+    expect(el.querySelector('.popup-etymology-type')?.textContent).toBe('Ideographic');
   });
 
-  it('renders pictophonetic description with semantic and phonetic', () => {
+  it('renders Pictographic badge for pictographic type', () => {
+    const el = createEtymologySection([makeEtymology({ etymologyType: 'pictographic' })]);
+    expect(el.querySelector('.popup-etymology-type')?.textContent).toBe('Pictographic');
+  });
+
+  it('renders hint for ideographic', () => {
+    const el = createEtymologySection([makeEtymology({ etymologyType: 'ideographic', hint: 'two trees' })]);
+    expect(el.querySelector('.popup-etymology-hint')?.textContent).toBe('two trees');
+  });
+
+  it('renders hint for pictographic', () => {
+    const el = createEtymologySection([makeEtymology({ etymologyType: 'pictographic', hint: 'sun' })]);
+    expect(el.querySelector('.popup-etymology-hint')?.textContent).toBe('sun');
+  });
+
+  it('does not render hint for pictophonetic', () => {
+    const el = createEtymologySection([makeEtymology({ etymologyType: 'pictophonetic', hint: 'person' })]);
+    expect(el.querySelector('.popup-etymology-hint')).toBeNull();
+  });
+
+  it('renders semantic chip with meaning role for pictophonetic', () => {
     const el = createEtymologySection([makeEtymology({
       etymologyType: 'pictophonetic',
       semantic: '女',
       phonetic: '子',
     })]);
-    const desc = el.querySelector('.popup-etymology-description')?.textContent ?? '';
-    expect(desc).toContain('Phonosemantic compound');
-    expect(desc).toContain('女 represents the meaning');
-    expect(desc).toContain('子 represents the sound');
+    const chips = el.querySelectorAll('.popup-etymology-component');
+    expect(chips.length).toBe(2);
+    const glyphs = Array.from(chips).map(c => c.querySelector('.popup-etymology-component-glyph')?.textContent);
+    expect(glyphs).toContain('女');
+    expect(glyphs).toContain('子');
+    const roles = Array.from(chips).map(c => c.querySelector('[class*="component-role"]')?.textContent);
+    expect(roles).toContain('meaning');
+    expect(roles).toContain('sound');
   });
 
-  it('renders pictophonetic description with semantic only', () => {
+  it('renders only semantic chip when phonetic is absent', () => {
     const el = createEtymologySection([makeEtymology({
       etymologyType: 'pictophonetic',
       semantic: '女',
     })]);
-    const desc = el.querySelector('.popup-etymology-description')?.textContent ?? '';
-    expect(desc).toContain('Phonosemantic compound');
-    expect(desc).toContain('女 represents the meaning');
-    expect(desc).not.toContain('represents the sound');
+    const chips = el.querySelectorAll('.popup-etymology-component');
+    expect(chips.length).toBe(1);
+    expect(chips[0]?.querySelector('.popup-etymology-component-glyph')?.textContent).toBe('女');
+    expect(chips[0]?.querySelector('[class*="component-role--meaning"]')?.textContent).toBe('meaning');
   });
 
-  it('renders pictophonetic with no parts as bare label', () => {
-    const el = createEtymologySection([makeEtymology({ etymologyType: 'pictophonetic' })]);
-    const desc = el.querySelector('.popup-etymology-description')?.textContent ?? '';
-    expect(desc).toBe('Phonosemantic compound.');
-  });
-
-  it('renders ideographic description with hint', () => {
-    const el = createEtymologySection([makeEtymology({ etymologyType: 'ideographic', hint: 'two trees' })]);
-    expect(el.querySelector('.popup-etymology-description')?.textContent).toBe('Ideographic: two trees');
-  });
-
-  it('renders ideographic description without hint', () => {
+  it('renders decomposition components for ideographic type', () => {
     const el = createEtymologySection([makeEtymology({ etymologyType: 'ideographic' })]);
-    expect(el.querySelector('.popup-etymology-description')?.textContent).toBe('Ideographic compound.');
+    const glyphs = Array.from(el.querySelectorAll('.popup-etymology-component-glyph')).map(e => e.textContent);
+    expect(glyphs).toContain('女');
+    expect(glyphs).toContain('子');
   });
 
-  it('renders pictographic description with hint', () => {
-    const el = createEtymologySection([makeEtymology({ etymologyType: 'pictographic', hint: 'sun' })]);
-    expect(el.querySelector('.popup-etymology-description')?.textContent).toBe('Pictographic: sun');
+  it('renders component definitions when provided', () => {
+    const el = createEtymologySection([makeEtymology({
+      etymologyType: 'pictophonetic',
+      semantic: '女',
+      phonetic: '子',
+      componentDefinitions: { '女': 'woman', '子': 'child' },
+    })]);
+    const defs = Array.from(el.querySelectorAll('.popup-etymology-component-def')).map(e => e.textContent);
+    expect(defs).toContain('woman');
+    expect(defs).toContain('child');
   });
 
-  it('renders pictographic description without hint', () => {
-    const el = createEtymologySection([makeEtymology({ etymologyType: 'pictographic' })]);
-    expect(el.querySelector('.popup-etymology-description')?.textContent).toBe('Pictographic character.');
+  it('renders no definition spans when componentDefinitions is absent', () => {
+    const el = createEtymologySection([makeEtymology({
+      etymologyType: 'pictophonetic',
+      semantic: '女',
+      phonetic: '子',
+    })]);
+    expect(el.querySelectorAll('.popup-etymology-component-def').length).toBe(0);
+  });
+
+  it('renders no components for pictophonetic with neither semantic nor phonetic', () => {
+    const el = createEtymologySection([makeEtymology({ etymologyType: 'pictophonetic' })]);
+    expect(el.querySelectorAll('.popup-etymology-component').length).toBe(0);
+  });
+
+  it('strips IDS operators from decomposition components', () => {
+    const el = createEtymologySection([makeEtymology({ decomposition: '⿰女子' })]);
+    const glyphs = Array.from(el.querySelectorAll('.popup-etymology-component-glyph')).map(e => e.textContent);
+    expect(glyphs).not.toContain('⿰');
+    expect(glyphs).toContain('女');
+    expect(glyphs).toContain('子');
   });
 
   it('renders an empty characters container for an empty input array', () => {
