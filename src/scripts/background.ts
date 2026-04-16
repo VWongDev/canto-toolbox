@@ -19,7 +19,7 @@ export class MessageManager {
 
   lookupWord(word: string, callback: (response: LookupResponse | ErrorResponse) => void): void {
     this.chromeRuntime.sendMessage({ type: 'lookup_word', word }, (response) => {
-      if (this.chromeRuntime.lastError || !response?.success || !('definition' in response)) {
+      if (this.chromeRuntime.lastError || response?.type !== 'lookup_word') {
         this.handleError(callback, 'Lookup failed', response);
         return;
       }
@@ -39,7 +39,7 @@ export class MessageManager {
 
   getStatistics(callback: (response: StatisticsResponse | ErrorResponse) => void): void {
     this.chromeRuntime.sendMessage({ type: 'get_statistics' }, (response) => {
-      if (this.chromeRuntime.lastError || !response?.success || !('statistics' in response)) {
+      if (this.chromeRuntime.lastError || response?.type !== 'get_statistics') {
         this.handleError(callback, 'Failed to get statistics', response);
         return;
       }
@@ -51,7 +51,7 @@ export class MessageManager {
     try {
       const definition = lookupWord(word);
       this.storageManager.updateStatistics(definition?.word || word);
-      sendResponse({ success: true, definition });
+      sendResponse({ success: true, type: 'lookup_word', definition });
     } catch (error) {
       console.error('[Background] Lookup error:', error);
       const err = error instanceof Error ? error : new Error(String(error));
@@ -61,7 +61,7 @@ export class MessageManager {
 
   private handleGetStatisticsMessage(sendResponse: (response: BackgroundResponse) => void): void {
     this.storageManager.getStatistics()
-      .then(stats => sendResponse({ success: true, statistics: stats }))
+      .then(stats => sendResponse({ success: true, type: 'get_statistics', statistics: stats }))
       .catch(error => {
         console.error('[Background] Error getting statistics:', error);
         sendResponse({ success: false, error: error?.message || 'Unknown error' });
@@ -70,7 +70,7 @@ export class MessageManager {
 
   private handleTrackWordMessage(word: string, sendResponse: (response: BackgroundResponse) => void): void {
     this.storageManager.updateStatistics(word);
-    sendResponse({ success: true } as TrackWordResponse);
+    sendResponse({ success: true, type: 'track_word' });
   }
 
   init(): void {

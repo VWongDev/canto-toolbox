@@ -92,7 +92,7 @@ export class ChineseHoverPopupManager {
   private handleMouseOut(event: MouseEvent): void {
     if (this.currentSelection) return;
     
-    const relatedTarget = event.relatedTarget as HTMLElement | null;
+    const relatedTarget = event.relatedTarget instanceof HTMLElement ? event.relatedTarget : null;
     if (relatedTarget?.closest('#chinese-hover-popup')) {
       this.clearTimer('hide');
       return;
@@ -114,7 +114,7 @@ export class ChineseHoverPopupManager {
       return;
     }
 
-    const element = target instanceof Element ? target : (target as Node).parentElement;
+    const element = target instanceof Element ? target : target instanceof Node ? target.parentElement : null;
     if (element?.closest('#chinese-hover-popup')) {
       this.clearTimer('hide');
       this.isHoveringChinese = true;
@@ -287,8 +287,8 @@ if (document.readyState === 'loading') {
 
 function getTextNodeAtCursor(event: MouseEvent): { textNode: Text; offset: number } | null {
   const range = document.caretRangeFromPoint(event.clientX, event.clientY);
-  if (range?.startContainer.nodeType === Node.TEXT_NODE) {
-    return { textNode: range.startContainer as Text, offset: range.startOffset };
+  if (range?.startContainer instanceof Text) {
+    return { textNode: range.startContainer, offset: range.startOffset };
   }
   return null;
 }

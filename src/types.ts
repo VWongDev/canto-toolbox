@@ -62,6 +62,7 @@ export type BackgroundMessage = LookupMessage | TrackWordMessage | GetStatistics
 
 export interface LookupResponse {
   success: true;
+  type: 'lookup_word';
   definition: DefinitionResult;
 }
 
@@ -73,11 +74,13 @@ export interface ErrorResponse {
 
 export interface StatisticsResponse {
   success: true;
+  type: 'get_statistics';
   statistics: Statistics;
 }
 
 export interface TrackWordResponse {
   success: true;
+  type: 'track_word';
 }
 
 export type BackgroundResponse = LookupResponse | ErrorResponse | StatisticsResponse | TrackWordResponse;
