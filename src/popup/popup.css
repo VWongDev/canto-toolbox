@@ -2,10 +2,10 @@
   position: fixed;
   z-index: 999999;
   background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.10);
+  padding: 14px 16px;
   min-width: 500px;
   max-width: 1200px;
   width: auto;
@@ -34,15 +34,16 @@
 }
 
 .popup-word {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: bold;
   color: #1a1a1a;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e8e8e8;
   text-align: center;
   word-break: break-word;
   overflow-wrap: break-word;
+  letter-spacing: 0.02em;
 }
 
 .popup-section {
@@ -97,7 +98,7 @@
 
 .popup-pinyin,
 .popup-jyutping {
-  font-size: 16px;
+  font-size: 15px;
   color: #0066cc;
   font-weight: 500;
   margin-bottom: 2px;
@@ -149,7 +150,7 @@
 
 .popup-etymology-characters {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -158,6 +159,7 @@
   align-items: flex-start;
   gap: 10px;
   flex: 1;
+  min-width: 180px;
   padding: 8px 12px;
   background: #f8f8f8;
   border-radius: 6px;
@@ -206,7 +208,7 @@
   align-items: baseline;
   gap: 4px;
   padding: 2px 7px;
-  background: #efefef;
+  background: #e4e4e4;
   border-radius: 4px;
   white-space: nowrap;
 }
@@ -240,14 +242,15 @@
 
 @media (prefers-color-scheme: dark) {
   .chinese-hover-popup {
-    background: #2d2d2d;
-    border-color: #444;
+    background: #232323;
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
     color: #e0e0e0;
   }
 
   .popup-word {
     color: #ffffff;
-    border-bottom-color: #444;
+    border-bottom-color: #383838;
   }
 
   .popup-label {
@@ -297,7 +300,7 @@
   }
 
   .popup-etymology-component {
-    background: #4a4a4a;
+    background: #585858;
   }
 
   .popup-etymology-component-glyph {
