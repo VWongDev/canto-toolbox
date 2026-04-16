@@ -12,13 +12,13 @@ type(domain): Description
 
 ### Commit Types
 
-- `feat`: New feature
+- `feat`: New user-facing feature in the extension (changes extension behavior or UI)
 - `fix`: Bug fix
 - `docs`: Documentation changes
 - `style`: Code style changes (formatting, etc.)
 - `refactor`: Code refactoring
 - `test`: Adding or updating tests
-- `chore`: Maintenance tasks
+- `chore`: Maintenance tasks, scripts, and tooling that do not affect extension behavior (e.g. adding a package.json script, updating deps)
 - `ci`: Continuous integration changes (CI/CD configuration, workflows, etc.)
 - `ai`: AI-related changes or documentation (use when modifying files in `.agents/` directory or AI-specific files)
 
