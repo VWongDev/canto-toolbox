@@ -41,6 +41,7 @@ Desktop.ini
 
 # Claude Code / AI tooling
 .claire/
-.claude/
+.claude/*
+!.claude/agents/
 .workflows/
 
