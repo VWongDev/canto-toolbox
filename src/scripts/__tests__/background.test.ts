@@ -50,20 +50,20 @@ describe('StorageManager', () => {
       const sync = makeSyncStorage();
       vi.mocked(sync.get).mockResolvedValue({
         wordStatistics: { 好: { count: 3, firstSeen: 100, lastSeen: 200 } },
-      });
+      } as unknown as void);
       const manager = new StorageManager(sync, makeLocalStorage());
       const stats = await manager.getStatistics();
-      expect(stats['好'].count).toBe(3);
+      expect(stats['好']!.count).toBe(3);
     });
 
     it('returns local-only stats when sync storage is empty', async () => {
       const local = makeLocalStorage();
       vi.mocked(local.get).mockResolvedValue({
         wordStatistics: { 字: { count: 1, firstSeen: 50, lastSeen: 150 } },
-      });
+      } as unknown as void);
       const manager = new StorageManager(makeSyncStorage(), local);
       const stats = await manager.getStatistics();
-      expect(stats['字'].count).toBe(1);
+      expect(stats['字']!.count).toBe(1);
     });
 
     it('merges counts for a word present in both storages', async () => {
@@ -71,13 +71,13 @@ describe('StorageManager', () => {
       const local = makeLocalStorage();
       vi.mocked(sync.get).mockResolvedValue({
         wordStatistics: { 好: { count: 3, firstSeen: 100, lastSeen: 200 } },
-      });
+      } as unknown as void);
       vi.mocked(local.get).mockResolvedValue({
         wordStatistics: { 好: { count: 2, firstSeen: 50, lastSeen: 150 } },
-      });
+      } as unknown as void);
       const manager = new StorageManager(sync, local);
       const stats = await manager.getStatistics();
-      expect(stats['好'].count).toBe(5);
+      expect(stats['好']!.count).toBe(5);
     });
 
     it('takes the earliest firstSeen when merging', async () => {
@@ -85,13 +85,13 @@ describe('StorageManager', () => {
       const local = makeLocalStorage();
       vi.mocked(sync.get).mockResolvedValue({
         wordStatistics: { 好: { count: 1, firstSeen: 200, lastSeen: 200 } },
-      });
+      } as unknown as void);
       vi.mocked(local.get).mockResolvedValue({
         wordStatistics: { 好: { count: 1, firstSeen: 50, lastSeen: 100 } },
-      });
+      } as unknown as void);
       const manager = new StorageManager(sync, local);
       const stats = await manager.getStatistics();
-      expect(stats['好'].firstSeen).toBe(50);
+      expect(stats['好']!.firstSeen).toBe(50);
     });
 
     it('takes the latest lastSeen when merging', async () => {
@@ -99,13 +99,13 @@ describe('StorageManager', () => {
       const local = makeLocalStorage();
       vi.mocked(sync.get).mockResolvedValue({
         wordStatistics: { 好: { count: 1, firstSeen: 100, lastSeen: 300 } },
-      });
+      } as unknown as void);
       vi.mocked(local.get).mockResolvedValue({
         wordStatistics: { 好: { count: 1, firstSeen: 100, lastSeen: 100 } },
-      });
+      } as unknown as void);
       const manager = new StorageManager(sync, local);
       const stats = await manager.getStatistics();
-      expect(stats['好'].lastSeen).toBe(300);
+      expect(stats['好']!.lastSeen).toBe(300);
     });
 
     it('handles storage read errors gracefully', async () => {
@@ -175,15 +175,15 @@ describe('MessageManager', () => {
     it('invokes callback with the definition on success', () => {
       const cb = vi.fn();
       manager.lookupWord('好', cb);
-      const reply = vi.mocked(runtime.sendMessage).mock.calls[0][1] as (r: unknown) => void;
-      reply({ success: true, definition: { word: '好', mandarin: { entries: [] }, cantonese: { entries: [] } } });
+      const reply = vi.mocked(runtime.sendMessage).mock.calls[0]![1] as (r: unknown) => void;
+      reply({ success: true, type: 'lookup_word', definition: { word: '好', mandarin: { entries: [] }, cantonese: { entries: [] } } });
       expect(cb).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
 
     it('invokes callback with error on failed response', () => {
       const cb = vi.fn();
       manager.lookupWord('好', cb);
-      const reply = vi.mocked(runtime.sendMessage).mock.calls[0][1] as (r: unknown) => void;
+      const reply = vi.mocked(runtime.sendMessage).mock.calls[0]![1] as (r: unknown) => void;
       reply({ success: false, error: 'not found' });
       expect(cb).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
     });
@@ -201,7 +201,7 @@ describe('MessageManager', () => {
     it('invokes callback with success on successful response', () => {
       const cb = vi.fn();
       manager.trackWord('好', cb);
-      const reply = vi.mocked(runtime.sendMessage).mock.calls[0][1] as (r: unknown) => void;
+      const reply = vi.mocked(runtime.sendMessage).mock.calls[0]![1] as (r: unknown) => void;
       reply({ success: true });
       expect(cb).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
@@ -219,15 +219,15 @@ describe('MessageManager', () => {
     it('invokes callback with statistics on success', () => {
       const cb = vi.fn();
       manager.getStatistics(cb);
-      const reply = vi.mocked(runtime.sendMessage).mock.calls[0][1] as (r: unknown) => void;
-      reply({ success: true, statistics: { 好: { count: 1, firstSeen: 0, lastSeen: 0 } } });
+      const reply = vi.mocked(runtime.sendMessage).mock.calls[0]![1] as (r: unknown) => void;
+      reply({ success: true, type: 'get_statistics', statistics: { 好: { count: 1, firstSeen: 0, lastSeen: 0 } } });
       expect(cb).toHaveBeenCalledWith(expect.objectContaining({ success: true, statistics: expect.any(Object) }));
     });
 
     it('invokes callback with error on failed response', () => {
       const cb = vi.fn();
       manager.getStatistics(cb);
-      const reply = vi.mocked(runtime.sendMessage).mock.calls[0][1] as (r: unknown) => void;
+      const reply = vi.mocked(runtime.sendMessage).mock.calls[0]![1] as (r: unknown) => void;
       reply({ success: false, error: 'storage error' });
       expect(cb).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
     });
@@ -236,7 +236,7 @@ describe('MessageManager', () => {
   describe('message handler (server side via init)', () => {
     it('handles lookup_word and returns a definition', () => {
       manager.init();
-      const handler = vi.mocked(runtime.onMessage.addListener).mock.calls[0][0] as (
+      const handler = vi.mocked(runtime.onMessage.addListener).mock.calls[0]![0] as (
         msg: unknown, sender: unknown, sendResponse: (r: unknown) => void,
       ) => boolean;
 
@@ -247,7 +247,7 @@ describe('MessageManager', () => {
 
     it('handles track_word and returns success', () => {
       manager.init();
-      const handler = vi.mocked(runtime.onMessage.addListener).mock.calls[0][0] as (
+      const handler = vi.mocked(runtime.onMessage.addListener).mock.calls[0]![0] as (
         msg: unknown, sender: unknown, sendResponse: (r: unknown) => void,
       ) => boolean;
 
@@ -258,7 +258,7 @@ describe('MessageManager', () => {
 
     it('returns true for known message types to keep the channel open', () => {
       manager.init();
-      const handler = vi.mocked(runtime.onMessage.addListener).mock.calls[0][0] as (
+      const handler = vi.mocked(runtime.onMessage.addListener).mock.calls[0]![0] as (
         msg: unknown, sender: unknown, sendResponse: (r: unknown) => void,
       ) => boolean;
 
@@ -269,7 +269,7 @@ describe('MessageManager', () => {
 
     it('returns false for unknown message types', () => {
       manager.init();
-      const handler = vi.mocked(runtime.onMessage.addListener).mock.calls[0][0] as (
+      const handler = vi.mocked(runtime.onMessage.addListener).mock.calls[0]![0] as (
         msg: unknown, sender: unknown, sendResponse: (r: unknown) => void,
       ) => boolean;
 
