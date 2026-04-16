@@ -12,8 +12,7 @@
     "screenshots": "pnpm build && pnpm build:scripts && node build-tools/dist/build-tools/generate-screenshots.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/ build-tools/",
-    "test": "vitest run"
+    "lint": "eslint src/ build-tools/"
   },
   "keywords": [
     "chrome-extension",
@@ -30,6 +29,7 @@
     "@types/chrome": "^0.0.268",
     "@types/node": "^20.14.0",
     "eslint": "^10.2.0",
+    "happy-dom": "^15.11.7",
     "puppeteer": "^24.37.5",
     "sharp": "^0.34.5",
     "typescript": "^5.5.0",
