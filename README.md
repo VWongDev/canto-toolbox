@@ -2,7 +2,7 @@
 
 A Chrome extension that displays Chinese word definitions in both Mandarin and Cantonese when you hover over Chinese characters on any webpage. Perfect for language learners and anyone reading Chinese text online.
 
-> **Note**: This project is an experiment in using [Cursor](https://cursor.com/) as an AI-assisted development environment.
+> **Note**: This project is an experiment in using [Claude Code](https://docs.anthropic.com/en/docs/claude-code) as an AI-assisted development environment.
 
 ## Features
 
