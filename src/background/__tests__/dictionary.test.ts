@@ -7,7 +7,7 @@ import {
   lookupWord,
   lookupEtymology,
 } from '../dictionary';
-import type { DictionaryEntry, DefinitionResult } from '../../types';
+import type { DictionaryEntry, DefinitionResult } from '../../shared/types';
 
 vi.mock('../../data/mandarin.json', () => ({
   default: {

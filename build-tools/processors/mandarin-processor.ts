@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { pathToFileURL } from 'url';
 import { getRootDir, addDictionaryEntry } from './utils.js';
-import type { Dictionary } from '../../src/types.js';
+import type { Dictionary } from '../../src/shared/types.js';
 
 type MandarinRawEntry = [string, string, string, string | string[], number[], number[]];
 

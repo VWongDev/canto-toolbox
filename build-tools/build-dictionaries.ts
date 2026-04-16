@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { processMandarinDict } from './processors/mandarin-processor.js';
 import { processCantoneseDict } from './processors/cantonese-processor.js';
 import { processEtymologyDict } from './processors/etymology-processor.js';
-import type { Dictionary, EtymologyDictionary } from '../src/types.js';
+import type { Dictionary, EtymologyDictionary } from '../src/shared/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

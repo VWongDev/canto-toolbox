@@ -1,4 +1,4 @@
-import type { Dictionary } from '../../src/types.js';
+import type { Dictionary } from '../../src/shared/types.js';
 
 export interface DictionaryProcessor {
   process(): Dictionary;

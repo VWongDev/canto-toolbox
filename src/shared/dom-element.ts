@@ -125,4 +125,3 @@ export function clearElement(element: HTMLElement): void {
 export function createText(text: string): Text {
   return document.createTextNode(text);
 }
-

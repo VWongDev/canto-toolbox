@@ -1,8 +1,8 @@
-import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, ErrorResponse } from '../types';
-import { createElement, clearElement } from '../utils/dom-element';
-import { messageManager, type MessageManager } from './background.js';
-import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/pronunciation-section.js';
-import { createEtymologySection } from '../utils/etymology-section.js';
+import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, ErrorResponse } from '../shared/types';
+import { createElement, clearElement } from '../shared/dom-element';
+import { messageManager, type MessageManager } from '../background/background.js';
+import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';
+import { createEtymologySection } from '../shared/etymology-section.js';
 
 const ELEMENT_IDS = {
   loading: 'loading',
@@ -165,7 +165,7 @@ export class StatsManager {
 
   private toggleExpansion(item: HTMLElement, word: string, expandedContent: HTMLElement, expandIcon: HTMLElement): void {
     const isExpanded = expandedContent.style.display !== 'none';
-    
+
     if (isExpanded) {
       expandedContent.style.display = 'none';
       expandIcon.textContent = EXPAND_ICON_COLLAPSED;
@@ -183,7 +183,7 @@ export class StatsManager {
 
   private handleDefinitionResponse(response: LookupResponse | ErrorResponse | undefined, container: HTMLElement, word: string): void {
     clearElement(container);
-    
+
     if (!response || !response.success || !response.definition) {
       container.appendChild(createElement({
         className: 'stat-error',
@@ -199,7 +199,7 @@ export class StatsManager {
 
   private loadDefinition(word: string, container: HTMLElement): void {
     clearElement(container);
-    
+
     const loadingEl = createElement({
       className: 'stat-loading',
       textContent: 'Loading definition...'
@@ -224,7 +224,7 @@ export class StatsManager {
       console.error('[Stats] Clear button not found');
       return;
     }
-    
+
     clearBtn.addEventListener('click', async () => {
       if (!confirm('Are you sure you want to clear all statistics? This action cannot be undone.')) {
         return;

@@ -1,6 +1,6 @@
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import type { Dictionary, DictionaryEntry } from '../../src/types.js';
+import type { Dictionary, DictionaryEntry } from '../../src/shared/types.js';
 
 export function getRootDir(): string {
   const __dirname = dirname(fileURLToPath(import.meta.url));

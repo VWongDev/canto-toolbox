@@ -4,19 +4,19 @@
 // running the full build first.
 
 declare module '*/data/mandarin.json' {
-  import type { Dictionary } from '../types';
+  import type { Dictionary } from '../shared/types';
   const value: Dictionary;
   export default value;
 }
 
 declare module '*/data/cantonese.json' {
-  import type { Dictionary } from '../types';
+  import type { Dictionary } from '../shared/types';
   const value: Dictionary;
   export default value;
 }
 
 declare module '*/data/etymology.json' {
-  import type { EtymologyDictionary } from '../types';
+  import type { EtymologyDictionary } from '../shared/types';
   const value: EtymologyDictionary;
   export default value;
 }

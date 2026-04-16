@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StorageManager, MessageManager } from '../background';
 
-vi.mock('../../utils/dictionary.js', () => ({
+vi.mock('../../background/dictionary.js', () => ({
   lookupWord: vi.fn().mockReturnValue({
     word: '好',
     mandarin: { entries: [{ traditional: '好', simplified: '好', romanisation: 'hao3', definitions: ['good'] }] },

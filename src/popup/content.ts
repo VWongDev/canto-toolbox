@@ -1,9 +1,9 @@
-import type { DefinitionResult, LookupResponse, ErrorResponse } from '../types';
-import { createElement } from '../utils/dom-element';
-import { messageManager, type MessageManager } from './background.js';
-import popupStyles from '../css/popup.css?raw';
-import { createPronunciationSection, type PronunciationSectionConfig } from '../utils/pronunciation-section.js';
-import { createEtymologySection } from '../utils/etymology-section.js';
+import type { DefinitionResult, LookupResponse, ErrorResponse } from '../shared/types';
+import { createElement } from '../shared/dom-element';
+import { messageManager, type MessageManager } from '../background/background.js';
+import popupStyles from './popup.css?raw';
+import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';
+import { createEtymologySection } from '../shared/etymology-section.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
 const MAX_WORD_LENGTH = 4;
@@ -91,13 +91,13 @@ export class ChineseHoverPopupManager {
 
   private handleMouseOut(event: MouseEvent): void {
     if (this.currentSelection) return;
-    
+
     const relatedTarget = event.relatedTarget instanceof HTMLElement ? event.relatedTarget : null;
     if (relatedTarget?.closest('#chinese-hover-popup')) {
       this.clearTimer('hide');
       return;
     }
-    
+
     this.clearTimer('hide');
     if (!this.isHoveringChinese && this.currentPopup && !this.currentPopup.matches(':hover')) {
       this.hidePopup();
@@ -120,9 +120,9 @@ export class ChineseHoverPopupManager {
       this.isHoveringChinese = true;
       return;
     }
-    
+
     if (hasActiveSelection()) return;
-    
+
     const result = getChineseWordAtCursor(event);
     if (!result) {
       if (this.isHoveringChinese || this.currentPopup) {
@@ -132,16 +132,16 @@ export class ChineseHoverPopupManager {
       }
       return;
     }
-    
+
     const { word, textNode, offset } = result;
     this.isHoveringChinese = true;
     this.clearTimer('hide');
-    
-    const characterChanged = textNode !== this.lastHoveredElement || 
+
+    const characterChanged = textNode !== this.lastHoveredElement ||
                             Math.abs(offset - this.lastHoveredOffset) >= 0.5;
     this.lastHoveredElement = textNode;
     this.lastHoveredOffset = offset;
-    
+
     if (word !== this.lastHoveredWord || characterChanged) {
       this.lastHoveredWord = word;
       this.clearTimer('hover');
@@ -159,10 +159,10 @@ export class ChineseHoverPopupManager {
     const { clientX: mouseX, clientY: mouseY } = event;
     const rect = this.currentSelection!.rect;
     const popup = this.currentPopup;
-    
+
     const overSelection = isMouseOverSelection(mouseX, mouseY, rect);
     const overPopup = popup && isMouseOverPopup(mouseX, mouseY, popup);
-    
+
     if (!overSelection && !overPopup) {
       this.clearTimer('selection');
       this.selectionPopupTimer = setTimeout(() => {
@@ -215,7 +215,7 @@ export class ChineseHoverPopupManager {
         }
       }
     });
-    
+
     popup.appendChild(createElement({ className: 'popup-word', textContent: definition.word || word }));
 
     if (definition.etymology?.length) {
@@ -296,27 +296,27 @@ function getTextNodeAtCursor(event: MouseEvent): { textNode: Text; offset: numbe
 function extractChineseWordFromText(text: string, offset: number): string | null {
   const chineseRegex = /[\u4e00-\u9fff]+/g;
   let match;
-  
+
   while ((match = chineseRegex.exec(text)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
-    
+
     if (offset >= start && offset < end) {
       const relativeOffset = offset - start;
       const maxLength = Math.min(MAX_WORD_LENGTH, match[0].length - relativeOffset);
       return match[0].substring(relativeOffset, relativeOffset + maxLength);
     }
-    
+
     if (start > offset) break;
   }
-  
+
   return null;
 }
 
 function getChineseWordAtCursor(event: MouseEvent): CursorResult | null {
   const cursorData = getTextNodeAtCursor(event);
   if (!cursorData?.textNode.textContent || cursorData.offset < 0) return null;
-  
+
   const word = extractChineseWordFromText(cursorData.textNode.textContent, cursorData.offset);
   return word ? { word, textNode: cursorData.textNode, offset: cursorData.offset } : null;
 }
@@ -326,16 +326,16 @@ function extractChineseWordsFromText(text: string): string[] {
 }
 
 function isMouseOverSelection(mouseX: number, mouseY: number, rect: DOMRect): boolean {
-  return mouseX >= rect.left - SELECTION_PADDING_PX && 
+  return mouseX >= rect.left - SELECTION_PADDING_PX &&
          mouseX <= rect.right + SELECTION_PADDING_PX &&
-         mouseY >= rect.top - SELECTION_PADDING_PX && 
+         mouseY >= rect.top - SELECTION_PADDING_PX &&
          mouseY <= rect.bottom + SELECTION_PADDING_PX;
 }
 
 function isMouseOverPopup(mouseX: number, mouseY: number, popup: HTMLElement): boolean {
-  return mouseX >= popup.offsetLeft && 
+  return mouseX >= popup.offsetLeft &&
          mouseX <= popup.offsetLeft + popup.offsetWidth &&
-         mouseY >= popup.offsetTop && 
+         mouseY >= popup.offsetTop &&
          mouseY <= popup.offsetTop + popup.offsetHeight;
 }
 

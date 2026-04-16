@@ -1,5 +1,5 @@
 import { addDictionaryEntry } from './utils.js';
-import type { Dictionary, DictionaryEntry } from '../../src/types.js';
+import type { Dictionary, DictionaryEntry } from '../../src/shared/types.js';
 
 function parseDefinitions(definitionsStr: string): string[] {
   return definitionsStr.split('/').filter(d => d.trim().length > 0);

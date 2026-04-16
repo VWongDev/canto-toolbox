@@ -13,10 +13,10 @@ export default defineConfig({
     rollupOptions: {
       input: {
         // TypeScript entry points
-        background: 'src/scripts/background.ts',
-        content: 'src/scripts/content.ts',
-        stats: 'src/html/stats.html',
-        'stats-script': 'src/scripts/stats.ts'
+        background: 'src/background/background.ts',
+        content: 'src/popup/content.ts',
+        stats: 'src/stats/stats.html',
+        'stats-script': 'src/stats/stats.ts'
       }
     },
     copyPublicDir: false

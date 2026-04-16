@@ -1,4 +1,4 @@
-import type { DefinitionResult } from '../types';
+import type { DefinitionResult } from './types';
 import { createElement } from './dom-element';
 
 export interface PronunciationSectionConfig {
@@ -62,4 +62,3 @@ function groupEntriesByRomanisation(entries: Array<{ romanisation?: string; defi
   }
   return grouped;
 }
-

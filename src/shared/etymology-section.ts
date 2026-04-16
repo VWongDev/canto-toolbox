@@ -1,4 +1,4 @@
-import type { CharacterEtymology } from '../types';
+import type { CharacterEtymology } from './types';
 import { createElement } from './dom-element';
 
 function formatEtymologyDescription(etymology: CharacterEtymology): string {

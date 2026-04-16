@@ -1,4 +1,4 @@
-import type { Dictionary, DictionaryEntry, DefinitionResult, EtymologyDictionary, CharacterEtymology } from '../types';
+import type { Dictionary, DictionaryEntry, DefinitionResult, EtymologyDictionary, CharacterEtymology } from '../shared/types';
 import mandarinDictData from '../data/mandarin.json';
 import cantoneseDictData from '../data/cantonese.json';
 import etymologyDictData from '../data/etymology.json';
@@ -20,12 +20,12 @@ function lookupInDict(dict: Dictionary, word: string): DictionaryEntry[] {
 
 function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): DictionaryEntry[] {
   const filteredEntries: DictionaryEntry[] = [];
-  
+
   for (const entry of mandarinEntries) {
     const filteredDefs = (entry.definitions || []).filter(
       def => def && def.trim().length > 0 && !def.toLowerCase().includes(CANTONESE_MARKER.toLowerCase())
     );
-    
+
     if (filteredDefs.length > 0) {
       filteredEntries.push({
         ...entry,
@@ -87,7 +87,7 @@ export function findLongestMatchingWord(word: string): { definition: DefinitionR
       return { definition, matchedWord: substring };
     }
   }
-  
+
   return null;
 }
 
@@ -97,8 +97,7 @@ export function lookupWord(word: string): DefinitionResult {
     matchResult.definition.word = matchResult.matchedWord;
     return matchResult.definition;
   }
-  
+
   console.error('[Dict] Word not found:', word);
   throw new Error(`Word "${word}" not found in dictionary`);
 }
-

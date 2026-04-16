@@ -84,4 +84,3 @@ export interface TrackWordResponse {
 }
 
 export type BackgroundResponse = LookupResponse | ErrorResponse | StatisticsResponse | TrackWordResponse;
-

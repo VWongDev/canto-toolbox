@@ -1,7 +1,7 @@
-import { lookupWord } from '../utils/dictionary.js';
-import { createBatchedDebounce } from '../utils/debounce.js';
-import { BoundedMap } from '../utils/bounded-map.js';
-import type { BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, LookupResponse, ErrorResponse } from '../types';
+import { lookupWord } from './dictionary.js';
+import { createBatchedDebounce } from './debounce.js';
+import { BoundedMap } from './bounded-map.js';
+import type { BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, LookupResponse, ErrorResponse } from '../shared/types';
 
 export class MessageManager {
   private readonly chromeRuntime: typeof chrome.runtime;

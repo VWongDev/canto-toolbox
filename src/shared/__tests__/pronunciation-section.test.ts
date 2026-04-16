@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from 'vitest';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../pronunciation-section';
-import type { DictionaryEntry } from '../../types';
+import type { DictionaryEntry } from '../types';
 
 const makeConfig = (overrides: Partial<PronunciationSectionConfig> = {}): PronunciationSectionConfig => ({
   sectionClassName: 'test-section',

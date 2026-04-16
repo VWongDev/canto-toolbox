@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { getRootDir } from './utils.js';
-import type { EtymologyDictionary, CharacterEtymology, EtymologyType } from '../../src/types.js';
+import type { EtymologyDictionary, CharacterEtymology, EtymologyType } from '../../src/shared/types.js';
 
 interface RawEtymologyEntry {
   character: string;

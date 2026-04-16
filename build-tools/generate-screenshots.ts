@@ -7,7 +7,7 @@ import sharp from 'sharp';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, mkdirSync, readdirSync } from 'fs';
-import type { Statistics } from '../src/types.js';
+import type { Statistics } from '../src/shared/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
