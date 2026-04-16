@@ -13,8 +13,11 @@ canto-toolbox/
 │   │   ├── content.ts        # Content script for hover detection
 │   │   └── stats.ts          # Statistics page logic
 │   ├── utils/
+│   │   ├── bounded-map.ts    # Size-limited map that prunes by sort key
+│   │   ├── debounce.ts       # Debounce and batched-debounce utilities
 │   │   ├── dictionary.ts     # Dictionary lookup functions
 │   │   ├── dom-element.ts    # DOM element creation utilities
+│   │   ├── etymology-section.ts  # Etymology section UI component
 │   │   └── pronunciation-section.ts  # Pronunciation section UI components
 │   ├── css/
 │   │   ├── popup.css         # Popup styling
@@ -22,23 +25,28 @@ canto-toolbox/
 │   ├── html/
 │   │   └── stats.html        # Statistics page HTML
 │   ├── data/
-│   │   ├── mandarin.json     # Pre-processed Mandarin dictionary
-│   │   └── cantonese.json    # Pre-processed Cantonese dictionary
+│   │   ├── mandarin.json     # Pre-processed Mandarin dictionary (generated)
+│   │   ├── cantonese.json    # Pre-processed Cantonese dictionary (generated)
+│   │   ├── etymology.json    # Pre-processed etymology data (generated)
+│   │   └── generated.d.ts    # Type declarations for generated JSON files
 │   ├── types.ts              # TypeScript type definitions
 │   └── vite-env.d.ts         # Vite environment type declarations
 ├── build-tools/              # Build-time dictionary processing
 │   ├── processors/           # Dictionary processors
 │   └── build-dictionaries.ts # Dictionary build script
-├── dictionaries/             # Dictionary submodule (git submodule)
+├── dictionaries/             # Dictionary submodules (git submodules)
 │   ├── mandarin/             # CC-CEDICT source data
-│   └── cantonese/            # CC-CANTO source data
+│   ├── cantonese/            # CC-Canto source data
+│   └── makemeahanzi/         # Character etymology source data
 ├── icons/                    # Extension icons
 │   ├── icon16.png
 │   ├── icon48.png
 │   └── icon128.png
 └── .agents/                  # AI agent documentation
+    ├── architecture.md
+    ├── dev-workflow.md
     ├── git-conventions.md
-    └── architecture.md
+    └── testing.md
 ```
 
 ## Architecture Flow
@@ -161,6 +169,9 @@ Both dictionaries are included as git submodules and processed at build time int
 - **`ChineseHoverPopupManager`**: Manages popup display and selection logic in content script
 - **`StatsManager`**: Handles statistics page UI and data loading
 - **`MessageManager`**: Centralizes typed message passing between content/background scripts
+- **`BoundedMap`** (`utils/bounded-map.ts`): Size-limited map that prunes to top-N entries by a numeric sort key; used to cap in-memory statistics
+- **`debounce`** / **`createBatchedDebounce`** (`utils/debounce.ts`): Debounce utilities; `createBatchedDebounce` accumulates keys with counts and flushes them as a batch
 - **`dom-element.ts`**: Shared DOM element creation utilities (`createElement`, `clearElement`)
-- **`dictionary.ts`**: Dictionary lookup functions (`lookupWord`, `lookupWordInDictionaries`)
+- **`dictionary.ts`**: Dictionary lookup functions (`lookupWord`, `lookupWordInDictionaries`, `lookupEtymology`)
+- **`etymology-section.ts`**: Etymology section UI component (`createEtymologySection`); renders character breakdown with radical, decomposition, and origin hint
 - **`pronunciation-section.ts`**: Pronunciation section UI component creation (`createPronunciationSection`, `groupEntriesByRomanisation`)
