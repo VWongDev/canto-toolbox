@@ -333,10 +333,11 @@ function isMouseOverSelection(mouseX: number, mouseY: number, rect: DOMRect): bo
 }
 
 function isMouseOverPopup(mouseX: number, mouseY: number, popup: HTMLElement): boolean {
-  return mouseX >= popup.offsetLeft &&
-         mouseX <= popup.offsetLeft + popup.offsetWidth &&
-         mouseY >= popup.offsetTop &&
-         mouseY <= popup.offsetTop + popup.offsetHeight;
+  const rect = popup.getBoundingClientRect();
+  return mouseX >= rect.left &&
+         mouseX <= rect.right &&
+         mouseY >= rect.top &&
+         mouseY <= rect.bottom;
 }
 
 function hasActiveSelection(): boolean {
