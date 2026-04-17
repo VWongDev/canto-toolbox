@@ -122,11 +122,10 @@ export class StorageManager {
   }
 
   async getStatistics(): Promise<Statistics> {
-    const syncStats = await this.loadStatisticsFromStorage(this.syncStorage);
-    if (Object.keys(syncStats).length > 0) {
-      return syncStats;
-    }
-    const localStats = await this.loadStatisticsFromStorage(this.localStorage);
+    const [syncStats, localStats] = await Promise.all([
+      this.loadStatisticsFromStorage(this.syncStorage),
+      this.loadStatisticsFromStorage(this.localStorage)
+    ]);
     return this.mergeStatistics(syncStats, localStats);
   }
 
