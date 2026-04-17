@@ -40,7 +40,7 @@ async function buildDictionaries(): Promise<void> {
       const dict = await processor();
       
       const outputPath = join(outputDir, `${name}.json`);
-      writeFileSync(outputPath, JSON.stringify(dict, null, 2), 'utf-8');
+      writeFileSync(outputPath, JSON.stringify(dict), 'utf-8');
       console.log(`[Build] Wrote ${name.charAt(0).toUpperCase() + name.slice(1)} dictionary: ${outputPath} (${Object.keys(dict).length} entries)`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
