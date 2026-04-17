@@ -1,4 +1,6 @@
-import { lookupWord } from './dictionary.js';
+import { lookupWord, initDictionaries } from './dictionary.js';
+
+const dictionariesReady = initDictionaries();
 import { createBatchedDebounce } from './debounce.js';
 import { BoundedMap } from './bounded-map.js';
 import type { BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, LookupResponse, ErrorResponse } from '../shared/types';
@@ -48,15 +50,20 @@ export class MessageManager {
   }
 
   private handleLookupWordMessage(word: string, sendResponse: (response: BackgroundResponse) => void): void {
-    try {
-      const definition = lookupWord(word);
-      this.storageManager.updateStatistics(definition?.word || word);
-      sendResponse({ success: true, type: 'lookup_word', definition });
-    } catch (error) {
-      console.error('[Background] Lookup error:', error);
-      const err = error instanceof Error ? error : new Error(String(error));
-      sendResponse({ success: false, error: err.message, errorName: err.name });
-    }
+    dictionariesReady.then(() => {
+      try {
+        const definition = lookupWord(word);
+        this.storageManager.updateStatistics(definition?.word || word);
+        sendResponse({ success: true, type: 'lookup_word', definition });
+      } catch (error) {
+        console.error('[Background] Lookup error:', error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        sendResponse({ success: false, error: err.message, errorName: err.name });
+      }
+    }).catch((error: unknown) => {
+      console.error('[Background] Dictionary init failed:', error);
+      sendResponse({ success: false, error: 'Dictionary failed to load' });
+    });
   }
 
   private handleGetStatisticsMessage(sendResponse: (response: BackgroundResponse) => void): void {

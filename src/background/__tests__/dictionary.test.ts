@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import {
+  initDictionaries,
   isDefinitionValid,
   hasValidDefinition,
   lookupWordInDictionaries,
@@ -9,46 +10,52 @@ import {
 } from '../dictionary';
 import type { DictionaryEntry, DefinitionResult } from '../../shared/types';
 
-vi.mock('../../data/mandarin.json', () => ({
-  default: {
-    '好': [
-      { traditional: '好', simplified: '好', romanisation: 'hao3', definitions: ['good', 'well'] },
-      { traditional: '好', simplified: '好', romanisation: 'hao4', definitions: ['to be fond of'] },
-    ],
-    '字': [
-      { traditional: '字', simplified: '字', romanisation: 'zi4', definitions: ['letter', 'symbol', 'character'] },
-    ],
-    '好字': [
-      { traditional: '好字', simplified: '好字', romanisation: 'hao3 zi4', definitions: ['good handwriting'] },
-    ],
-    '廣東話': [
-      {
-        traditional: '廣東話',
-        simplified: '广东话',
-        romanisation: 'Guang3dong1 hua4',
-        definitions: ['Cantonese (dialect)', '(Cantonese) Cantonese'],
-      },
-    ],
-  },
+const mockMandarin = {
+  '好': [
+    { traditional: '好', simplified: '好', romanisation: 'hao3', definitions: ['good', 'well'] },
+    { traditional: '好', simplified: '好', romanisation: 'hao4', definitions: ['to be fond of'] },
+  ],
+  '字': [
+    { traditional: '字', simplified: '字', romanisation: 'zi4', definitions: ['letter', 'symbol', 'character'] },
+  ],
+  '好字': [
+    { traditional: '好字', simplified: '好字', romanisation: 'hao3 zi4', definitions: ['good handwriting'] },
+  ],
+  '廣東話': [
+    {
+      traditional: '廣東話',
+      simplified: '广东话',
+      romanisation: 'Guang3dong1 hua4',
+      definitions: ['Cantonese (dialect)', '(Cantonese) Cantonese'],
+    },
+  ],
+};
+
+const mockCantonese = {
+  '好': [
+    { traditional: '好', simplified: '好', romanisation: 'hou2', definitions: ['good', 'well'] },
+  ],
+  '字': [
+    { traditional: '字', simplified: '字', romanisation: 'zi6', definitions: ['character', 'letter'] },
+  ],
+};
+
+const mockEtymology = {
+  '好': { character: '好', decomposition: '⿰女子', radical: '女', etymologyType: 'ideographic', hint: 'woman with child' },
+  '字': { character: '字', decomposition: '⿱宀子', radical: '宀', etymologyType: 'pictophonetic', semantic: '宀', phonetic: '子' },
+};
+
+vi.stubGlobal('fetch', vi.fn((url: string) => {
+  let data: unknown;
+  if (url.includes('mandarin')) data = mockMandarin;
+  else if (url.includes('cantonese')) data = mockCantonese;
+  else if (url.includes('etymology')) data = mockEtymology;
+  return Promise.resolve({ json: () => Promise.resolve(data) });
 }));
 
-vi.mock('../../data/cantonese.json', () => ({
-  default: {
-    '好': [
-      { traditional: '好', simplified: '好', romanisation: 'hou2', definitions: ['good', 'well'] },
-    ],
-    '字': [
-      { traditional: '字', simplified: '字', romanisation: 'zi6', definitions: ['character', 'letter'] },
-    ],
-  },
-}));
-
-vi.mock('../../data/etymology.json', () => ({
-  default: {
-    '好': { character: '好', decomposition: '⿰女子', radical: '女', etymologyType: 'ideographic', hint: 'woman with child' },
-    '字': { character: '字', decomposition: '⿱宀子', radical: '宀', etymologyType: 'pictophonetic', semantic: '宀', phonetic: '子' },
-  },
-}));
+beforeAll(async () => {
+  await initDictionaries();
+});
 
 const makeEntry = (romanisation: string, definitions: string[]): DictionaryEntry => ({
   traditional: '字',

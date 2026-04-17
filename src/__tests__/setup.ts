@@ -7,6 +7,7 @@ vi.stubGlobal('chrome', {
     onMessage: { addListener: vi.fn() },
     sendMessage: vi.fn(),
     lastError: null as chrome.runtime.LastError | null,
+    getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
   },
   storage: {
     sync: {

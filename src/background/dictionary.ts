@@ -1,14 +1,22 @@
 import type { Dictionary, DictionaryEntry, DefinitionResult, EtymologyDictionary, CharacterEtymology } from '../shared/types';
-import mandarinDictData from '../data/mandarin.json';
-import cantoneseDictData from '../data/cantonese.json';
-import etymologyDictData from '../data/etymology.json';
 
 const CANTONESE_MARKER = '(cantonese)';
 const MAX_WORD_LENGTH = 4;
 
-const mandarinDict = mandarinDictData as Dictionary;
-const cantoneseDict = cantoneseDictData as Dictionary;
-const etymologyDict = etymologyDictData as EtymologyDictionary;
+let mandarinDict: Dictionary = {};
+let cantoneseDict: Dictionary = {};
+let etymologyDict: EtymologyDictionary = {};
+
+export async function initDictionaries(): Promise<void> {
+  const [mandarin, cantonese, etymology] = await Promise.all([
+    fetch(chrome.runtime.getURL('src/data/mandarin.json')).then(r => r.json() as Promise<Dictionary>),
+    fetch(chrome.runtime.getURL('src/data/cantonese.json')).then(r => r.json() as Promise<Dictionary>),
+    fetch(chrome.runtime.getURL('src/data/etymology.json')).then(r => r.json() as Promise<EtymologyDictionary>),
+  ]);
+  mandarinDict = mandarin;
+  cantoneseDict = cantonese;
+  etymologyDict = etymology;
+}
 
 function lookupInDict(dict: Dictionary, word: string): DictionaryEntry[] {
   const entries = dict[word];

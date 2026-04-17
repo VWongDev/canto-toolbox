@@ -7,6 +7,7 @@ vi.mock('../../background/dictionary.js', () => ({
     mandarin: { entries: [{ traditional: '好', simplified: '好', romanisation: 'hao3', definitions: ['good'] }] },
     cantonese: { entries: [] },
   }),
+  initDictionaries: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ---------------------------------------------------------------------------
@@ -234,7 +235,7 @@ describe('MessageManager', () => {
   });
 
   describe('message handler (server side via init)', () => {
-    it('handles lookup_word and returns a definition', () => {
+    it('handles lookup_word and returns a definition', async () => {
       manager.init();
       const handler = vi.mocked(runtime.onMessage.addListener).mock.calls[0]![0] as (
         msg: unknown, sender: unknown, sendResponse: (r: unknown) => void,
@@ -242,6 +243,7 @@ describe('MessageManager', () => {
 
       const sendResponse = vi.fn();
       handler({ type: 'lookup_word', word: '好' }, {}, sendResponse);
+      await Promise.resolve(); // flush microtask queue for dictionariesReady.then()
       expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
 

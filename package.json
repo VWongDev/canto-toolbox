@@ -6,12 +6,12 @@
   "scripts": {
     "build:scripts": "tsc -p build-tools/tsconfig.json",
     "build:dict": "pnpm build:scripts && node build-tools/dist/build-tools/build-dictionaries.js",
-    "build": "pnpm build:dict && NODE_OPTIONS=--max-old-space-size=8192 vite build",
+    "build": "pnpm build:dict && vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist src/data build-tools/dist",
     "screenshots": "pnpm build && pnpm build:scripts && node build-tools/dist/build-tools/generate-screenshots.js",
     "test": "vitest run",
-    "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src/ build-tools/",
     "prepare": "husky"
   },
