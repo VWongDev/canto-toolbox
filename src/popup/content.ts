@@ -39,17 +39,30 @@ export class ChineseHoverPopupManager {
   private lastHoveredElement: Node | null = null;
   private mousemoveThrottle: number | null = null;
   private lastMouseMoveTime = 0;
+  private readonly boundMouseMove: (e: MouseEvent) => void;
+  private readonly boundMouseOut: (e: MouseEvent) => void;
+  private readonly boundMouseUp: (e: MouseEvent) => void;
 
   constructor(document: Document, messageManager: MessageManager) {
     this.document = document;
     this.messageManager = messageManager;
+    this.boundMouseMove = (e) => this.handleMouseMove(e);
+    this.boundMouseOut = (e) => this.handleMouseOut(e);
+    this.boundMouseUp = (e) => this.handleSelection(e);
   }
 
   init(): void {
     this.injectStyles();
-    this.document.addEventListener('mousemove', (e) => this.handleMouseMove(e), true);
-    this.document.addEventListener('mouseout', (e) => this.handleMouseOut(e), true);
-    this.document.addEventListener('mouseup', (e) => this.handleSelection(e), true);
+    this.document.addEventListener('mousemove', this.boundMouseMove, true);
+    this.document.addEventListener('mouseout', this.boundMouseOut, true);
+    this.document.addEventListener('mouseup', this.boundMouseUp, true);
+  }
+
+  destroy(): void {
+    this.document.removeEventListener('mousemove', this.boundMouseMove, true);
+    this.document.removeEventListener('mouseout', this.boundMouseOut, true);
+    this.document.removeEventListener('mouseup', this.boundMouseUp, true);
+    this.hidePopup();
   }
 
   private handleMouseMove(event: MouseEvent): void {
