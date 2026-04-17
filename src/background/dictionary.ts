@@ -47,6 +47,7 @@ function processDictionaryLookup(
 }
 
 const IDS_COMPONENT_RE = /[\u2FF0-\u2FFB？]/;
+const etymologyCache = new Map<string, CharacterEtymology[]>();
 
 function getFirstDefinition(char: string): string | undefined {
   const entries = processDictionaryLookup(mandarinDict, char, true);
@@ -57,7 +58,10 @@ function getFirstDefinition(char: string): string | undefined {
 }
 
 export function lookupEtymology(word: string): CharacterEtymology[] {
-  return [...word]
+  const cached = etymologyCache.get(word);
+  if (cached) return cached;
+
+  const result = [...word]
     .map(char => {
       const entry = etymologyDict[char];
       if (!entry) return undefined;
@@ -82,6 +86,9 @@ export function lookupEtymology(word: string): CharacterEtymology[] {
         : entry;
     })
     .filter((entry): entry is CharacterEtymology => entry !== undefined);
+
+  etymologyCache.set(word, result);
+  return result;
 }
 
 export function lookupWordInDictionaries(word: string): DefinitionResult {
