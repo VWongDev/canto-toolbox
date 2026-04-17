@@ -28,7 +28,7 @@ async function buildDictionaries(): Promise<void> {
   ];
 
   // Create output directory
-  const outputDir = join(rootDir, 'src/data');
+  const outputDir = join(rootDir, 'public/data');
   if (!existsSync(outputDir)) {
     mkdirSync(outputDir, { recursive: true });
   }

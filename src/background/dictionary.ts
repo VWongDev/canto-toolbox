@@ -9,9 +9,9 @@ let etymologyDict: EtymologyDictionary = {};
 
 export async function initDictionaries(): Promise<void> {
   const [mandarin, cantonese, etymology] = await Promise.all([
-    fetch(chrome.runtime.getURL('src/data/mandarin.json')).then(r => r.json() as Promise<Dictionary>),
-    fetch(chrome.runtime.getURL('src/data/cantonese.json')).then(r => r.json() as Promise<Dictionary>),
-    fetch(chrome.runtime.getURL('src/data/etymology.json')).then(r => r.json() as Promise<EtymologyDictionary>),
+    fetch(chrome.runtime.getURL('data/mandarin.json')).then(r => r.json() as Promise<Dictionary>),
+    fetch(chrome.runtime.getURL('data/cantonese.json')).then(r => r.json() as Promise<Dictionary>),
+    fetch(chrome.runtime.getURL('data/etymology.json')).then(r => r.json() as Promise<EtymologyDictionary>),
   ]);
   mandarinDict = mandarin;
   cantoneseDict = cantonese;

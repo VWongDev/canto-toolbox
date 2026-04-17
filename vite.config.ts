@@ -17,10 +17,9 @@ export default defineConfig({
         content: 'src/popup/content.ts',
         stats: 'src/stats/stats.html',
         'stats-script': 'src/stats/stats.ts'
-      }
+      },
     },
-    copyPublicDir: false
   },
-  publicDir: 'src/data' // Pre-processed dictionary files
+  publicDir: 'public'
 });
 
