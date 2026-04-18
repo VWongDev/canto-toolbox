@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from 'vitest';
-import { createElement, clearElement, createText } from '../dom-element';
+import { createElement, clearElement } from '../dom-element';
 
 describe('createElement', () => {
   it('creates a div by default', () => {
@@ -92,16 +92,5 @@ describe('clearElement', () => {
     const el = document.createElement('div');
     expect(() => clearElement(el)).not.toThrow();
     expect(el.childNodes.length).toBe(0);
-  });
-});
-
-describe('createText', () => {
-  it('creates a text node', () => {
-    const node = createText('hello');
-    expect(node.nodeType).toBe(Node.TEXT_NODE);
-  });
-
-  it('contains the provided text', () => {
-    expect(createText('你好').textContent).toBe('你好');
   });
 });

@@ -121,7 +121,3 @@ export function clearElement(element: HTMLElement): void {
     element.removeChild(element.firstChild);
   }
 }
-
-export function createText(text: string): Text {
-  return document.createTextNode(text);
-}

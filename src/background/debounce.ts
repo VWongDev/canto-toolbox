@@ -1,29 +1,4 @@
 /**
- * Creates a debounced version of a function that delays execution until
- * after `delay` milliseconds have elapsed since the last call.
- *
- * @param fn - The function to debounce
- * @param delay - Milliseconds to wait before executing
- * @returns A debounced function that resets its timer on each call
- */
-export function debounce<A extends unknown[]>(
-  fn: (...args: A) => void,
-  delay: number
-): (...args: A) => void {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-  return (...args: A): void => {
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      fn(...args);
-      timeoutId = null;
-    }, delay);
-  };
-}
-
-/**
  * Creates a batched debounce function that accumulates keys and their counts,
  * then flushes them after `delay` milliseconds of inactivity.
  *
