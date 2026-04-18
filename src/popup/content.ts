@@ -193,10 +193,10 @@ export class ChineseHoverPopupManager {
     if (this.currentPopup?.dataset.word === word) {
       positionPopup(this.currentPopup, x, y);
       this.messageManager.trackWord(word, (response) => {
-      if (!response.success) {
-        console.error('[Content] Track word failed:', response.error);
-      }
-    });
+        if (!response.success) {
+          console.error('[Content] Track word failed:', response.error);
+        }
+      });
       return;
     }
 
