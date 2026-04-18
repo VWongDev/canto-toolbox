@@ -15,10 +15,6 @@ const POPUP_OFFSET_PX = 15;
 const SELECTION_PADDING_PX = 10;
 const VIEWPORT_MARGIN_PX = 10;
 
-interface SelectionData {
-  rect: DOMRect;
-}
-
 interface CursorResult {
   word: string;
   textNode: Text;
@@ -34,7 +30,7 @@ export class ChineseHoverPopupManager {
   private lastHoveredWord: string | null = null;
   private lastHoveredOffset = -1;
   private currentPopup: HTMLElement | null = null;
-  private currentSelection: SelectionData | null = null;
+  private currentSelection: DOMRect | null = null;
   private isHoveringChinese = false;
   private lastHoveredElement: Node | null = null;
   private mousemoveThrottle: number | null = null;
@@ -98,7 +94,7 @@ export class ChineseHoverPopupManager {
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
-    this.currentSelection = { rect };
+    this.currentSelection = rect;
     this.lookupAndShowWord(chineseWords.join(''), rect.left + rect.width / 2, rect.top - 10);
   }
 
@@ -170,7 +166,7 @@ export class ChineseHoverPopupManager {
 
   private handleSelectionTracking(event: MouseEvent): void {
     const { clientX: mouseX, clientY: mouseY } = event;
-    const rect = this.currentSelection!.rect;
+    const rect = this.currentSelection!;
     const popup = this.currentPopup;
 
     const overSelection = isMouseOverSelection(mouseX, mouseY, rect);
