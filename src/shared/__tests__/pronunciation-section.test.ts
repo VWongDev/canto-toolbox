@@ -29,17 +29,6 @@ describe('createPronunciationSection', () => {
     expect(el.querySelector('.test-label')?.textContent).toBe('Mandarin');
   });
 
-  it('adds single-pronunciation class when there is exactly one pronunciation group', () => {
-    const el = createPronunciationSection({ entries: [makeEntry('hao3', ['good'])] }, 'Mandarin', 'pinyin', makeConfig());
-    expect(el.classList.contains('single-pronunciation')).toBe(true);
-  });
-
-  it('does not add single-pronunciation class with multiple groups', () => {
-    const el = createPronunciationSection({
-      entries: [makeEntry('hao3', ['good']), makeEntry('hao4', ['to like'])],
-    }, 'Mandarin', 'pinyin', makeConfig());
-    expect(el.classList.contains('single-pronunciation')).toBe(false);
-  });
 
   it('groups entries sharing the same romanisation into one group element', () => {
     const el = createPronunciationSection({

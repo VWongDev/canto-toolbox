@@ -36,13 +36,8 @@ export function createPronunciationSection(
     return createElement({ className: config.groupClassName, children: groupChildren });
   });
 
-  const sectionClasses = [config.sectionClassName];
-  if (pronunciationGroups.length === 1) {
-    sectionClasses.push('single-pronunciation');
-  }
-
   return createElement({
-    className: sectionClasses.join(' '),
+    className: config.sectionClassName,
     children: [
       createElement({ className: config.labelClassName, textContent: label }),
       ...pronunciationGroups

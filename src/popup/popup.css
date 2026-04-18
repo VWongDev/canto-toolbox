@@ -52,27 +52,11 @@
   max-width: 100%;
   overflow: hidden;
   box-sizing: border-box;
-  column-count: 1;
-  column-gap: 12px;
-}
-
-.popup-section.single-pronunciation {
-  column-count: 1 !important;
-}
-
-@container (min-width: 400px) {
-  .popup-section {
-    column-count: 2;
-  }
-
-  .popup-section.single-pronunciation {
-    column-count: 1;
-  }
 }
 
 .popup-pronunciation-group {
   break-inside: avoid;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
@@ -101,7 +85,7 @@
   font-size: 15px;
   color: #0066cc;
   font-weight: 500;
-  margin-bottom: 2px;
+  margin-bottom: 5px;
   font-family: 'Arial', sans-serif;
   overflow-wrap: break-word;
   word-wrap: break-word;
@@ -125,7 +109,7 @@
 }
 
 .popup-definition-item {
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .popup-definition-item:last-child {
