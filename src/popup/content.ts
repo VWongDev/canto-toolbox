@@ -303,10 +303,10 @@ function getTextNodeAtCursor(event: MouseEvent): { textNode: Text; offset: numbe
 }
 
 function extractChineseWordFromText(text: string, offset: number): string | null {
-  const chineseRegex = /[\u4e00-\u9fff]+/g;
+  CHINESE_REGEX.lastIndex = 0;
   let match;
 
-  while ((match = chineseRegex.exec(text)) !== null) {
+  while ((match = CHINESE_REGEX.exec(text)) !== null) {
     const start = match.index;
     const end = start + match[0].length;
 
