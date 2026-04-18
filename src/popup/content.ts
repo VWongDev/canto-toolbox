@@ -259,13 +259,9 @@ export class ChineseHoverPopupManager {
   }
 
   private clearTimer(type: 'hide' | 'hover' | 'selection'): void {
-    const timer = type === 'hide' ? this.hideTimer : type === 'hover' ? this.hoverTimer : this.selectionPopupTimer;
-    if (timer) {
-      clearTimeout(timer);
-      if (type === 'hide') this.hideTimer = null;
-      else if (type === 'hover') this.hoverTimer = null;
-      else this.selectionPopupTimer = null;
-    }
+    if (type === 'hide') { clearTimeout(this.hideTimer!); this.hideTimer = null; }
+    else if (type === 'hover') { clearTimeout(this.hoverTimer!); this.hoverTimer = null; }
+    else { clearTimeout(this.selectionPopupTimer!); this.selectionPopupTimer = null; }
   }
 
   private resetHoverState(): void {
