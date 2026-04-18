@@ -4,6 +4,7 @@ export type EtymologyType = 'pictophonetic' | 'ideographic' | 'pictographic';
 
 export interface CharacterEtymology {
   character: string;
+  definition?: string;
   decomposition: string;
   radical: string;
   etymologyType?: EtymologyType;

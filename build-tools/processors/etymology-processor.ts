@@ -5,6 +5,7 @@ import type { EtymologyDictionary, CharacterEtymology, EtymologyType } from '../
 
 interface RawEtymologyEntry {
   character: string;
+  definition?: string;
   decomposition: string;
   radical: string;
   etymology?: {
@@ -38,7 +39,8 @@ export async function processEtymologyDict(): Promise<EtymologyDictionary> {
       const entry: CharacterEtymology = {
         character: raw.character,
         decomposition: raw.decomposition,
-        radical: raw.radical
+        radical: raw.radical,
+        ...(raw.definition ? { definition: raw.definition } : {})
       };
 
       // Add etymology fields if present and valid
