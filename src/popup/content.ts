@@ -101,13 +101,11 @@ export class ChineseHoverPopupManager {
   private handleMouseOut(event: MouseEvent): void {
     if (this.currentSelection) return;
 
-    const relatedTarget = event.relatedTarget instanceof HTMLElement ? event.relatedTarget : null;
-    if (relatedTarget?.closest('#chinese-hover-popup')) {
-      this.clearTimer('hide');
-      return;
-    }
-
     this.clearTimer('hide');
+
+    const relatedTarget = event.relatedTarget instanceof HTMLElement ? event.relatedTarget : null;
+    if (relatedTarget?.closest('#chinese-hover-popup')) return;
+
     if (!this.isHoveringChinese && this.currentPopup && !this.currentPopup.matches(':hover')) {
       this.hidePopup();
       this.resetHoverState();
