@@ -44,5 +44,6 @@ Desktop.ini
 .claire/
 .claude/*
 !.claude/agents/
+!.claude/docs/
 .workflows/
 
