@@ -34,3 +34,38 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  perf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compile build tools
+        run: pnpm build:scripts
+
+      - name: Build dictionaries
+        run: node build-tools/dist/build-tools/build-dictionaries.js
+
+      - name: Benchmark lookup performance
+        run: node build-tools/dist/build-tools/benchmark.js
+
+      - name: Build extension
+        run: NODE_OPTIONS=--max-old-space-size=8192 pnpm exec vite build
+
+      - name: Check bundle sizes
+        run: node build-tools/dist/build-tools/check-bundle-size.js
