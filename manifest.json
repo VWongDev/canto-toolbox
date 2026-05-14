@@ -7,7 +7,7 @@
     "storage"
   ],
   "background": {
-    "service_worker": "src/background/background.ts",
+    "service_worker": "src/service-worker.ts",
     "type": "module"
   },
   "content_scripts": [
