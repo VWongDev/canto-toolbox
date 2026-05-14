@@ -19,12 +19,12 @@ const EXPAND_ICON_EXPANDED = '▼';
 
 export class StatsManager {
   private readonly document: Document;
-  private readonly messageManager: StatsClient;
+  private readonly client: StatsClient;
   private readonly chromeStorage: typeof chrome.storage;
 
-  constructor(document: Document, messageManager: StatsClient, chromeStorage: typeof chrome.storage) {
+  constructor(document: Document, client: StatsClient, chromeStorage: typeof chrome.storage) {
     this.document = document;
-    this.messageManager = messageManager;
+    this.client = client;
     this.chromeStorage = chromeStorage;
   }
 
@@ -106,7 +106,7 @@ export class StatsManager {
     const elements = this.getRequiredElements();
     if (!elements) return;
 
-    this.messageManager.getStatistics((response: StatisticsResponse | ErrorResponse) => {
+    this.client.getStatistics((response: StatisticsResponse | ErrorResponse) => {
       this.handleStatisticsResponse(response, elements);
     });
   }
@@ -209,7 +209,7 @@ export class StatsManager {
     container.appendChild(loadingEl);
     container.style.display = 'block';
 
-    this.messageManager.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
+    this.client.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
       this.handleDefinitionResponse(response, container, word);
     });
   }

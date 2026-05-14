@@ -68,15 +68,15 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
 
 export class FlashcardManager {
   private readonly document: Document;
-  private readonly messageManager: FlashcardClient;
+  private readonly client: FlashcardClient;
   private reviewQueue: string[] = [];
   private sessionWords: string[] = [];
   private correctCount = 0;
   private totalCount = 0;
 
-  constructor(document: Document, messageManager: FlashcardClient) {
+  constructor(document: Document, client: FlashcardClient) {
     this.document = document;
-    this.messageManager = messageManager;
+    this.client = client;
   }
 
   init(): void {
@@ -84,7 +84,7 @@ export class FlashcardManager {
     this.setupShowAnswerButton();
     this.setupReviewAgainButton();
 
-    this.messageManager.getStatistics((response: StatisticsResponse | ErrorResponse) => {
+    this.client.getStatistics((response: StatisticsResponse | ErrorResponse) => {
       if (!response.success) {
         this.showEmpty();
         return;
@@ -211,7 +211,7 @@ export class FlashcardManager {
       const showAnswerContainer = this.document.getElementById('show-answer-btn-container');
       if (showAnswerContainer) showAnswerContainer.style.display = 'none';
 
-      this.messageManager.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
+      this.client.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
         if (!response.success || !response.definition) {
           if (cardBack) {
             clearElement(cardBack);

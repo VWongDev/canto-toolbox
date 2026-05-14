@@ -23,7 +23,7 @@ interface CursorResult {
 
 export class ChineseHoverPopupManager {
   private readonly document: Document;
-  private readonly messageManager: PopupClient;
+  private readonly client: PopupClient;
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private selectionPopupTimer: ReturnType<typeof setTimeout> | null = null;
@@ -39,9 +39,9 @@ export class ChineseHoverPopupManager {
   private readonly boundMouseOut: (e: MouseEvent) => void;
   private readonly boundMouseUp: (e: MouseEvent) => void;
 
-  constructor(document: Document, messageManager: PopupClient) {
+  constructor(document: Document, client: PopupClient) {
     this.document = document;
-    this.messageManager = messageManager;
+    this.client = client;
     this.boundMouseMove = (e) => this.handleMouseMove(e);
     this.boundMouseOut = (e) => this.handleMouseOut(e);
     this.boundMouseUp = (e) => this.handleSelection(e);
@@ -186,7 +186,7 @@ export class ChineseHoverPopupManager {
   private lookupAndShowWord(word: string, x: number, y: number): void {
     if (this.currentPopup?.dataset.word === word) {
       positionPopup(this.currentPopup, x, y);
-      this.messageManager.trackWord(word, (response) => {
+      this.client.trackWord(word, (response) => {
         if (!response.success) {
           console.error('[Content] Track word failed:', response.error);
         }
@@ -194,7 +194,7 @@ export class ChineseHoverPopupManager {
       return;
     }
 
-    this.messageManager.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
+    this.client.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
       if (response.success && 'definition' in response) {
         this.showPopup(response.definition.word || word, response.definition, x, y);
       } else {
