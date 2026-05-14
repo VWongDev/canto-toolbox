@@ -1,14 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { StorageManager } from '../background.js';
-
-vi.mock('../../background/dictionary.js', () => ({
-  lookupWord: vi.fn().mockReturnValue({
-    word: '好',
-    mandarin: { entries: [{ traditional: '好', simplified: '好', romanisation: 'hao3', definitions: ['good'] }] },
-    cantonese: { entries: [] },
-  }),
-  initDictionaries: vi.fn().mockResolvedValue(undefined),
-}));
+import { StorageManager } from '../../shared/storage-manager';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -128,4 +119,3 @@ describe('StorageManager', () => {
     });
   });
 });
-
