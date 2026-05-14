@@ -1,4 +1,4 @@
-import type { Dictionary, DictionaryEntry, DefinitionResult, EtymologyDictionary, CharacterEtymology } from '../shared/types';
+import type { Dictionary, DictionaryEntry, DefinitionResult, EtymologyDictionary, CharacterEtymology } from '../shared/types.js';
 
 const CANTONESE_MARKER = '(cantonese)';
 const MAX_WORD_LENGTH = 4;

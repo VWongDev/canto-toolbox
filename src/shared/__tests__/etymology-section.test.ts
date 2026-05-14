@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
-import { createEtymologySection } from '../etymology-section';
-import type { CharacterEtymology } from '../types';
+import { createEtymologySection } from '../etymology-section.js';
+import type { CharacterEtymology } from '../types.js';
 
 const makeEtymology = (overrides: Partial<CharacterEtymology> = {}): CharacterEtymology => ({
   character: '好',

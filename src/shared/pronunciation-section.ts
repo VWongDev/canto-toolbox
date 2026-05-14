@@ -1,5 +1,5 @@
-import type { DefinitionResult } from './types';
-import { createElement } from './dom-element';
+import type { DefinitionResult } from './types.js';
+import { createElement } from './dom-element.js';
 
 export interface PronunciationSectionConfig {
   sectionClassName: string;

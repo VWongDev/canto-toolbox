@@ -1,5 +1,5 @@
-import type { CharacterEtymology } from './types';
-import { createElement } from './dom-element';
+import type { CharacterEtymology } from './types.js';
+import { createElement } from './dom-element.js';
 
 const IDS_COMPONENT_RE = /[\u2FF0-\u2FFB？]/;
 

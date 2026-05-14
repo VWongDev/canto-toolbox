@@ -1,5 +1,5 @@
-import type { DefinitionResult, LookupResponse, ErrorResponse } from '../shared/types';
-import { createElement } from '../shared/dom-element';
+import type { DefinitionResult, LookupResponse, ErrorResponse } from '../shared/types.js';
+import { createElement } from '../shared/dom-element.js';
 import { popupClient, type PopupClient } from './popup-client.js';
 import popupStyles from './popup.css?raw';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';

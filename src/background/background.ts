@@ -1,7 +1,7 @@
 import { lookupWord, initDictionaries } from './dictionary.js';
 import { createBatchedDebounce } from './debounce.js';
 import { BoundedMap } from './bounded-map.js';
-import type { BackgroundMessage, BackgroundResponse, Statistics } from '../shared/types';
+import type { BackgroundMessage, BackgroundResponse, Statistics } from '../shared/types.js';
 
 const dictionariesReady = initDictionaries();
 

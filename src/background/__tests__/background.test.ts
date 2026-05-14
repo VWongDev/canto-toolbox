@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { StorageManager } from '../background';
+import { StorageManager } from '../background.js';
 
 vi.mock('../../background/dictionary.js', () => ({
   lookupWord: vi.fn().mockReturnValue({

@@ -1,5 +1,5 @@
-import type { DefinitionResult, StatisticsResponse, LookupResponse, ErrorResponse } from '../shared/types';
-import { createElement, clearElement } from '../shared/dom-element';
+import type { DefinitionResult, StatisticsResponse, LookupResponse, ErrorResponse } from '../shared/types.js';
+import { createElement, clearElement } from '../shared/dom-element.js';
 import { flashcardClient, type FlashcardClient } from './flashcard-client.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';
 import { createEtymologySection } from '../shared/etymology-section.js';

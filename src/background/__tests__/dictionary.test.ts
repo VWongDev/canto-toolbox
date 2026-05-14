@@ -7,8 +7,8 @@ import {
   findLongestMatchingWord,
   lookupWord,
   lookupEtymology,
-} from '../dictionary';
-import type { DictionaryEntry, DefinitionResult } from '../../shared/types';
+} from '../dictionary.js';
+import type { DictionaryEntry, DefinitionResult } from '../../shared/types.js';
 
 const mockMandarin = {
   '好': [

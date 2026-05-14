@@ -1,5 +1,5 @@
 import { sendMessage } from '../shared/message-manager.js';
-import type { LookupResponse, TrackWordResponse, ErrorResponse } from '../shared/types';
+import type { LookupResponse, TrackWordResponse, ErrorResponse } from '../shared/types.js';
 
 export interface PopupClient {
   lookupWord(word: string, callback: (r: LookupResponse | ErrorResponse) => void): void;

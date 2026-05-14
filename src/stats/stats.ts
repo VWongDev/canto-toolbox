@@ -1,5 +1,5 @@
-import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, ErrorResponse } from '../shared/types';
-import { createElement, clearElement } from '../shared/dom-element';
+import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, ErrorResponse } from '../shared/types.js';
+import { createElement, clearElement } from '../shared/dom-element.js';
 import { statsClient, type StatsClient } from './stats-client.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';
 import { createEtymologySection } from '../shared/etymology-section.js';

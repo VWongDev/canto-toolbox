@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createBatchedDebounce } from '../debounce';
+import { createBatchedDebounce } from '../debounce.js';
 
 describe('createBatchedDebounce', () => {
   beforeEach(() => { vi.useFakeTimers(); });

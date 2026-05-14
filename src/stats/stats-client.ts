@@ -1,5 +1,5 @@
 import { sendMessage } from '../shared/message-manager.js';
-import type { StatisticsResponse, LookupResponse, ErrorResponse } from '../shared/types';
+import type { StatisticsResponse, LookupResponse, ErrorResponse } from '../shared/types.js';
 
 export interface StatsClient {
   getStatistics(callback: (r: StatisticsResponse | ErrorResponse) => void): void;

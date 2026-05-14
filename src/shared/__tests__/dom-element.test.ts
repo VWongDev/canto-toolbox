@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from 'vitest';
-import { createElement, clearElement } from '../dom-element';
+import { createElement, clearElement } from '../dom-element.js';
 
 describe('createElement', () => {
   it('creates a div by default', () => {

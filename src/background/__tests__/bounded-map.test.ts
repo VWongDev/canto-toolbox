@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BoundedMap } from '../bounded-map';
+import { BoundedMap } from '../bounded-map.js';
 
 describe('BoundedMap', () => {
   it('stores and retrieves values', () => {
