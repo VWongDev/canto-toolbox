@@ -30,6 +30,7 @@ The domain specifies the area of the codebase affected:
 - `background`: Background service worker
 - `build`: Build system and tooling
 - `content`: Content script
+- `flashcard`: Flashcard review page
 - `popup`: Popup UI components
 - `stats`: Statistics page
 - `dict`: Dictionary-related functionality

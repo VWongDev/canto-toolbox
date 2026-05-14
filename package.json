@@ -15,6 +15,7 @@
     "bench": "pnpm build:scripts && node build-tools/dist/build-tools/benchmark.js",
     "size:check": "pnpm build:scripts && node build-tools/dist/build-tools/check-bundle-size.js",
     "size:update-baseline": "pnpm build:scripts && node build-tools/dist/build-tools/check-bundle-size.js --update",
+    "test:e2e": "playwright test",
     "lint": "eslint src/ build-tools/",
     "prepare": "husky"
   },
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.25",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.60.0",
     "@types/chrome": "^0.0.268",
     "@types/node": "^20.14.0",
     "eslint": "^10.2.0",

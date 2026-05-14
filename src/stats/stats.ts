@@ -9,7 +9,8 @@ const ELEMENT_IDS = {
   emptyState: 'empty-state',
   statsList: 'stats-list',
   wordCount: 'word-count',
-  clearBtn: 'clear-btn'
+  clearBtn: 'clear-btn',
+  flashcardBtn: 'flashcard-btn'
 } as const;
 
 const STORAGE_KEY = 'wordStatistics';
@@ -30,6 +31,7 @@ export class StatsManager {
   init(): void {
     this.loadStatistics();
     this.setupClearButton();
+    this.setupFlashcardButton();
   }
 
   private getRequiredElements() {
@@ -216,6 +218,15 @@ export class StatsManager {
     await this.chromeStorage.sync.set({ [STORAGE_KEY]: {} });
     await this.chromeStorage.local.set({ [STORAGE_KEY]: {} });
     this.loadStatistics();
+  }
+
+  private setupFlashcardButton(): void {
+    const flashcardBtn = this.document.getElementById(ELEMENT_IDS.flashcardBtn);
+    if (!flashcardBtn) return;
+
+    flashcardBtn.addEventListener('click', () => {
+      void chrome.tabs.create({ url: chrome.runtime.getURL('src/flashcards/flashcards.html') });
+    });
   }
 
   private setupClearButton(): void {

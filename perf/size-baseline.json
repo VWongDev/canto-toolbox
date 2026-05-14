@@ -1,12 +1,14 @@
 {
-  ".vite/manifest.json": 1454,
+  ".vite/manifest.json": 1795,
   "assets/background-BV0v63Pp.js": 6120,
-  "assets/content-Dp7ufz3A.js": 12610,
-  "assets/content.ts-loader-CN_GZMim.js": 340,
-  "assets/etymology-section-Dpy9iehB.js": 3205,
-  "assets/stats-DSgM7UaR.js": 819,
-  "assets/stats-Db-vgqqk.css": 6167,
-  "assets/stats-script-qN1Zujx4.js": 4792,
+  "assets/content-B_8WYcaz.js": 12297,
+  "assets/content.ts-loader-DkF0-t7-.js": 340,
+  "assets/etymology-section-CoyagIdV.js": 3144,
+  "assets/flashcards-MhdxRG8_.css": 5726,
+  "assets/flashcards-script-BrfL64KS.js": 4587,
+  "assets/modulepreload-polyfill-B5Qt9EMX.js": 711,
+  "assets/stats-B9e_rbMB.css": 6286,
+  "assets/stats-script-BAeAJP9d.js": 5044,
   "data/cantonese.json": 26919805,
   "data/etymology.json": 1831560,
   "data/mandarin.json": 31683383,
@@ -16,5 +18,6 @@
   "icons/icon48.png": 1195,
   "manifest.json": 1138,
   "service-worker-loader.js": 42,
-  "src/stats/stats.html": 1448
+  "src/flashcards/flashcards.html": 2159,
+  "src/stats/stats.html": 1561
 }

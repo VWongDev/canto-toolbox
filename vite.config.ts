@@ -16,7 +16,9 @@ export default defineConfig({
         background: 'src/background/background.ts',
         content: 'src/popup/content.ts',
         stats: 'src/stats/stats.html',
-        'stats-script': 'src/stats/stats.ts'
+        'stats-script': 'src/stats/stats.ts',
+        flashcards: 'src/flashcards/flashcards.html',
+        'flashcards-script': 'src/flashcards/flashcards.ts'
       },
     },
   },

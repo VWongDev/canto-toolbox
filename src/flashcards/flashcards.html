@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flashcard Review</title>
+  <link rel="stylesheet" href="./flashcards.css">
+</head>
+<body>
+  <div id="loading" class="screen">
+    <p>Loading flashcards...</p>
+  </div>
+
+  <div id="empty-state" class="screen" style="display: none;">
+    <div class="empty-icon">字</div>
+    <p>No words to review yet.<br>Hover over Chinese words at least twice to unlock flashcard review.</p>
+  </div>
+
+  <div id="review" class="screen" style="display: none;">
+    <div class="progress-bar-container">
+      <div id="progress" class="progress-bar"></div>
+    </div>
+    <div class="counter-row">
+      <span id="counter">Card 1 of 1</span>
+    </div>
+
+    <div id="card" class="card">
+      <div id="card-front" class="card-front"></div>
+      <div id="card-back" class="card-back" style="display: none;"></div>
+    </div>
+
+    <div id="show-answer-btn-container">
+      <button id="show-answer-btn" class="btn btn-show-answer">Show Answer</button>
+    </div>
+
+    <div id="rating-btns" class="rating-btns" style="display: none;">
+      <button class="btn btn-again" data-rating="again">Again</button>
+      <button class="btn btn-hard" data-rating="hard">Hard</button>
+      <button class="btn btn-good" data-rating="good">Good</button>
+      <button class="btn btn-easy" data-rating="easy">Easy</button>
+    </div>
+  </div>
+
+  <div id="finished" class="screen" style="display: none;">
+    <div class="finished-icon">✓</div>
+    <h1>Session Complete</h1>
+    <p id="result-summary" class="result-summary"></p>
+    <button id="review-again-btn" class="btn btn-primary">Review Again</button>
+  </div>
+
+  <script type="module" src="./flashcards.ts"></script>
+</body>
+</html>
