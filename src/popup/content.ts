@@ -1,6 +1,6 @@
 import type { DefinitionResult, LookupResponse, ErrorResponse } from '../shared/types';
 import { createElement } from '../shared/dom-element';
-import { messageManager, type MessageManager } from '../background/background.js';
+import { popupClient, type PopupClient } from './popup-client.js';
 import popupStyles from './popup.css?raw';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';
 import { createEtymologySection } from '../shared/etymology-section.js';
@@ -23,7 +23,7 @@ interface CursorResult {
 
 export class ChineseHoverPopupManager {
   private readonly document: Document;
-  private readonly messageManager: MessageManager;
+  private readonly messageManager: PopupClient;
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private selectionPopupTimer: ReturnType<typeof setTimeout> | null = null;
@@ -39,7 +39,7 @@ export class ChineseHoverPopupManager {
   private readonly boundMouseOut: (e: MouseEvent) => void;
   private readonly boundMouseUp: (e: MouseEvent) => void;
 
-  constructor(document: Document, messageManager: MessageManager) {
+  constructor(document: Document, messageManager: PopupClient) {
     this.document = document;
     this.messageManager = messageManager;
     this.boundMouseMove = (e) => this.handleMouseMove(e);
@@ -280,7 +280,7 @@ export class ChineseHoverPopupManager {
   }
 }
 
-export const popupManager = new ChineseHoverPopupManager(document, messageManager);
+export const popupManager = new ChineseHoverPopupManager(document, popupClient);
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => popupManager.init());

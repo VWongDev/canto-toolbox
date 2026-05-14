@@ -1,6 +1,6 @@
 import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, ErrorResponse } from '../shared/types';
 import { createElement, clearElement } from '../shared/dom-element';
-import { messageManager, type MessageManager } from '../background/background.js';
+import { statsClient, type StatsClient } from './stats-client.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';
 import { createEtymologySection } from '../shared/etymology-section.js';
 
@@ -19,10 +19,10 @@ const EXPAND_ICON_EXPANDED = '▼';
 
 export class StatsManager {
   private readonly document: Document;
-  private readonly messageManager: MessageManager;
+  private readonly messageManager: StatsClient;
   private readonly chromeStorage: typeof chrome.storage;
 
-  constructor(document: Document, messageManager: MessageManager, chromeStorage: typeof chrome.storage) {
+  constructor(document: Document, messageManager: StatsClient, chromeStorage: typeof chrome.storage) {
     this.document = document;
     this.messageManager = messageManager;
     this.chromeStorage = chromeStorage;
@@ -251,7 +251,7 @@ export class StatsManager {
   }
 }
 
-export const statsManager = new StatsManager(document, messageManager, chrome.storage);
+export const statsManager = new StatsManager(document, statsClient, chrome.storage);
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => statsManager.init());

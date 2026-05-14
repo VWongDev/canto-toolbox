@@ -1,0 +1,29 @@
+import { sendMessage } from '../shared/message-manager.js';
+import type { LookupResponse, TrackWordResponse, ErrorResponse } from '../shared/types';
+
+export interface PopupClient {
+  lookupWord(word: string, callback: (r: LookupResponse | ErrorResponse) => void): void;
+  trackWord(word: string, callback: (r: TrackWordResponse | ErrorResponse) => void): void;
+}
+
+export class PopupMessageClient implements PopupClient {
+  lookupWord(word: string, callback: (r: LookupResponse | ErrorResponse) => void): void {
+    sendMessage(
+      { type: 'lookup_word', word },
+      (r) => (r as { type?: string } | undefined)?.type === 'lookup_word',
+      'Lookup failed',
+      callback
+    );
+  }
+
+  trackWord(word: string, callback: (r: TrackWordResponse | ErrorResponse) => void): void {
+    sendMessage(
+      { type: 'track_word', word },
+      (r) => (r as { success?: boolean } | undefined)?.success === true,
+      'Tracking failed',
+      callback
+    );
+  }
+}
+
+export const popupClient = new PopupMessageClient();

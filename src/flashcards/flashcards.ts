@@ -1,6 +1,6 @@
 import type { DefinitionResult, StatisticsResponse, LookupResponse, ErrorResponse } from '../shared/types';
 import { createElement, clearElement } from '../shared/dom-element';
-import { messageManager, type MessageManager } from '../background/background.js';
+import { flashcardClient, type FlashcardClient } from './flashcard-client.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';
 import { createEtymologySection } from '../shared/etymology-section.js';
 
@@ -68,13 +68,13 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
 
 export class FlashcardManager {
   private readonly document: Document;
-  private readonly messageManager: MessageManager;
+  private readonly messageManager: FlashcardClient;
   private reviewQueue: string[] = [];
   private sessionWords: string[] = [];
   private correctCount = 0;
   private totalCount = 0;
 
-  constructor(document: Document, messageManager: MessageManager) {
+  constructor(document: Document, messageManager: FlashcardClient) {
     this.document = document;
     this.messageManager = messageManager;
   }
@@ -268,7 +268,7 @@ export class FlashcardManager {
   }
 }
 
-const flashcardManager = new FlashcardManager(document, messageManager);
+const flashcardManager = new FlashcardManager(document, flashcardClient);
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => flashcardManager.init());

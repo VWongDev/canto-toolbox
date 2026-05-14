@@ -1,107 +1,9 @@
 import { lookupWord, initDictionaries } from './dictionary.js';
-
-const dictionariesReady = initDictionaries();
 import { createBatchedDebounce } from './debounce.js';
 import { BoundedMap } from './bounded-map.js';
-import type { BackgroundMessage, BackgroundResponse, Statistics, StatisticsResponse, TrackWordResponse, LookupResponse, ErrorResponse } from '../shared/types';
+import type { BackgroundMessage, BackgroundResponse, Statistics } from '../shared/types';
 
-export class MessageManager {
-  private readonly chromeRuntime: typeof chrome.runtime;
-  private readonly storageManager: StorageManager;
-
-  constructor(chromeRuntime: typeof chrome.runtime, storageManager: StorageManager) {
-    this.chromeRuntime = chromeRuntime;
-    this.storageManager = storageManager;
-  }
-
-  private handleError(callback: (response: ErrorResponse) => void, defaultError: string, response?: BackgroundResponse): void {
-    const error = this.chromeRuntime.lastError?.message || (response && 'error' in response ? response.error : defaultError);
-    callback({ success: false, error });
-  }
-
-  lookupWord(word: string, callback: (response: LookupResponse | ErrorResponse) => void): void {
-    this.chromeRuntime.sendMessage({ type: 'lookup_word', word }, (response) => {
-      if (this.chromeRuntime.lastError || response?.type !== 'lookup_word') {
-        this.handleError(callback, 'Lookup failed', response);
-        return;
-      }
-      callback(response as LookupResponse);
-    });
-  }
-
-  trackWord(word: string, callback: (response: TrackWordResponse | ErrorResponse) => void): void {
-    this.chromeRuntime.sendMessage({ type: 'track_word', word }, (response) => {
-      if (this.chromeRuntime.lastError || !response?.success) {
-        this.handleError(callback, 'Tracking failed', response);
-        return;
-      }
-      callback(response as TrackWordResponse);
-    });
-  }
-
-  getStatistics(callback: (response: StatisticsResponse | ErrorResponse) => void): void {
-    this.chromeRuntime.sendMessage({ type: 'get_statistics' }, (response) => {
-      if (this.chromeRuntime.lastError || response?.type !== 'get_statistics') {
-        this.handleError(callback, 'Failed to get statistics', response);
-        return;
-      }
-      callback(response as StatisticsResponse);
-    });
-  }
-
-  private handleLookupWordMessage(word: string, sendResponse: (response: BackgroundResponse) => void): void {
-    dictionariesReady.then(() => {
-      try {
-        const definition = lookupWord(word);
-        this.storageManager.updateStatistics(definition?.word || word);
-        sendResponse({ success: true, type: 'lookup_word', definition });
-      } catch (error) {
-        console.error('[Background] Lookup error:', error);
-        const err = error instanceof Error ? error : new Error(String(error));
-        sendResponse({ success: false, error: err.message, errorName: err.name });
-      }
-    }).catch((error: unknown) => {
-      console.error('[Background] Dictionary init failed:', error);
-      sendResponse({ success: false, error: 'Dictionary failed to load' });
-    });
-  }
-
-  private handleGetStatisticsMessage(sendResponse: (response: BackgroundResponse) => void): void {
-    this.storageManager.getStatistics()
-      .then(stats => sendResponse({ success: true, type: 'get_statistics', statistics: stats }))
-      .catch(error => {
-        console.error('[Background] Error getting statistics:', error);
-        sendResponse({ success: false, error: error?.message || 'Unknown error' });
-      });
-  }
-
-  private handleTrackWordMessage(word: string, sendResponse: (response: BackgroundResponse) => void): void {
-    this.storageManager.updateStatistics(word);
-    sendResponse({ success: true, type: 'track_word' });
-  }
-
-  init(): void {
-    this.chromeRuntime.onMessage.addListener((
-      message: BackgroundMessage,
-      _sender: chrome.runtime.MessageSender,
-      sendResponse: (response: BackgroundResponse) => void
-    ): boolean => {
-      if (message.type === 'lookup_word') {
-        this.handleLookupWordMessage(message.word, sendResponse);
-        return true;
-      }
-      if (message.type === 'get_statistics') {
-        this.handleGetStatisticsMessage(sendResponse);
-        return true;
-      }
-      if (message.type === 'track_word') {
-        this.handleTrackWordMessage(message.word, sendResponse);
-        return true;
-      }
-      return false;
-    });
-  }
-}
+const dictionariesReady = initDictionaries();
 
 export class StorageManager {
   private readonly STORAGE_KEY = 'wordStatistics';
@@ -193,5 +95,44 @@ export class StorageManager {
   }
 }
 
-export const messageManager = new MessageManager(chrome.runtime, new StorageManager(chrome.storage.sync, chrome.storage.local));
-messageManager.init();
+const storageManager = new StorageManager(chrome.storage.sync, chrome.storage.local);
+
+chrome.runtime.onMessage.addListener((
+  message: BackgroundMessage,
+  _sender: chrome.runtime.MessageSender,
+  sendResponse: (response: BackgroundResponse) => void
+): boolean => {
+  if (message.type === 'lookup_word') {
+    dictionariesReady.then(() => {
+      try {
+        const definition = lookupWord(message.word);
+        storageManager.updateStatistics(definition?.word || message.word);
+        sendResponse({ success: true, type: 'lookup_word', definition });
+      } catch (error) {
+        console.error('[Background] Lookup error:', error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        sendResponse({ success: false, error: err.message, errorName: err.name });
+      }
+    }).catch((error: unknown) => {
+      console.error('[Background] Dictionary init failed:', error);
+      sendResponse({ success: false, error: 'Dictionary failed to load' });
+    });
+    return true;
+  }
+  if (message.type === 'get_statistics') {
+    storageManager.getStatistics()
+      .then(stats => sendResponse({ success: true, type: 'get_statistics', statistics: stats }))
+      .catch((error: unknown) => {
+        console.error('[Background] Error getting statistics:', error);
+        const err = error instanceof Error ? error : new Error(String(error));
+        sendResponse({ success: false, error: err.message || 'Unknown error' });
+      });
+    return true;
+  }
+  if (message.type === 'track_word') {
+    storageManager.updateStatistics(message.word);
+    sendResponse({ success: true, type: 'track_word' });
+    return true;
+  }
+  return false;
+});
