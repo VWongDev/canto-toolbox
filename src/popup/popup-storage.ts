@@ -1,6 +1,6 @@
 import { StorageManager } from '../shared/storage-manager.js';
-import { createBatchedDebounce } from '../background/debounce.js';
-import { BoundedMap } from '../background/bounded-map.js';
+import { createBatchedDebounce } from '../shared/debounce.js';
+import { BoundedMap } from '../shared/bounded-map.js';
 import type { Statistics } from '../shared/types';
 
 const STORAGE_KEY = 'wordStatistics';

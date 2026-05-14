@@ -7,15 +7,21 @@ let mandarinDict: Dictionary = {};
 let cantoneseDict: Dictionary = {};
 let etymologyDict: EtymologyDictionary = {};
 
-export async function initDictionaries(): Promise<void> {
-  const [mandarin, cantonese, etymology] = await Promise.all([
-    fetch(chrome.runtime.getURL('data/mandarin.json')).then(r => r.json() as Promise<Dictionary>),
-    fetch(chrome.runtime.getURL('data/cantonese.json')).then(r => r.json() as Promise<Dictionary>),
-    fetch(chrome.runtime.getURL('data/etymology.json')).then(r => r.json() as Promise<EtymologyDictionary>),
-  ]);
-  mandarinDict = mandarin;
-  cantoneseDict = cantonese;
-  etymologyDict = etymology;
+let dictionariesPromise: Promise<void> | null = null;
+
+export function initDictionaries(): Promise<void> {
+  if (!dictionariesPromise) {
+    dictionariesPromise = Promise.all([
+      fetch(chrome.runtime.getURL('data/mandarin.json')).then(r => r.json() as Promise<Dictionary>),
+      fetch(chrome.runtime.getURL('data/cantonese.json')).then(r => r.json() as Promise<Dictionary>),
+      fetch(chrome.runtime.getURL('data/etymology.json')).then(r => r.json() as Promise<EtymologyDictionary>),
+    ]).then(([mandarin, cantonese, etymology]) => {
+      mandarinDict = mandarin;
+      cantoneseDict = cantonese;
+      etymologyDict = etymology;
+    });
+  }
+  return dictionariesPromise;
 }
 
 function lookupInDict(dict: Dictionary, word: string): DictionaryEntry[] {
