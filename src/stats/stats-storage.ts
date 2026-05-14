@@ -1,5 +1,8 @@
 import { StorageManager } from '../shared/storage-manager.js';
+import { mergeStatistics } from '../shared/statistics-utils.js';
 import type { Statistics } from '../shared/types';
+
+const STORAGE_KEY = 'wordStatistics';
 
 export interface StatsStorage {
   getStatistics(): Promise<Statistics>;
@@ -8,8 +11,12 @@ export interface StatsStorage {
 export class StatsStorageClient implements StatsStorage {
   constructor(private readonly manager: StorageManager) {}
 
-  getStatistics(): Promise<Statistics> {
-    return this.manager.getStatistics();
+  async getStatistics(): Promise<Statistics> {
+    const [sync, local] = await Promise.all([
+      this.manager.readSync(STORAGE_KEY),
+      this.manager.readLocal(STORAGE_KEY),
+    ]);
+    return mergeStatistics((sync as Statistics) ?? {}, (local as Statistics) ?? {});
   }
 }
 
