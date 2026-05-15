@@ -10,6 +10,7 @@ A Chrome extension that displays Chinese word definitions in both Mandarin and C
 - **Dual Language Support**: Shows definitions in both Mandarin (with Pinyin) and Cantonese (with Jyutping)
 - **Works Everywhere**: Functions on any website with Chinese text
 - **Word Statistics**: Tracks your most frequently looked-up words
+- **Flashcard Review**: Spaced-repetition review of your looked-up words
 - **Multi-word Selection**: Select multiple characters to look up phrases
 - **Radical Breakdown**: Per-character etymology with radical, structure (IDS decomposition), and pictographic/ideographic/pictophonetic hints
 - **Dark Mode Support**: Automatically adapts to your system theme
@@ -27,6 +28,11 @@ A Chrome extension that displays Chinese word definitions in both Mandarin and C
 ![Statistics page](screenshots/statistics.png)
 
 *Track your most frequently looked-up words*
+
+### Flashcard Review
+![Flashcard review page](screenshots/flashcard-review.png)
+
+*Review your looked-up words with spaced repetition*
 
 ### Dark Mode
 ![Dark mode support](screenshots/dark-mode.png)
@@ -87,7 +93,7 @@ To clean build artifacts:
 pnpm clean
 ```
 
-To regenerate the screenshots used in the README and store listing (builds the extension, then launches Chrome to capture hover-popup, statistics, and dark-mode screenshots):
+To regenerate the screenshots used in the README and store listing (builds the extension, then launches Chrome to capture hover-popup, statistics, flashcard-review, and dark-mode screenshots):
 ```bash
 pnpm screenshots
 ```
@@ -107,6 +113,8 @@ Screenshots are written to `screenshots/`. Chrome runs in headed mode because ex
    - Your most frequently looked-up words
    - Hover counts for each word
    - Detailed definitions for each tracked word
+
+4. **Flashcard review**: Once you've hovered over words at least twice, open the flashcard review page to quiz yourself with spaced repetition — rate each card as Again, Hard, Good, or Easy.
 
 ## Dictionary Resources
 

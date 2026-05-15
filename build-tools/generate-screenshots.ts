@@ -26,6 +26,13 @@ const sampleStats: Statistics = {
   '香港': { count: 8, firstSeen: Date.now(), lastSeen: Date.now() },
 };
 
+// Sample statistics data for flashcard screenshot — 粵語 leads so it appears as the first card
+const flashcardSampleStats: Statistics = {
+  '粵語': { count: 42, firstSeen: Date.now(), lastSeen: Date.now() },
+  '學習': { count: 28, firstSeen: Date.now(), lastSeen: Date.now() },
+  '香港': { count: 15, firstSeen: Date.now(), lastSeen: Date.now() },
+};
+
 async function findExtensionId(browser: Browser): Promise<string> {
   // Navigate to chrome://extensions to find the extension ID
   const page = await browser.newPage();
@@ -110,7 +117,7 @@ async function triggerChinesePopup(page: Page): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 500));
 }
 
-async function injectSampleStatistics(page: Page, extensionId: string): Promise<void> {
+async function injectSampleStatistics(page: Page, extensionId: string, stats: Statistics = sampleStats): Promise<void> {
   // Navigate to stats page to inject sample data
   const statsUrl = `chrome-extension://${extensionId}/src/stats/stats.html`;
   await page.goto(statsUrl);
@@ -118,7 +125,7 @@ async function injectSampleStatistics(page: Page, extensionId: string): Promise<
   // Inject sample statistics into chrome.storage.sync (key: wordStatistics)
   await page.evaluate(async (stats) => {
     await chrome.storage.sync.set({ wordStatistics: stats });
-  }, sampleStats);
+  }, stats);
 
   // Reload the page to show the injected stats
   await page.reload();
@@ -228,6 +235,35 @@ async function captureStatsScreenshot(
   await page.screenshot({ path: outputPath, type: 'png', clip: VIEWPORT_CLIP });
 }
 
+async function captureFlashcardScreenshot(
+  page: Page,
+  extensionId: string,
+  outputPath: string
+): Promise<void> {
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+
+  console.log('[Screenshots] Injecting sample statistics for flashcards...');
+  await injectSampleStatistics(page, extensionId, flashcardSampleStats);
+
+  console.log('[Screenshots] Navigating to flashcard page...');
+  await page.goto(`chrome-extension://${extensionId}/src/flashcards/flashcards.html`);
+
+  await page.waitForFunction(
+    () => {
+      const el = document.getElementById('review');
+      return el && el.style.display !== 'none';
+    },
+    { timeout: 10000 }
+  );
+
+  await page.click('#show-answer-btn');
+  await page.waitForSelector('.definition-container', { visible: true, timeout: 15000 });
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  console.log('[Screenshots] Capturing flashcard-review.png (1280×800)...');
+  await page.screenshot({ path: outputPath, type: 'png', clip: VIEWPORT_CLIP });
+}
+
 async function captureDarkModeScreenshot(page: Page, outputPath: string): Promise<void> {
   await prepareHoverPopup(page, 'dark');
 
@@ -308,6 +344,13 @@ async function generateScreenshots(): Promise<void> {
       page,
       extensionId,
       join(screenshotsDir, 'statistics.png')
+    );
+
+    // Capture flashcard review screenshot
+    await captureFlashcardScreenshot(
+      page,
+      extensionId,
+      join(screenshotsDir, 'flashcard-review.png')
     );
 
     // Capture dark mode screenshot (hover popup in dark theme)
