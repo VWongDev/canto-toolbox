@@ -2,11 +2,12 @@
 // generate-screenshots.ts - Automate screenshot capture for Chrome Web Store.
 // Requires a headed Chrome (extensions are not supported in headless mode).
 
-import puppeteer, { type Browser, type Page } from 'puppeteer';
+import puppeteer, { type Page } from 'puppeteer';
 import sharp from 'sharp';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, mkdirSync, readdirSync } from 'fs';
+import { createHash } from 'crypto';
 import type { Statistics } from '../src/shared/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -33,38 +34,13 @@ const flashcardSampleStats: Statistics = {
   '香港': { count: 15, firstSeen: Date.now(), lastSeen: Date.now() },
 };
 
-async function findExtensionId(browser: Browser): Promise<string> {
-  // Primary: read from the filesystem. When Chrome loads an extension via --load-extension
-  // it writes it to the temp user data dir immediately at startup — no service worker
-  // lifecycle timing to worry about. Extension IDs are always 32 lowercase letters [a-p].
-  const chromeArgs: string[] = browser.process()?.spawnargs ?? [];
-  const userDataArg = chromeArgs.find(a => a.startsWith('--user-data-dir='));
-  if (userDataArg) {
-    const userDataDir = userDataArg.replace('--user-data-dir=', '');
-    const extensionsDir = join(userDataDir, 'Default', 'Extensions');
-    if (existsSync(extensionsDir)) {
-      const entries = readdirSync(extensionsDir);
-      const id = entries.find(e => /^[a-p]{32}$/.test(e));
-      if (id) return id;
-    }
-  }
-
-  // Fallback: wait for the service worker target. This works locally but can race in CI
-  // if the worker goes idle before we check.
-  console.log('[Screenshots] Filesystem lookup failed, falling back to waitForTarget...');
-  const page = await browser.newPage();
-  await page.goto('chrome://extensions');
-  await page.close();
-
-  const extensionTarget = await browser.waitForTarget(
-    target => target.type() === 'service_worker' && target.url().includes('chrome-extension://'),
-    { timeout: 15000 }
-  );
-
-  const url = extensionTarget.url();
-  const match = url.match(/chrome-extension:\/\/([^/]+)/);
-  if (!match) throw new Error('Could not find extension ID');
-  return match[1]!;
+// Replicates Chromium's crx_file::id_util::GenerateIdForPath: SHA-256 of the absolute
+// path bytes, take the first 16 bytes as 32 hex chars, then map 0-9a-f → a-p.
+// This is how Chrome derives the ID for unpacked extensions loaded via --load-extension.
+function computeExtensionIdForPath(absPath: string): string {
+  const hex = createHash('sha256').update(absPath).digest('hex').slice(0, 32);
+  const aCode = 'a'.charCodeAt(0);
+  return Array.from(hex, c => String.fromCharCode(aCode + parseInt(c, 16))).join('');
 }
 
 async function waitForPopup(page: Page): Promise<void> {
@@ -315,6 +291,9 @@ async function generateScreenshots(): Promise<void> {
     args: [
       `--disable-extensions-except=${distDir}`,
       `--load-extension=${distDir}`,
+      // Chrome 128+ disables --load-extension by default. This feature flag re-enables it.
+      // See https://issues.chromium.org/issues/40274926
+      '--disable-features=DisableLoadExtensionCommandLineSwitch',
       '--no-sandbox',
       '--disable-setuid-sandbox',
     ],
@@ -324,9 +303,10 @@ async function generateScreenshots(): Promise<void> {
     // Wait for extension to initialize
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Find the extension ID
-    console.log('[Screenshots] Finding extension ID...');
-    const extensionId = await findExtensionId(browser);
+    // Compute the extension ID deterministically from the dist path — Chrome derives
+    // the ID for unpacked extensions as a hash of their absolute path, so we can predict
+    // it without inspecting browser state or service worker targets.
+    const extensionId = computeExtensionIdForPath(distDir);
     console.log(`[Screenshots] Extension ID: ${extensionId}`);
 
     // Warm up the background service worker by visiting the extension page.
