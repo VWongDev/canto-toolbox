@@ -34,27 +34,22 @@ const flashcardSampleStats: Statistics = {
 };
 
 async function findExtensionId(browser: Browser): Promise<string> {
-  // Navigate to chrome://extensions to find the extension ID
+  // Visiting chrome://extensions prompts Chrome to register the extension service worker
   const page = await browser.newPage();
   await page.goto('chrome://extensions');
-
-  // Get extension ID from service worker targets
-  const targets = browser.targets();
-  const extensionTarget = targets.find(
-    target => target.type() === 'service_worker' && target.url().includes('chrome-extension://')
-  );
-
   await page.close();
 
-  if (extensionTarget) {
-    const url = extensionTarget.url();
-    const match = url.match(/chrome-extension:\/\/([^/]+)/);
-    if (match) {
-      return match[1]!;
-    }
-  }
+  // Wait for the service worker target to appear — synchronous targets() misses it in CI
+  // because the worker may not have registered by the time we call it.
+  const extensionTarget = await browser.waitForTarget(
+    target => target.type() === 'service_worker' && target.url().includes('chrome-extension://'),
+    { timeout: 10000 }
+  );
 
-  throw new Error('Could not find extension ID');
+  const url = extensionTarget.url();
+  const match = url.match(/chrome-extension:\/\/([^/]+)/);
+  if (!match) throw new Error('Could not find extension ID');
+  return match[1]!;
 }
 
 async function waitForPopup(page: Page): Promise<void> {
