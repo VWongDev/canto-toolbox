@@ -34,16 +34,31 @@ const flashcardSampleStats: Statistics = {
 };
 
 async function findExtensionId(browser: Browser): Promise<string> {
-  // Visiting chrome://extensions prompts Chrome to register the extension service worker
+  // Primary: read from the filesystem. When Chrome loads an extension via --load-extension
+  // it writes it to the temp user data dir immediately at startup — no service worker
+  // lifecycle timing to worry about. Extension IDs are always 32 lowercase letters [a-p].
+  const chromeArgs: string[] = browser.process()?.spawnargs ?? [];
+  const userDataArg = chromeArgs.find(a => a.startsWith('--user-data-dir='));
+  if (userDataArg) {
+    const userDataDir = userDataArg.replace('--user-data-dir=', '');
+    const extensionsDir = join(userDataDir, 'Default', 'Extensions');
+    if (existsSync(extensionsDir)) {
+      const entries = readdirSync(extensionsDir);
+      const id = entries.find(e => /^[a-p]{32}$/.test(e));
+      if (id) return id;
+    }
+  }
+
+  // Fallback: wait for the service worker target. This works locally but can race in CI
+  // if the worker goes idle before we check.
+  console.log('[Screenshots] Filesystem lookup failed, falling back to waitForTarget...');
   const page = await browser.newPage();
   await page.goto('chrome://extensions');
   await page.close();
 
-  // Wait for the service worker target to appear — synchronous targets() misses it in CI
-  // because the worker may not have registered by the time we call it.
   const extensionTarget = await browser.waitForTarget(
     target => target.type() === 'service_worker' && target.url().includes('chrome-extension://'),
-    { timeout: 10000 }
+    { timeout: 15000 }
   );
 
   const url = extensionTarget.url();
