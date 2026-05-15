@@ -340,6 +340,7 @@ body {
   background: #f8f8f8;
   border-radius: 6px;
   border: 1px solid #e8e8e8;
+  overflow: hidden;
 }
 
 .popup-etymology-char {
@@ -387,6 +388,7 @@ body {
   background: #e4e4e4;
   border-radius: 4px;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .popup-etymology-component-glyph {
@@ -398,6 +400,9 @@ body {
 .popup-etymology-component-def {
   font-size: 11px;
   color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .popup-etymology-component-role--meaning {
