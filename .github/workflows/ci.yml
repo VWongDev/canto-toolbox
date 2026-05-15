@@ -68,7 +68,7 @@ jobs:
         run: NODE_OPTIONS=--max-old-space-size=8192 pnpm exec vite build
 
       - name: Run e2e tests
-        run: pnpm test:e2e
+        run: xvfb-run --auto-servernum pnpm test:e2e
 
       - name: Upload test results
         if: always()
