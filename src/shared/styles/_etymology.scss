@@ -1,0 +1,140 @@
+@use 'tokens' as t;
+@use 'dark-mode' as *;
+
+.popup-etymology-section {
+  width: 100%;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid t.$color-border-bold;
+
+  @include dark { border-bottom-color: t.$color-border-bold-dark; }
+}
+
+.popup-etymology-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #444;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+
+  @include dark { color: #aaa; }
+}
+
+.popup-etymology-characters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.popup-etymology-character {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 12px;
+  background: t.$color-surface-alt;
+  border-radius: 6px;
+  border: 1px solid t.$color-border-muted;
+  overflow: hidden;
+
+  @include dark {
+    background: t.$color-surface-alt-dark;
+    border-color: t.$color-border-muted-dark;
+  }
+}
+
+.popup-etymology-char {
+  font-size: 28px;
+  font-weight: bold;
+  color: t.$color-text-strong;
+  flex-shrink: 0;
+  line-height: 1.2;
+
+  @include dark { color: t.$color-text-strong-dark; }
+}
+
+.popup-etymology-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.popup-etymology-type {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: t.$color-text-subtle;
+
+  @include dark { color: #777; }
+}
+
+.popup-etymology-hint {
+  font-size: 12px;
+  color: t.$color-text;
+  line-height: 1.4;
+  font-style: italic;
+
+  @include dark { color: t.$color-text-muted-dark; }
+}
+
+.popup-etymology-components {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.popup-etymology-component {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 7px;
+  background: #e4e4e4;
+  border-radius: 4px;
+  white-space: nowrap;
+  max-width: 100%;
+
+  @include dark { background: #585858; }
+}
+
+.popup-etymology-component-glyph {
+  font-size: 15px;
+  font-weight: 500;
+  color: t.$color-text-strong;
+
+  @include dark { color: #e8e8e8; }
+}
+
+.popup-etymology-component-def {
+  font-size: 11px;
+  color: t.$color-text-muted;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+
+  @include dark { color: #aaa; }
+}
+
+.popup-etymology-component-role--meaning {
+  font-size: 10px;
+  font-weight: 600;
+  color: t.$color-meaning;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+
+  @include dark { color: t.$color-meaning-dark; }
+}
+
+.popup-etymology-component-role--sound {
+  font-size: 10px;
+  font-weight: 600;
+  color: t.$color-sound;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+
+  @include dark { color: t.$color-sound-dark; }
+}

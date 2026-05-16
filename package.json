@@ -39,6 +39,7 @@
     "happy-dom": "^15.11.7",
     "husky": "^9.1.7",
     "puppeteer": "^24.37.5",
+    "sass": "^1.99.0",
     "sharp": "^0.34.5",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.58.2",

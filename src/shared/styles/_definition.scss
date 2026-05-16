@@ -1,0 +1,82 @@
+@use 'tokens' as t;
+@use 'dark-mode' as *;
+
+.definition-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.definition-word {
+  font-size: 24px;
+  font-weight: bold;
+  color: t.$color-text-strong;
+  text-align: center;
+  padding-bottom: 12px;
+  border-bottom: 2px solid t.$color-border-bold;
+
+  @include dark {
+    color: t.$color-text-strong-dark;
+    border-bottom-color: t.$color-border-bold-dark;
+  }
+}
+
+.definition-sections {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
+.definition-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.definition-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: t.$color-text-faint;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+
+  @include dark { color: #aaa; }
+}
+
+.definition-pinyin,
+.definition-jyutping {
+  font-size: 16px;
+  color: t.$color-primary;
+  font-weight: 500;
+  margin-bottom: 6px;
+  font-family: t.$font-romanisation;
+
+  @include dark { color: t.$color-primary-dark; }
+}
+
+.definition-text {
+  font-size: 13px;
+  color: t.$color-text-muted;
+  line-height: 1.6;
+  list-style-type: disc;
+  padding-left: 18px;
+  margin: 0;
+
+  @include dark { color: t.$color-text-muted-dark; }
+}
+
+.pronunciation-group {
+  margin-bottom: 12px;
+}
+
+.pronunciation-group:last-child {
+  margin-bottom: 0;
+}
+
+.definition-item {
+  margin-bottom: 4px;
+}
+
+.definition-item:last-child {
+  margin-bottom: 0;
+}
