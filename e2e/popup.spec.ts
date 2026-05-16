@@ -10,6 +10,7 @@ const EXTENSION_PATH = path.resolve(process.cwd(), 'dist');
 const PAGE_HTML = `<!doctype html><html><head><meta charset="utf-8"><title>zh</title></head>
 <body style="font-size:48px;line-height:2;padding:80px">
 <p id="zh">你好世界</p>
+<p id="away" style="margin-top:200px">english only no han here</p>
 </body></html>`;
 
 let context: BrowserContext;
@@ -77,9 +78,18 @@ test('moving the mouse away hides the popup', async () => {
   await page.mouse.move(box.x + 12, box.y + box.height / 2);
   await expect(page.locator('#chinese-hover-popup')).toBeVisible({ timeout: 15000 });
 
-  // Move far away from any Chinese text
-  await page.mouse.move(5, 5);
-  await page.mouse.move(6, 6);
+  // Let any in-flight lookup settle: the lookup is an async message
+  // round-trip, so a still-pending response could otherwise re-create the
+  // popup right after we dismiss it (a race only reachable at machine speed,
+  // not human hover speed).
+  await page.waitForTimeout(1000);
+
+  // Move onto the non-Chinese paragraph. (A bare corner is not enough:
+  // caretRangeFromPoint snaps to the nearest text, so the cursor must be
+  // over real non-Han text to clear detection.) Popup node is removed.
+  const away = (await page.locator('#away').boundingBox())!;
+  await page.mouse.move(away.x + 10, away.y + away.height / 2);
+  await page.mouse.move(away.x + 14, away.y + away.height / 2);
   await expect(page.locator('#chinese-hover-popup')).toHaveCount(0, { timeout: 15000 });
 
   await page.close();
