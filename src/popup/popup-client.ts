@@ -8,21 +8,11 @@ export interface PopupClient {
 
 export class PopupMessageClient implements PopupClient {
   lookupWord(word: string, callback: (r: LookupResponse | ErrorResponse) => void): void {
-    sendMessage(
-      { type: 'lookup_word', word },
-      (r) => (r as { type?: string } | undefined)?.type === 'lookup_word',
-      'Lookup failed',
-      callback
-    );
+    sendMessage({ type: 'lookup_word', word }, callback);
   }
 
   trackWord(word: string, callback: (r: TrackWordResponse | ErrorResponse) => void): void {
-    sendMessage(
-      { type: 'track_word', word },
-      (r) => (r as { success?: boolean } | undefined)?.success === true,
-      'Tracking failed',
-      callback
-    );
+    sendMessage({ type: 'track_word', word }, callback);
   }
 }
 

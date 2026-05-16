@@ -8,9 +8,9 @@ export function mergeStatistics(syncStats: Statistics, localStats: Statistics): 
     const localStat = localStats[word];
     if (syncStat && localStat) {
       merged[word] = {
-        count: (syncStat.count ?? 0) + (localStat.count ?? 0),
-        firstSeen: Math.min(syncStat.firstSeen ?? Date.now(), localStat.firstSeen ?? Date.now()),
-        lastSeen: Math.max(syncStat.lastSeen ?? 0, localStat.lastSeen ?? 0)
+        count: syncStat.count + localStat.count,
+        firstSeen: Math.min(syncStat.firstSeen, localStat.firstSeen),
+        lastSeen: Math.max(syncStat.lastSeen, localStat.lastSeen)
       };
     }
   }

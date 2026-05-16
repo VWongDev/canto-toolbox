@@ -2,7 +2,7 @@
  * A map that automatically prunes to keep only the top N entries
  * by a numeric sort key when the limit is exceeded.
  */
-export class BoundedMap<K, V> {
+export class BoundedMap<K extends PropertyKey, V> {
   private readonly maxSize: number;
   private readonly getSortKey: (value: V) => number;
   private readonly entries: Map<K, V>;
@@ -33,8 +33,8 @@ export class BoundedMap<K, V> {
     return this.entries.size;
   }
 
-  toObject(): Record<string, V> {
-    return Object.fromEntries(this.entries) as Record<string, V>;
+  toObject(): Record<K, V> {
+    return Object.fromEntries(this.entries) as Record<K, V>;
   }
 
   [Symbol.iterator](): IterableIterator<[K, V]> {

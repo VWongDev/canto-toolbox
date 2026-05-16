@@ -86,3 +86,9 @@ export interface TrackWordResponse {
 }
 
 export type BackgroundResponse = LookupResponse | ErrorResponse | StatisticsResponse | TrackWordResponse;
+
+// Every non-error response carries a `type` that matches its request, so the
+// success response for a given message is derivable from the union — no
+// hand-written per-call validator needed.
+export type SuccessResponse = Exclude<BackgroundResponse, ErrorResponse>;
+export type ResponseFor<M extends BackgroundMessage> = Extract<SuccessResponse, { type: M['type'] }>;

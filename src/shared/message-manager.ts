@@ -1,19 +1,22 @@
-import type { BackgroundMessage, BackgroundResponse, ErrorResponse } from './types';
+import type { BackgroundMessage, BackgroundResponse, ErrorResponse, ResponseFor } from './types';
 
-export function sendMessage<T extends BackgroundResponse>(
-  message: BackgroundMessage,
-  isValid: (r: unknown) => boolean,
-  defaultError: string,
-  callback: (response: T | ErrorResponse) => void
+function isSuccessFor(r: BackgroundResponse | undefined, type: BackgroundMessage['type']): boolean {
+  return r != null && r.success === true && r.type === type;
+}
+
+export function sendMessage<M extends BackgroundMessage>(
+  message: M,
+  callback: (response: ResponseFor<M> | ErrorResponse) => void,
+  defaultError = 'Request failed'
 ): void {
   chrome.runtime.sendMessage(message, (response: unknown) => {
-    if (chrome.runtime.lastError || !isValid(response)) {
-      const r = response as BackgroundResponse | undefined;
+    const r = response as BackgroundResponse | undefined;
+    if (chrome.runtime.lastError || !isSuccessFor(r, message.type)) {
       const error = chrome.runtime.lastError?.message
-        ?? (r != null && 'error' in r ? (r as ErrorResponse).error : defaultError);
+        ?? (r != null && 'error' in r ? r.error : defaultError);
       callback({ success: false, error });
       return;
     }
-    callback(response as T);
+    callback(r as ResponseFor<M>);
   });
 }

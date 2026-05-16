@@ -43,8 +43,10 @@ async function buildDictionaries(): Promise<void> {
         // byte-identical (stable diffs, cacheable). Entry arrays already
         // preserve deterministic source order.
         const sorted: Record<string, unknown> = {};
-        for (const key of Object.keys(dict).sort()) {
-          sorted[key] = (dict as Record<string, unknown>)[key];
+        // Default UTF-16 code-unit ordering (matches Array#sort) keeps output byte-identical.
+        const byKey = Object.entries(dict).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+        for (const [key, value] of byKey) {
+          sorted[key] = value;
         }
         writeFileSync(outputPath, JSON.stringify(sorted), 'utf-8');
         console.log(`[Build] Wrote ${name.charAt(0).toUpperCase() + name.slice(1)} dictionary: ${outputPath} (${Object.keys(dict).length} entries)`);

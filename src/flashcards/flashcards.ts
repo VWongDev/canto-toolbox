@@ -8,6 +8,28 @@ const MIN_COUNT = 2;
 
 type Rating = 'again' | 'hard' | 'good' | 'easy';
 
+const ELEMENT_IDS = {
+  progress: 'progress',
+  counter: 'counter',
+  cardFront: 'card-front',
+  cardBack: 'card-back',
+  showAnswerContainer: 'show-answer-btn-container',
+  ratingBtns: 'rating-btns',
+  card: 'card',
+  showAnswerBtn: 'show-answer-btn',
+  reviewAgainBtn: 'review-again-btn',
+  resultSummary: 'result-summary'
+} as const;
+
+const SCREEN_IDS = {
+  loading: 'loading',
+  emptyState: 'empty-state',
+  review: 'review',
+  finished: 'finished'
+} as const;
+
+type ScreenId = (typeof SCREEN_IDS)[keyof typeof SCREEN_IDS];
+
 function fisherYatesShuffle<T>(arr: T[]): T[] {
   const result = [...arr];
   for (let i = result.length - 1; i > 0; i--) {
@@ -61,23 +83,23 @@ export class FlashcardManager {
   }
 
   private showReviewScreen(): void {
-    this.setScreen('review');
+    this.setScreen(SCREEN_IDS.review);
   }
 
   private showEmpty(): void {
-    this.setScreen('empty-state');
+    this.setScreen(SCREEN_IDS.emptyState);
   }
 
   private showFinished(): void {
-    this.setScreen('finished');
-    const summaryEl = this.document.getElementById('result-summary');
+    this.setScreen(SCREEN_IDS.finished);
+    const summaryEl = this.document.getElementById(ELEMENT_IDS.resultSummary);
     if (summaryEl) {
       summaryEl.textContent = `${this.correctCount} / ${this.totalCount} correct`;
     }
   }
 
-  private setScreen(id: string): void {
-    ['loading', 'empty-state', 'review', 'finished'].forEach(screenId => {
+  private setScreen(id: ScreenId): void {
+    Object.values(SCREEN_IDS).forEach(screenId => {
       const el = this.document.getElementById(screenId);
       if (el) el.style.display = screenId === id ? '' : 'none';
     });
@@ -97,8 +119,8 @@ export class FlashcardManager {
   }
 
   private updateProgress(done: number, total: number): void {
-    const progressEl = this.document.getElementById('progress') as HTMLElement | null;
-    const counterEl = this.document.getElementById('counter');
+    const progressEl = this.document.getElementById(ELEMENT_IDS.progress);
+    const counterEl = this.document.getElementById(ELEMENT_IDS.counter);
     if (progressEl) {
       progressEl.style.width = total > 0 ? `${(done / total) * 100}%` : '0%';
     }
@@ -108,10 +130,10 @@ export class FlashcardManager {
   }
 
   private showFront(word: string): void {
-    const cardFront = this.document.getElementById('card-front');
-    const cardBack = this.document.getElementById('card-back');
-    const showAnswerContainer = this.document.getElementById('show-answer-btn-container');
-    const ratingBtns = this.document.getElementById('rating-btns');
+    const cardFront = this.document.getElementById(ELEMENT_IDS.cardFront);
+    const cardBack = this.document.getElementById(ELEMENT_IDS.cardBack);
+    const showAnswerContainer = this.document.getElementById(ELEMENT_IDS.showAnswerContainer);
+    const ratingBtns = this.document.getElementById(ELEMENT_IDS.ratingBtns);
 
     if (cardFront) {
       cardFront.replaceChildren();
@@ -127,14 +149,14 @@ export class FlashcardManager {
     if (showAnswerContainer) showAnswerContainer.style.display = '';
     if (ratingBtns) ratingBtns.style.display = 'none';
 
-    const card = this.document.getElementById('card');
+    const card = this.document.getElementById(ELEMENT_IDS.card);
     if (card) card.dataset.currentWord = word;
   }
 
   private showBack(word: string, definition: DefinitionResult): void {
-    const cardBack = this.document.getElementById('card-back');
-    const showAnswerContainer = this.document.getElementById('show-answer-btn-container');
-    const ratingBtns = this.document.getElementById('rating-btns');
+    const cardBack = this.document.getElementById(ELEMENT_IDS.cardBack);
+    const showAnswerContainer = this.document.getElementById(ELEMENT_IDS.showAnswerContainer);
+    const ratingBtns = this.document.getElementById(ELEMENT_IDS.ratingBtns);
 
     if (cardBack) {
       cardBack.replaceChildren();
@@ -146,20 +168,20 @@ export class FlashcardManager {
   }
 
   private setupShowAnswerButton(): void {
-    const btn = this.document.getElementById('show-answer-btn');
+    const btn = this.document.getElementById(ELEMENT_IDS.showAnswerBtn);
     if (!btn) return;
 
     btn.addEventListener('click', () => {
-      const card = this.document.getElementById('card');
+      const card = this.document.getElementById(ELEMENT_IDS.card);
       const word = card?.dataset.currentWord;
       if (!word) return;
 
-      const cardBack = this.document.getElementById('card-back');
+      const cardBack = this.document.getElementById(ELEMENT_IDS.cardBack);
       if (cardBack) {
         cardBack.textContent = 'Loading...';
         cardBack.style.display = '';
       }
-      const showAnswerContainer = this.document.getElementById('show-answer-btn-container');
+      const showAnswerContainer = this.document.getElementById(ELEMENT_IDS.showAnswerContainer);
       if (showAnswerContainer) showAnswerContainer.style.display = 'none';
 
       this.client.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
@@ -170,7 +192,7 @@ export class FlashcardManager {
               createElement({ className: 'flashcard-error', textContent: 'Definition not found' })
             );
           }
-          const ratingBtns = this.document.getElementById('rating-btns');
+          const ratingBtns = this.document.getElementById(ELEMENT_IDS.ratingBtns);
           if (ratingBtns) ratingBtns.style.display = '';
           return;
         }
@@ -180,19 +202,19 @@ export class FlashcardManager {
   }
 
   private setupRatingButtons(): void {
-    const ratingBtns = this.document.getElementById('rating-btns');
+    const ratingBtns = this.document.getElementById(ELEMENT_IDS.ratingBtns);
     if (!ratingBtns) return;
 
     ratingBtns.addEventListener('click', (e: Event) => {
-      const target = e.target as HTMLElement;
-      const rating = target.dataset.rating as Rating | undefined;
+      if (!(e.target instanceof HTMLElement)) return;
+      const rating = e.target.dataset.rating as Rating | undefined;
       if (!rating) return;
       this.rate(rating);
     });
   }
 
   private rate(rating: Rating): void {
-    const card = this.document.getElementById('card');
+    const card = this.document.getElementById(ELEMENT_IDS.card);
     const word = card?.dataset.currentWord;
     if (!word) return;
 
@@ -206,7 +228,7 @@ export class FlashcardManager {
   }
 
   private setupReviewAgainButton(): void {
-    const btn = this.document.getElementById('review-again-btn');
+    const btn = this.document.getElementById(ELEMENT_IDS.reviewAgainBtn);
     if (!btn) return;
 
     btn.addEventListener('click', () => {

@@ -71,10 +71,10 @@ describe('popup background-handler register()', () => {
     listener({ type: 'lookup_word', word: '好' }, {}, sendResponse);
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
-    expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'Dictionary failed to load' });
+    expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'Dictionary failed to load', errorName: 'Error' });
   });
 
-  it('tracks a track_word message synchronously', () => {
+  it('tracks a track_word message', async () => {
     const listener = registerAndGetListener();
     const sendResponse = vi.fn();
 
@@ -82,6 +82,7 @@ describe('popup background-handler register()', () => {
 
     expect(keptOpen).toBe(true);
     expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝');
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
     expect(sendResponse).toHaveBeenCalledWith({ success: true, type: 'track_word' });
   });
 
