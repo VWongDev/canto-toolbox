@@ -1,3 +1,4 @@
+import { RedundantStore } from '../shared/redundant-store.js';
 import { StorageManager } from '../shared/storage-manager.js';
 import { mergeStatistics } from '../shared/statistics-utils.js';
 import type { Statistics } from '../shared/types';
@@ -9,17 +10,15 @@ export interface StatsStorage {
 }
 
 export class StatsStorageClient implements StatsStorage {
-  constructor(private readonly manager: StorageManager) {}
+  constructor(private readonly store: RedundantStore) {}
 
   async getStatistics(): Promise<Statistics> {
-    const [sync, local] = await Promise.all([
-      this.manager.readSync(STORAGE_KEY),
-      this.manager.readLocal(STORAGE_KEY),
-    ]);
-    return mergeStatistics((sync as Statistics) ?? {}, (local as Statistics) ?? {});
+    return this.store.read<Statistics>(STORAGE_KEY, (sync, local) =>
+      mergeStatistics(sync ?? {}, local ?? {})
+    );
   }
 }
 
 export const statsStorage = new StatsStorageClient(
-  new StorageManager(chrome.storage.sync, chrome.storage.local)
+  new RedundantStore(new StorageManager(chrome.storage.sync, chrome.storage.local))
 );

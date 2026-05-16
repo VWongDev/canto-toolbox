@@ -1,3 +1,4 @@
+import { RedundantStore } from '../shared/redundant-store.js';
 import { StorageManager } from '../shared/storage-manager.js';
 import { createBatchedDebounce } from '../shared/debounce.js';
 import { BoundedMap } from '../shared/bounded-map.js';
@@ -14,7 +15,7 @@ export interface PopupStorage {
 export class PopupStorageClient implements PopupStorage {
   private readonly queueUpdate: (word: string) => void;
 
-  constructor(private readonly manager: StorageManager) {
+  constructor(private readonly store: RedundantStore) {
     this.queueUpdate = createBatchedDebounce(
       (updates) => this.flushUpdates(updates),
       DEBOUNCE_DELAY
@@ -30,45 +31,26 @@ export class PopupStorageClient implements PopupStorage {
   }
 
   private async flushUpdates(updates: Map<string, number>): Promise<void> {
-    try {
-      await this.writeToArea('sync', updates);
-    } catch (error) {
-      console.error('[Background] Failed to update statistics in sync storage:', error);
-      try {
-        await this.writeToArea('local', updates);
-      } catch (localError) {
-        console.error('[Background] Failed to update local statistics:', localError);
+    await this.store.mutate<Statistics>(STORAGE_KEY, (existing) => {
+      const now = Date.now();
+      const stats = new BoundedMap<string, Statistics[string]>(
+        MAX_WORDS,
+        (entry) => entry.count,
+        Object.entries(existing ?? {})
+      );
+
+      for (const [word, count] of updates) {
+        const entry = stats.get(word) ?? { count: 0, firstSeen: now, lastSeen: now };
+        entry.count += count;
+        entry.lastSeen = now;
+        stats.set(word, entry);
       }
-    }
-  }
 
-  private async writeToArea(area: 'sync' | 'local', updates: Map<string, number>): Promise<void> {
-    const existing = (area === 'sync'
-      ? await this.manager.readSync(STORAGE_KEY)
-      : await this.manager.readLocal(STORAGE_KEY)) as Statistics ?? {};
-
-    const now = Date.now();
-    const stats = new BoundedMap<string, Statistics[string]>(
-      MAX_WORDS,
-      (entry) => entry.count,
-      Object.entries(existing)
-    );
-
-    for (const [word, count] of updates) {
-      const entry = stats.get(word) ?? { count: 0, firstSeen: now, lastSeen: now };
-      entry.count += count;
-      entry.lastSeen = now;
-      stats.set(word, entry);
-    }
-
-    if (area === 'sync') {
-      await this.manager.writeSync(STORAGE_KEY, stats.toObject());
-    } else {
-      await this.manager.writeLocal(STORAGE_KEY, stats.toObject());
-    }
+      return stats.toObject();
+    });
   }
 }
 
 export const popupStorage = new PopupStorageClient(
-  new StorageManager(chrome.storage.sync, chrome.storage.local)
+  new RedundantStore(new StorageManager(chrome.storage.sync, chrome.storage.local))
 );
