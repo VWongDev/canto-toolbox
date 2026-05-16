@@ -58,6 +58,10 @@ export class ChineseHoverPopupManager {
     this.document.removeEventListener('mousemove', this.boundMouseMove, true);
     this.document.removeEventListener('mouseout', this.boundMouseOut, true);
     this.document.removeEventListener('mouseup', this.boundMouseUp, true);
+    if (this.mousemoveThrottle !== null) {
+      cancelAnimationFrame(this.mousemoveThrottle);
+      this.mousemoveThrottle = null;
+    }
     this.hidePopup();
   }
 
