@@ -8,6 +8,7 @@ public/data/cantonese.json
 public/data/etymology.json
 build-tools/dist/
 scripts/dist/
+coverage/
 
 # Build artifacts
 *.tsbuildinfo

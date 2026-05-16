@@ -35,6 +35,10 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Coverage (non-blocking)
+        continue-on-error: true
+        run: pnpm test:coverage
+
   e2e:
     runs-on: ubuntu-latest
     steps:
