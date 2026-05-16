@@ -2,8 +2,9 @@ import type { DefinitionResult, LookupResponse, ErrorResponse } from '../shared/
 import { createElement } from '../shared/dom-element.js';
 import { popupClient, type PopupClient } from './popup-client.js';
 import popupStyles from './popup.scss?inline';
-import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';
+import type { PronunciationSectionConfig } from '../shared/pronunciation-section.js';
 import { createEtymologySection } from '../shared/etymology-section.js';
+import { createMandarinSection, createCantoneseSection } from '../shared/definition-section.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
 const MAX_WORD_LENGTH = 4;
@@ -236,8 +237,8 @@ export class ChineseHoverPopupManager {
     popup.appendChild(createElement({
       className: 'popup-sections-container',
       children: [
-        createMandarinSection(definition.mandarin),
-        createCantoneseSection(definition.cantonese)
+        createMandarinSection(definition.mandarin, popupPronunciationConfig),
+        createCantoneseSection(definition.cantonese, popupPronunciationConfig)
       ]
     }));
 
@@ -369,22 +370,6 @@ const popupPronunciationConfig: PronunciationSectionConfig = {
   groupClassName: 'popup-pronunciation-group',
   createDefinitionElement: createPopupDefinitionElement
 };
-
-function createPronunciationSectionForPopup(
-  data: DefinitionResult['mandarin'] | DefinitionResult['cantonese'],
-  label: string,
-  pronunciationKey: 'pinyin' | 'jyutping'
-): HTMLElement {
-  return createPronunciationSection(data, label, pronunciationKey, popupPronunciationConfig);
-}
-
-function createMandarinSection(mandarinData: DefinitionResult['mandarin']): HTMLElement {
-  return createPronunciationSectionForPopup(mandarinData, 'Mandarin', 'pinyin');
-}
-
-function createCantoneseSection(cantoneseData: DefinitionResult['cantonese']): HTMLElement {
-  return createPronunciationSectionForPopup(cantoneseData, 'Cantonese', 'jyutping');
-}
 
 function calculatePopupPosition(x: number, y: number, popupRect: DOMRect): { left: number; top: number } {
   const viewportWidth = window.innerWidth;
