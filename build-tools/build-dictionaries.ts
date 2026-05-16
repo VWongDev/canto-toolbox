@@ -39,7 +39,14 @@ async function buildDictionaries(): Promise<void> {
       try {
         const dict = await processor();
         const outputPath = join(outputDir, `${name}.json`);
-        writeFileSync(outputPath, JSON.stringify(dict), 'utf-8');
+        // Serialise with sorted top-level keys so repeated builds are
+        // byte-identical (stable diffs, cacheable). Entry arrays already
+        // preserve deterministic source order.
+        const sorted: Record<string, unknown> = {};
+        for (const key of Object.keys(dict).sort()) {
+          sorted[key] = (dict as Record<string, unknown>)[key];
+        }
+        writeFileSync(outputPath, JSON.stringify(sorted), 'utf-8');
         console.log(`[Build] Wrote ${name.charAt(0).toUpperCase() + name.slice(1)} dictionary: ${outputPath} (${Object.keys(dict).length} entries)`);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
