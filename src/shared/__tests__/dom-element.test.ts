@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from 'vitest';
-import { createElement, clearElement } from '../dom-element.js';
+import { createElement } from '../dom-element.js';
 
 describe('createElement', () => {
   it('creates a div by default', () => {
@@ -76,21 +76,5 @@ describe('createElement', () => {
   it('returns the correct generic type', () => {
     const el = createElement<HTMLButtonElement>({ tag: 'button' });
     expect(el.tagName).toBe('BUTTON');
-  });
-});
-
-describe('clearElement', () => {
-  it('removes all child nodes', () => {
-    const el = document.createElement('div');
-    el.appendChild(document.createElement('span'));
-    el.appendChild(document.createElement('p'));
-    clearElement(el);
-    expect(el.childNodes.length).toBe(0);
-  });
-
-  it('is a no-op on an already-empty element', () => {
-    const el = document.createElement('div');
-    expect(() => clearElement(el)).not.toThrow();
-    expect(el.childNodes.length).toBe(0);
   });
 });

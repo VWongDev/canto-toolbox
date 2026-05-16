@@ -115,9 +115,3 @@ export function createElement<T extends HTMLElement = HTMLElement>(
 
   return element;
 }
-
-export function clearElement(element: HTMLElement): void {
-  while (element.firstChild) {
-    element.removeChild(element.firstChild);
-  }
-}

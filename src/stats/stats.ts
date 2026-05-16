@@ -1,5 +1,5 @@
 import type { DefinitionResult, StatisticsResponse, WordStatistics, LookupResponse, ErrorResponse } from '../shared/types.js';
-import { createElement, clearElement } from '../shared/dom-element.js';
+import { createElement } from '../shared/dom-element.js';
 import { statsClient, type StatsClient } from './stats-client.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';
 import { createEtymologySection } from '../shared/etymology-section.js';
@@ -91,7 +91,7 @@ export class StatsManager {
       wordCountEl.textContent = `${words.length} ${words.length === 1 ? 'word' : 'words'} tracked`;
 
       const sortedWords = sortWordsByCount(words, statistics);
-      clearElement(statsListEl);
+      statsListEl.replaceChildren();
 
       sortedWords.forEach(word => {
         const stat = statistics[word];
@@ -184,7 +184,7 @@ export class StatsManager {
   }
 
   private handleDefinitionResponse(response: LookupResponse | ErrorResponse | undefined, container: HTMLElement, word: string): void {
-    clearElement(container);
+    container.replaceChildren();
 
     if (!response || !response.success || !response.definition) {
       container.appendChild(createElement({
@@ -200,7 +200,7 @@ export class StatsManager {
   }
 
   private loadDefinition(word: string, container: HTMLElement): void {
-    clearElement(container);
+    container.replaceChildren();
 
     const loadingEl = createElement({
       className: 'stat-loading',
