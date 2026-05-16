@@ -1,61 +1,12 @@
 import type { DefinitionResult, StatisticsResponse, LookupResponse, ErrorResponse } from '../shared/types.js';
 import { createElement } from '../shared/dom-element.js';
 import { flashcardClient, type FlashcardClient } from './flashcard-client.js';
-import { createPronunciationSection, type PronunciationSectionConfig } from '../shared/pronunciation-section.js';
-import { createEtymologySection } from '../shared/etymology-section.js';
+import { createDefinitionElement } from '../shared/definition-section.js';
 
 const MAX_CARDS = 20;
 const MIN_COUNT = 2;
 
 type Rating = 'again' | 'hard' | 'good' | 'easy';
-
-const flashcardsPronunciationConfig: PronunciationSectionConfig = {
-  sectionClassName: 'definition-section',
-  labelClassName: 'definition-label',
-  pronunciationClassName: (key) => `definition-${key}`,
-  groupClassName: 'pronunciation-group',
-  createDefinitionElement: (defs) => createDefinitionTextElement(defs),
-  showDefinitionIfEmpty: (key) => key === 'pinyin'
-};
-
-function createDefinitionTextElement(definitions: string[] | undefined): HTMLElement {
-  const defs = definitions && definitions.length > 0 ? definitions : ['Not found'];
-  return createElement({
-    tag: 'ul',
-    className: 'definition-text',
-    children: defs.map(def =>
-      createElement({ tag: 'li', className: 'definition-item', textContent: def })
-    )
-  });
-}
-
-function createDefinitionElement(word: string, definition: DefinitionResult): HTMLElement {
-  const displayWord = definition.word || word;
-
-  const children: HTMLElement[] = [
-    createElement({
-      className: 'definition-word',
-      textContent: displayWord
-    })
-  ];
-
-  if (definition.etymology?.length) {
-    children.push(createEtymologySection(definition.etymology));
-  }
-
-  children.push(createElement({
-    className: 'definition-sections',
-    children: [
-      createPronunciationSection(definition.mandarin, 'Mandarin', 'pinyin', flashcardsPronunciationConfig),
-      createPronunciationSection(definition.cantonese, 'Cantonese', 'jyutping', flashcardsPronunciationConfig)
-    ]
-  }));
-
-  return createElement({
-    className: 'definition-container',
-    children
-  });
-}
 
 function fisherYatesShuffle<T>(arr: T[]): T[] {
   const result = [...arr];
