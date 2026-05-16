@@ -1,20 +1,16 @@
-import type { StatisticsResponse, WordStatistics, LookupResponse, ErrorResponse } from '../shared/types.js';
-import { createElement } from '../shared/dom-element.js';
+import type { StatisticsResponse, LookupResponse, ErrorResponse } from '../shared/types.js';
 import { statsClient, type StatsClient } from './stats-client.js';
-import { createDefinitionElement } from '../shared/definition-section.js';
-
-const ELEMENT_IDS = {
-  loading: 'loading',
-  emptyState: 'empty-state',
-  statsList: 'stats-list',
-  wordCount: 'word-count',
-  clearBtn: 'clear-btn',
-  flashcardBtn: 'flashcard-btn'
-} as const;
+import {
+  ELEMENT_IDS,
+  getRequiredElements,
+  showError,
+  renderStatistics,
+  renderDefinitionLoading,
+  renderDefinition,
+  type StatsElements
+} from './stats-view.js';
 
 const STORAGE_KEY = 'wordStatistics';
-const EXPAND_ICON_COLLAPSED = '▶';
-const EXPAND_ICON_EXPANDED = '▼';
 
 export class StatsManager {
   private readonly document: Document;
@@ -33,76 +29,8 @@ export class StatsManager {
     this.setupFlashcardButton();
   }
 
-  private getRequiredElements() {
-    const loadingEl = this.document.getElementById(ELEMENT_IDS.loading);
-    const emptyStateEl = this.document.getElementById(ELEMENT_IDS.emptyState);
-    const statsListEl = this.document.getElementById(ELEMENT_IDS.statsList);
-    const wordCountEl = this.document.getElementById(ELEMENT_IDS.wordCount);
-
-    if (!loadingEl || !emptyStateEl || !statsListEl || !wordCountEl) {
-      console.error('[Stats] Required DOM elements not found!', { loadingEl, emptyStateEl, statsListEl, wordCountEl });
-      return null;
-    }
-
-    return { loadingEl, emptyStateEl, statsListEl, wordCountEl };
-  }
-
-  private showError(loadingEl: HTMLElement, message: string): void {
-    loadingEl.textContent = message;
-    loadingEl.style.color = '#dc3545';
-  }
-
-  private handleStatisticsResponse(response: StatisticsResponse | ErrorResponse | undefined, elements: ReturnType<typeof this.getRequiredElements>): void {
-    if (!elements) return;
-
-    const { loadingEl } = elements;
-
-    if (!response) {
-      console.error('[Stats] No response received');
-      this.showError(loadingEl, 'No response from background script. Please try again.');
-      return;
-    }
-
-    if (!response.success) {
-      console.error('[Stats] Failed to load statistics:', response);
-      this.showError(loadingEl, 'Failed to load statistics: ' + response.error);
-      return;
-    }
-
-    this.displayStatistics(response.statistics, elements);
-  }
-
-  private displayStatistics(statistics: Record<string, WordStatistics>, elements: ReturnType<typeof this.getRequiredElements>): void {
-    if (!elements) return;
-
-    const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
-    const words = Object.keys(statistics);
-
-    loadingEl.style.display = 'none';
-
-    if (words.length === 0) {
-      emptyStateEl.style.display = 'block';
-      statsListEl.style.display = 'none';
-      wordCountEl.textContent = '0 words tracked';
-    } else {
-      emptyStateEl.style.display = 'none';
-      statsListEl.style.display = 'flex';
-      wordCountEl.textContent = `${words.length} ${words.length === 1 ? 'word' : 'words'} tracked`;
-
-      const sortedWords = sortWordsByCount(words, statistics);
-      statsListEl.replaceChildren();
-
-      sortedWords.forEach(word => {
-        const stat = statistics[word];
-        if (!stat) return;
-        const item = this.createStatItem(word, stat);
-        statsListEl.appendChild(item);
-      });
-    }
-  }
-
   private loadStatistics(): void {
-    const elements = this.getRequiredElements();
+    const elements = getRequiredElements(this.document);
     if (!elements) return;
 
     this.client.getStatistics((response: StatisticsResponse | ErrorResponse) => {
@@ -110,106 +38,33 @@ export class StatsManager {
     });
   }
 
-  private createStatItem(word: string, stat: WordStatistics): HTMLElement {
-    const item = createElement({
-      className: 'stat-item',
-      dataset: { word }
-    });
+  private handleStatisticsResponse(
+    response: StatisticsResponse | ErrorResponse | undefined,
+    elements: StatsElements
+  ): void {
+    const { loadingEl } = elements;
 
-    const header = createElement({
-      className: 'stat-header',
-      style: { cursor: 'pointer' }
-    });
-
-    const wordEl = createElement({
-      className: 'stat-word',
-      textContent: word
-    });
-
-    const expandIcon = createElement({
-      className: 'stat-expand-icon',
-      textContent: EXPAND_ICON_COLLAPSED
-    });
-
-    const detailsEl = createElement({
-      className: 'stat-details',
-      children: [
-        createElement({
-          className: 'stat-count',
-          textContent: String(stat.count || 0)
-        }),
-        createElement({
-          className: 'stat-label',
-          textContent: 'Hover Count'
-        }),
-        expandIcon
-      ]
-    });
-
-    header.appendChild(wordEl);
-    header.appendChild(detailsEl);
-
-    const expandedContent = createElement({
-      className: 'stat-expanded',
-      style: { display: 'none' }
-    });
-
-    item.appendChild(header);
-    item.appendChild(expandedContent);
-
-    header.addEventListener('click', () => {
-      this.toggleExpansion(item, word, expandedContent, expandIcon);
-    });
-
-    return item;
-  }
-
-  private toggleExpansion(item: HTMLElement, word: string, expandedContent: HTMLElement, expandIcon: HTMLElement): void {
-    const isExpanded = expandedContent.style.display !== 'none';
-
-    if (isExpanded) {
-      expandedContent.style.display = 'none';
-      expandIcon.textContent = EXPAND_ICON_COLLAPSED;
-      item.classList.remove('expanded');
-    } else {
-      if (!expandedContent.dataset.loaded) {
-        this.loadDefinition(word, expandedContent);
-      } else {
-        expandedContent.style.display = 'block';
-      }
-      expandIcon.textContent = EXPAND_ICON_EXPANDED;
-      item.classList.add('expanded');
-    }
-  }
-
-  private handleDefinitionResponse(response: LookupResponse | ErrorResponse | undefined, container: HTMLElement, word: string): void {
-    container.replaceChildren();
-
-    if (!response || !response.success || !response.definition) {
-      container.appendChild(createElement({
-        className: 'stat-error',
-        textContent: 'Something went wrong'
-      }));
+    if (!response) {
+      console.error('[Stats] No response received');
+      showError(loadingEl, 'No response from background script. Please try again.');
       return;
     }
 
-    const definitionEl = createDefinitionElement(word, response.definition);
-    container.appendChild(definitionEl);
-    container.dataset.loaded = 'true';
+    if (!response.success) {
+      console.error('[Stats] Failed to load statistics:', response);
+      showError(loadingEl, 'Failed to load statistics: ' + response.error);
+      return;
+    }
+
+    renderStatistics(response.statistics, elements, (word, container) => {
+      this.loadDefinition(word, container);
+    });
   }
 
   private loadDefinition(word: string, container: HTMLElement): void {
-    container.replaceChildren();
-
-    const loadingEl = createElement({
-      className: 'stat-loading',
-      textContent: 'Loading definition...'
-    });
-    container.appendChild(loadingEl);
-    container.style.display = 'block';
-
+    renderDefinitionLoading(container);
     this.client.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
-      this.handleDefinitionResponse(response, container, word);
+      renderDefinition(container, response, word);
     });
   }
 
@@ -256,12 +111,4 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => statsManager.init());
 } else {
   statsManager.init();
-}
-
-function sortWordsByCount(words: string[], statistics: Record<string, WordStatistics>): string[] {
-  return words.sort((a, b) => {
-    const countA = statistics[a]?.count ?? 0;
-    const countB = statistics[b]?.count ?? 0;
-    return countB - countA;
-  });
 }
