@@ -93,12 +93,18 @@ This runs `tsc --noEmit` against all source files in `src/` and `build-tools/`. 
 
 ## Testing
 
-There are no automated tests for the extension itself. Verification is manual:
+The extension has automated coverage. See @.claude/docs/testing.md for the full
+guide.
 
-1. Build and load the extension (see above)
-2. Navigate to a page with Chinese text
-3. Hover over Chinese characters — a popup should appear with Mandarin/Cantonese definitions
-4. Open the Stats page via the extension popup to verify statistics are being tracked
+```sh
+pnpm test       # Vitest unit/integration suite
+pnpm test:e2e   # Playwright end-to-end (build the extension first)
+```
+
+Unit tests live in `__tests__/` directories beside their source. E2E specs are
+in `e2e/`. CI runs both. Manual verification in Chrome is an optional sanity
+check for UI-heavy changes (load the unpacked `dist/`, hover Chinese text, open
+the Stats page).
 
 ### Screenshot generation
 
