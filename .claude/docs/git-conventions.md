@@ -35,6 +35,7 @@ The domain specifies the area of the codebase affected:
 - `stats`: Statistics page
 - `dict`: Dictionary-related functionality
 - `api`: API integration
+- `agents`: Subagent definitions in `.claude/agents/`
 - `git`: Git configuration and conventions
 - `global`: Repository-wide changes
 
@@ -62,6 +63,7 @@ fix(build): Fix build path resolution and memory limit
 ci(build): Add GitHub Actions workflow for automated builds
 ai(git): Add ci commit type and build domain to git conventions
 ai(global): Add agent documentation files
+ai(agents): Add doc-reviewer subagent
 ```
 
 ## Branch Naming
