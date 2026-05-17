@@ -15,6 +15,23 @@ Run `pnpm build` to build the extension. See @.claude/docs/dev-workflow.md for t
 - Run `pnpm typecheck` to verify type correctness without a full build
 - Run `pnpm lint` to check for lint errors before committing
 
+## Verifying Changes
+This project has automated coverage — do not assume verification is manual.
+
+- `pnpm test` — Vitest unit/integration suite (run after every code change)
+- `pnpm test:e2e` — Playwright end-to-end (build the extension first)
+- The Playwright MCP server (`.mcp.json`) is available to drive the browser
+  interactively when debugging UI behaviour
+
+See @.claude/docs/testing.md for the full guide.
+
+## Specialised Agents
+Prefer these subagents for their areas:
+
+- `domain-reviewer` — run after refactors or cross-domain imports to check
+  `src/` domain boundaries
+- `dict-inspector` — for `build-tools/` and dictionary-pipeline questions
+
 ## Git Commits
 All commits must follow the `type(domain): Description` format. Read and follow @.claude/docs/git-conventions.md exactly.
 
