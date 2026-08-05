@@ -54,13 +54,14 @@ export function createCantoneseSection(
 export function createDefinitionElement(
   word: string,
   definition: DefinitionResult,
-  config: PronunciationSectionConfig = definitionPronunciationConfig
+  config: PronunciationSectionConfig = definitionPronunciationConfig,
+  showWord = true,
 ): HTMLElement {
   const displayWord = definition.word || word;
 
-  const children: HTMLElement[] = [
-    createElement({ className: 'definition-word', textContent: displayWord })
-  ];
+  const children: HTMLElement[] = showWord
+    ? [createElement({ className: 'definition-word', textContent: displayWord })]
+    : [];
 
   if (definition.etymology?.length) {
     children.push(createEtymologySection(definition.etymology));
