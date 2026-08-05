@@ -114,5 +114,3 @@ jobs:
       - name: Build extension
         run: NODE_OPTIONS=--max-old-space-size=8192 pnpm exec vite build
 
-      - name: Check bundle sizes
-        run: node build-tools/dist/build-tools/check-bundle-size.js

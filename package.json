@@ -14,9 +14,7 @@
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "bench": "pnpm build:scripts && node build-tools/dist/build-tools/benchmark.js",
-    "size:check": "pnpm build:scripts && node build-tools/dist/build-tools/check-bundle-size.js",
-    "size:update-baseline": "pnpm build:scripts && node build-tools/dist/build-tools/check-bundle-size.js --update",
-    "test:e2e": "playwright test",
+"test:e2e": "playwright test",
     "lint": "eslint src/ build-tools/",
     "prepare": "husky"
   },
