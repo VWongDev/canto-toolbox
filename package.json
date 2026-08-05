@@ -1,6 +1,6 @@
 {
   "name": "canto-toolbox",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Hover over Chinese words to see definitions in Mandarin and Cantonese with pronunciations",
   "type": "module",
   "scripts": {
@@ -14,7 +14,7 @@
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "bench": "pnpm build:scripts && node build-tools/dist/build-tools/benchmark.js",
-"test:e2e": "playwright test",
+    "test:e2e": "playwright test",
     "lint": "eslint src/ build-tools/",
     "prepare": "husky"
   },
