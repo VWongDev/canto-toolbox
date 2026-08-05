@@ -25,10 +25,21 @@ export interface DictionaryEntry {
 
 export type Dictionary = Record<string, DictionaryEntry[]>;
 
+export type FlashcardRating = 'again' | 'hard' | 'good' | 'easy';
+export type FlashcardStage = 'new' | 'learning' | 'familiar' | 'mastered';
+
+export interface FlashcardProgress {
+  reviews: number;
+  consecutiveCorrect: number;
+  lastRating?: FlashcardRating;
+  lastReviewed?: number;
+}
+
 export interface WordStatistics {
   count: number;
   firstSeen: number;
   lastSeen: number;
+  flashcard?: FlashcardProgress;
 }
 
 export interface Statistics {
@@ -60,7 +71,13 @@ export interface GetStatisticsMessage {
   type: 'get_statistics';
 }
 
-export type BackgroundMessage = LookupMessage | TrackWordMessage | GetStatisticsMessage;
+export interface UpdateFlashcardMessage {
+  type: 'update_flashcard';
+  word: string;
+  rating: FlashcardRating;
+}
+
+export type BackgroundMessage = LookupMessage | TrackWordMessage | GetStatisticsMessage | UpdateFlashcardMessage;
 
 export interface LookupResponse {
   success: true;
@@ -85,7 +102,12 @@ export interface TrackWordResponse {
   type: 'track_word';
 }
 
-export type BackgroundResponse = LookupResponse | ErrorResponse | StatisticsResponse | TrackWordResponse;
+export interface UpdateFlashcardResponse {
+  success: true;
+  type: 'update_flashcard';
+}
+
+export type BackgroundResponse = LookupResponse | ErrorResponse | StatisticsResponse | TrackWordResponse | UpdateFlashcardResponse;
 
 // Every non-error response carries a `type` that matches its request, so the
 // success response for a given message is derivable from the union — no

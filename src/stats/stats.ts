@@ -1,4 +1,4 @@
-import type { StatisticsResponse, LookupResponse, ErrorResponse } from '../shared/types.js';
+import type { StatisticsResponse, LookupResponse, ErrorResponse, Statistics, FlashcardStage } from '../shared/types.js';
 import { statsClient, type StatsClient } from './stats-client.js';
 import {
   ELEMENT_IDS,
@@ -7,6 +7,8 @@ import {
   renderStatistics,
   renderDefinitionLoading,
   renderDefinition,
+  updateFilterCounts,
+  updateFilterTabStates,
   type StatsElements
 } from './stats-view.js';
 
@@ -16,6 +18,8 @@ export class StatsManager {
   private readonly document: Document;
   private readonly client: StatsClient;
   private readonly chromeStorage: typeof chrome.storage;
+  private cachedStatistics: Statistics | null = null;
+  private activeFilters: Set<FlashcardStage> = new Set();
 
   constructor(document: Document, client: StatsClient, chromeStorage: typeof chrome.storage) {
     this.document = document;
@@ -56,8 +60,35 @@ export class StatsManager {
       return;
     }
 
+    this.cachedStatistics = response.statistics;
+    updateFilterCounts(elements, response.statistics);
+    this.setupFilterTabs(elements);
     renderStatistics(response.statistics, elements, (word, container) => {
       this.loadDefinition(word, container);
+    }, this.activeFilters);
+  }
+
+  private setupFilterTabs(elements: StatsElements): void {
+    elements.filterTabsEl.addEventListener('click', (e: Event) => {
+      if (!(e.target instanceof HTMLElement)) return;
+      const tab = e.target.closest('[data-stage]') as HTMLElement | null;
+      if (!tab) return;
+      const stage = tab.dataset.stage as FlashcardStage | undefined;
+      if (!stage) return;
+
+      if (this.activeFilters.has(stage)) {
+        this.activeFilters.delete(stage);
+      } else {
+        this.activeFilters.add(stage);
+      }
+
+      updateFilterTabStates(elements.filterTabsEl, this.activeFilters);
+
+      if (this.cachedStatistics) {
+        renderStatistics(this.cachedStatistics, elements, (word, container) => {
+          this.loadDefinition(word, container);
+        }, this.activeFilters);
+      }
     });
   }
 
@@ -71,6 +102,8 @@ export class StatsManager {
   private async clearStatistics(): Promise<void> {
     await this.chromeStorage.sync.set({ [STORAGE_KEY]: {} });
     await this.chromeStorage.local.set({ [STORAGE_KEY]: {} });
+    this.cachedStatistics = null;
+    this.activeFilters = new Set();
     this.loadStatistics();
   }
 

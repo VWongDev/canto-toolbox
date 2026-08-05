@@ -1,4 +1,5 @@
-import type { WordStatistics, LookupResponse, ErrorResponse } from '../shared/types.js';
+import type { FlashcardStage, WordStatistics, LookupResponse, ErrorResponse, Statistics } from '../shared/types.js';
+import { getFlashcardStage } from '../shared/statistics-utils.js';
 import { createElement } from '../shared/dom-element.js';
 import { createDefinitionElement } from '../shared/definition-section.js';
 
@@ -8,17 +9,26 @@ export const ELEMENT_IDS = {
   statsList: 'stats-list',
   wordCount: 'word-count',
   clearBtn: 'clear-btn',
-  flashcardBtn: 'flashcard-btn'
+  flashcardBtn: 'flashcard-btn',
+  filterTabs: 'filter-tabs',
 } as const;
 
 const EXPAND_ICON_COLLAPSED = '▶';
 const EXPAND_ICON_EXPANDED = '▼';
+
+const STAGE_LABELS: Record<FlashcardStage, string> = {
+  new: 'New',
+  learning: 'Learning',
+  familiar: 'Familiar',
+  mastered: 'Mastered',
+};
 
 export interface StatsElements {
   loadingEl: HTMLElement;
   emptyStateEl: HTMLElement;
   statsListEl: HTMLElement;
   wordCountEl: HTMLElement;
+  filterTabsEl: HTMLElement;
 }
 
 /** Lazily loads and renders a word's definition into its expanded container. */
@@ -29,13 +39,14 @@ export function getRequiredElements(document: Document): StatsElements | null {
   const emptyStateEl = document.getElementById(ELEMENT_IDS.emptyState);
   const statsListEl = document.getElementById(ELEMENT_IDS.statsList);
   const wordCountEl = document.getElementById(ELEMENT_IDS.wordCount);
+  const filterTabsEl = document.getElementById(ELEMENT_IDS.filterTabs);
 
-  if (!loadingEl || !emptyStateEl || !statsListEl || !wordCountEl) {
-    console.error('[Stats] Required DOM elements not found!', { loadingEl, emptyStateEl, statsListEl, wordCountEl });
+  if (!loadingEl || !emptyStateEl || !statsListEl || !wordCountEl || !filterTabsEl) {
+    console.error('[Stats] Required DOM elements not found!');
     return null;
   }
 
-  return { loadingEl, emptyStateEl, statsListEl, wordCountEl };
+  return { loadingEl, emptyStateEl, statsListEl, wordCountEl, filterTabsEl };
 }
 
 export function showError(loadingEl: HTMLElement, message: string): void {
@@ -43,28 +54,70 @@ export function showError(loadingEl: HTMLElement, message: string): void {
   loadingEl.style.color = '#dc3545';
 }
 
+export function updateFilterCounts(elements: StatsElements, statistics: Statistics): void {
+  const counts = { new: 0, learning: 0, familiar: 0, mastered: 0 };
+
+  for (const stat of Object.values(statistics)) {
+    counts[getFlashcardStage(stat)]++;
+  }
+
+  const entries: [string, number][] = [
+    ['new', counts.new],
+    ['learning', counts.learning],
+    ['familiar', counts.familiar],
+    ['mastered', counts.mastered],
+  ];
+
+  for (const [stage, count] of entries) {
+    const el = elements.filterTabsEl.querySelector(`#count-${stage}`);
+    if (el) el.textContent = String(count);
+  }
+}
+
+export function updateFilterTabStates(filterTabsEl: HTMLElement, activeFilters: Set<FlashcardStage>): void {
+  filterTabsEl.querySelectorAll('.filter-tab').forEach(tab => {
+    const stage = (tab as HTMLElement).dataset.stage as FlashcardStage | undefined;
+    tab.classList.toggle('active', stage !== undefined && activeFilters.has(stage));
+  });
+}
+
 export function renderStatistics(
-  statistics: Record<string, WordStatistics>,
+  statistics: Statistics,
   elements: StatsElements,
-  loadDefinition: LoadDefinition
+  loadDefinition: LoadDefinition,
+  activeFilters: Set<FlashcardStage>,
 ): void {
   const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
-  const words = Object.keys(statistics);
+  const allWords = Object.keys(statistics);
 
   loadingEl.style.display = 'none';
 
-  if (words.length === 0) {
+  if (allWords.length === 0) {
     emptyStateEl.style.display = 'block';
     statsListEl.style.display = 'none';
     wordCountEl.textContent = '0 words tracked';
     return;
   }
 
-  emptyStateEl.style.display = 'none';
-  statsListEl.style.display = 'flex';
-  wordCountEl.textContent = `${words.length} ${words.length === 1 ? 'word' : 'words'} tracked`;
+  const filtered = activeFilters.size === 0
+    ? allWords
+    : allWords.filter(w => {
+        const stat = statistics[w];
+        return stat && activeFilters.has(getFlashcardStage(stat));
+      });
 
-  const sortedWords = sortWordsByCount(words, statistics);
+  emptyStateEl.style.display = filtered.length === 0 ? 'block' : 'none';
+  statsListEl.style.display = filtered.length === 0 ? 'none' : 'flex';
+  wordCountEl.textContent = `${allWords.length} ${allWords.length === 1 ? 'word' : 'words'} tracked`;
+
+  if (filtered.length === 0) {
+    const activeStageNames = [...activeFilters].map(s => STAGE_LABELS[s]).join(' or ');
+    const p = emptyStateEl.querySelector('p');
+    if (p) p.textContent = `No ${activeStageNames} words yet.`;
+    return;
+  }
+
+  const sortedWords = sortWordsByCount(filtered, statistics);
   statsListEl.replaceChildren();
 
   sortedWords.forEach(word => {
@@ -103,7 +156,17 @@ export function renderDefinition(
   container.dataset.loaded = 'true';
 }
 
+function createStageBadge(stage: FlashcardStage): HTMLElement {
+  return createElement({
+    tag: 'span',
+    className: `stage-badge stage-badge--${stage}`,
+    textContent: STAGE_LABELS[stage],
+  });
+}
+
 function createStatItem(word: string, stat: WordStatistics, loadDefinition: LoadDefinition): HTMLElement {
+  const stage = getFlashcardStage(stat);
+
   const item = createElement({
     className: 'stat-item',
     dataset: { word }
@@ -114,9 +177,12 @@ function createStatItem(word: string, stat: WordStatistics, loadDefinition: Load
     style: { cursor: 'pointer' }
   });
 
-  const wordEl = createElement({
-    className: 'stat-word',
-    textContent: word
+  const wordRow = createElement({
+    className: 'stat-word-row',
+    children: [
+      createElement({ className: 'stat-word', textContent: word }),
+      createStageBadge(stage),
+    ],
   });
 
   const expandIcon = createElement({
@@ -139,7 +205,7 @@ function createStatItem(word: string, stat: WordStatistics, loadDefinition: Load
     ]
   });
 
-  header.appendChild(wordEl);
+  header.appendChild(wordRow);
   header.appendChild(detailsEl);
 
   const expandedContent = createElement({

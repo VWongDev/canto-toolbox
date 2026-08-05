@@ -125,6 +125,7 @@ export class FlashcardManager {
       this.correctCount++;
     }
 
+    this.client.updateFlashcard(word, rating, () => {});
     this.showNextCard();
   }
 
