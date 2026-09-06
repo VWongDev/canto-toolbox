@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Canto Toolbox",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Hover over Chinese text for Mandarin and Cantonese definitions with Pinyin, Jyutping, radical breakdown, and offline lookup.",
   "permissions": [
     "storage"
