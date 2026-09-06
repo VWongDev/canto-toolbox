@@ -1,5 +1,6 @@
 import type { DefinitionResult } from './types.js';
 import { createElement } from './dom-element.js';
+import { toToneMarks } from './pinyin.js';
 
 export interface PronunciationSectionConfig {
   sectionClassName: string;
@@ -22,8 +23,11 @@ export function createPronunciationSection(
 
   const pronunciationGroups = Object.entries(grouped).map(([pronunciation, defs]) => {
     const hasDefinition = defs && defs.length > 0;
+    // Jyutping keeps its trailing tone digits — that is how it is written.
+    const displayPronunciation =
+      pronunciationKey === 'pinyin' ? toToneMarks(pronunciation) : pronunciation;
     const groupChildren: HTMLElement[] = [
-      createElement({ className: pronunciationClassName, textContent: pronunciation })
+      createElement({ className: pronunciationClassName, textContent: displayPronunciation })
     ];
 
     const shouldShowDefinition = hasDefinition ||
