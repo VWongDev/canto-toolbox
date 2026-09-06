@@ -7,6 +7,12 @@ function parseComponents(decomposition: string): string[] {
   return [...decomposition].filter(ch => !IDS_COMPONENT_RE.test(ch));
 }
 
+/** First CEDICT-style sense (text before the first `;`). */
+export function firstGloss(definition: string): string {
+  const idx = definition.indexOf(';');
+  return (idx === -1 ? definition : definition.slice(0, idx)).trim();
+}
+
 function createComponentChip(
   glyph: string,
   definition: string | undefined,
@@ -16,7 +22,12 @@ function createComponentChip(
     createElement({ tag: 'span', className: 'popup-etymology-component-glyph', textContent: glyph })
   ];
   if (definition) {
-    children.push(createElement({ tag: 'span', className: 'popup-etymology-component-def', textContent: definition }));
+    children.push(createElement({
+      tag: 'span',
+      className: 'popup-etymology-component-def',
+      textContent: firstGloss(definition),
+      attributes: { title: definition },
+    }));
   }
   if (role) {
     children.push(createElement({

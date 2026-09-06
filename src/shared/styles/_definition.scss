@@ -81,3 +81,40 @@
 .definition-item:last-child {
   margin-bottom: 0;
 }
+
+.definition-senses {
+  display: flex;
+  flex-direction: column;
+  gap: t.$space-1;
+  min-width: 0;
+}
+
+.definition-senses.is-collapsed .definition-sense--overflow {
+  display: none;
+}
+
+.definition-more {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: t.$text-xs;
+  font-weight: 600;
+  color: t.$color-primary;
+  cursor: pointer;
+  letter-spacing: 0.2px;
+
+  &:hover {
+    color: t.$color-primary-hover;
+    text-decoration: underline;
+  }
+
+  @include dark {
+    color: t.$color-primary-dark;
+
+    &:hover {
+      color: t.$color-primary-hover-dark;
+    }
+  }
+}

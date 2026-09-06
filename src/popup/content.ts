@@ -4,7 +4,7 @@ import { popupClient, type PopupClient } from './popup-client.js';
 import popupStyles from './popup.scss?inline';
 import type { PronunciationSectionConfig } from '../shared/pronunciation-section.js';
 import { createEtymologySection } from '../shared/etymology-section.js';
-import { createMandarinSection, createCantoneseSection } from '../shared/definition-section.js';
+import { createMandarinSection, createCantoneseSection, createDefinitionList } from '../shared/definition-section.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
 const MAX_WORD_LENGTH = 4;
@@ -354,13 +354,7 @@ function hasActiveSelection(): boolean {
 }
 
 function createPopupDefinitionElement(definitions: string[]): HTMLElement {
-  return createElement({
-    tag: 'ul',
-    className: 'popup-definition',
-    children: definitions.map(def =>
-      createElement({ tag: 'li', className: 'popup-definition-item', textContent: def })
-    )
-  });
+  return createDefinitionList(definitions, 'popup-definition', 'popup-definition-item');
 }
 
 const popupPronunciationConfig: PronunciationSectionConfig = {

@@ -3,19 +3,70 @@ import { createElement } from './dom-element.js';
 import { createPronunciationSection, type PronunciationSectionConfig } from './pronunciation-section.js';
 import { createEtymologySection } from './etymology-section.js';
 
+export const MAX_VISIBLE_DEFINITIONS = 3;
+
+/**
+ * Definition sense list with optional collapse when there are more than
+ * {@link MAX_VISIBLE_DEFINITIONS} senses. Used by popup, stats, and flashcards.
+ */
+export function createDefinitionList(
+  definitions: string[],
+  listClassName: string,
+  itemClassName: string,
+): HTMLElement {
+  const items = definitions.map((def, i) =>
+    createElement({
+      tag: 'li',
+      className: i >= MAX_VISIBLE_DEFINITIONS
+        ? `${itemClassName} definition-sense--overflow`
+        : itemClassName,
+      textContent: def,
+    })
+  );
+
+  const list = createElement({
+    tag: 'ul',
+    className: listClassName,
+    children: items,
+  });
+
+  if (definitions.length <= MAX_VISIBLE_DEFINITIONS) {
+    return list;
+  }
+
+  const hiddenCount = definitions.length - MAX_VISIBLE_DEFINITIONS;
+  const moreBtn = createElement({
+    tag: 'button',
+    className: 'definition-more',
+    textContent: `${hiddenCount} more`,
+    attributes: {
+      type: 'button',
+      'aria-expanded': 'false',
+    },
+  });
+
+  const wrapper = createElement({
+    className: 'definition-senses is-collapsed',
+    children: [list, moreBtn],
+  });
+
+  moreBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const collapsed = wrapper.classList.toggle('is-collapsed');
+    moreBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    moreBtn.textContent = collapsed ? `${hiddenCount} more` : 'Show less';
+  });
+
+  return wrapper;
+}
+
 /**
  * `<ul class="definition-text">` definition list used by the stats and
  * flashcard surfaces. Falls back to a single "Not found" item.
  */
 export function createDefinitionTextElement(definitions: string[] | undefined): HTMLElement {
   const defs = definitions && definitions.length > 0 ? definitions : ['Not found'];
-  return createElement({
-    tag: 'ul',
-    className: 'definition-text',
-    children: defs.map(def =>
-      createElement({ tag: 'li', className: 'definition-item', textContent: def })
-    )
-  });
+  return createDefinitionList(defs, 'definition-text', 'definition-item');
 }
 
 /**

@@ -1,6 +1,7 @@
 @use '../shared/styles/tokens' as t;
 @use '../shared/styles/dark-mode' as *;
 @use '../shared/styles/etymology';
+@use '../shared/styles/definition';
 
 .chinese-hover-popup {
   position: fixed;

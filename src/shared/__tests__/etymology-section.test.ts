@@ -107,6 +107,35 @@ describe('createEtymologySection', () => {
     expect(defs).toContain('child');
   });
 
+  it('shows only the first gloss and keeps the full definition on title', () => {
+    const el = createEtymologySection([makeEtymology({
+      etymologyType: 'pictophonetic',
+      semantic: '口',
+      phonetic: '羊',
+      componentDefinitions: {
+        '口': 'mouth; entrance, gate, opening',
+        '羊': 'sheep, goat',
+      },
+    })]);
+    const defs = Array.from(el.querySelectorAll('.popup-etymology-component-def'));
+    const mouth = defs.find(d => d.getAttribute('title') === 'mouth; entrance, gate, opening');
+    const sheep = defs.find(d => d.getAttribute('title') === 'sheep, goat');
+    expect(mouth?.textContent).toBe('mouth');
+    expect(sheep?.textContent).toBe('sheep, goat');
+  });
+
+  it('leaves a definition without a semicolon unchanged', () => {
+    const el = createEtymologySection([makeEtymology({
+      etymologyType: 'ideographic',
+      componentDefinitions: { '女': 'woman', '子': 'child' },
+    })]);
+    const defs = Array.from(el.querySelectorAll('.popup-etymology-component-def'));
+    expect(defs.map(d => d.textContent)).toEqual(expect.arrayContaining(['woman', 'child']));
+    for (const def of defs) {
+      expect(def.getAttribute('title')).toBe(def.textContent);
+    }
+  });
+
   it('renders no definition spans when componentDefinitions is absent', () => {
     const el = createEtymologySection([makeEtymology({
       etymologyType: 'pictophonetic',
