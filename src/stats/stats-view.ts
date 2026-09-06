@@ -13,8 +13,11 @@ export const ELEMENT_IDS = {
   filterTabs: 'filter-tabs',
 } as const;
 
-const EXPAND_ICON_COLLAPSED = '▶';
-const EXPAND_ICON_EXPANDED = '▼';
+/** Chevron drawn as SVG so it scales cleanly; rotation is handled in CSS. */
+const CHEVRON_SVG =
+  '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">' +
+  '<path d="M3.5 1.5L7 5l-3.5 3.5" stroke="currentColor" stroke-width="1.5" ' +
+  'stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 const STAGE_LABELS: Record<FlashcardStage, string> = {
   new: 'New',
@@ -185,21 +188,20 @@ function createStatItem(word: string, stat: WordStatistics, loadDefinition: Load
     ],
   });
 
-  const expandIcon = createElement({
-    className: 'stat-expand-icon',
-    textContent: EXPAND_ICON_COLLAPSED
-  });
+  const expandIcon = createElement({ className: 'stat-expand-icon' });
+  expandIcon.innerHTML = CHEVRON_SVG;
 
+  const count = stat.count || 0;
   const detailsEl = createElement({
     className: 'stat-details',
     children: [
       createElement({
         className: 'stat-count',
-        textContent: String(stat.count || 0)
+        textContent: String(count)
       }),
       createElement({
         className: 'stat-label',
-        textContent: 'Hover Count'
+        textContent: count === 1 ? 'hover' : 'hovers'
       }),
       expandIcon
     ]
@@ -217,7 +219,7 @@ function createStatItem(word: string, stat: WordStatistics, loadDefinition: Load
   item.appendChild(expandedContent);
 
   header.addEventListener('click', () => {
-    toggleExpansion(item, word, expandedContent, expandIcon, loadDefinition);
+    toggleExpansion(item, word, expandedContent, loadDefinition);
   });
 
   return item;
@@ -227,14 +229,12 @@ function toggleExpansion(
   item: HTMLElement,
   word: string,
   expandedContent: HTMLElement,
-  expandIcon: HTMLElement,
   loadDefinition: LoadDefinition
 ): void {
   const isExpanded = expandedContent.style.display !== 'none';
 
   if (isExpanded) {
     expandedContent.style.display = 'none';
-    expandIcon.textContent = EXPAND_ICON_COLLAPSED;
     item.classList.remove('expanded');
   } else {
     if (!expandedContent.dataset.loaded) {
@@ -242,7 +242,6 @@ function toggleExpansion(
     } else {
       expandedContent.style.display = 'block';
     }
-    expandIcon.textContent = EXPAND_ICON_EXPANDED;
     item.classList.add('expanded');
   }
 }

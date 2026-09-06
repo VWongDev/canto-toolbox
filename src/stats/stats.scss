@@ -48,26 +48,37 @@ h1 {
   font-size: 13px;
 }
 
+// Primary action and its context group on the left; the destructive action is
+// pushed away from them and carries no fill.
 .controls {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding: 12px 16px;
+  gap: t.$space-4;
+  margin-bottom: t.$space-5;
+  padding: t.$space-3 t.$space-4;
   background: white;
-  border-radius: 8px;
+  border-radius: t.$radius-lg;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+#clear-btn {
+  margin-left: auto;
+}
+
 .btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: t.$space-2 t.$space-4;
+  border: 1px solid transparent;
+  border-radius: t.$radius-md;
+  font-size: t.$text-base;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.btn:focus-visible {
+  outline: 2px solid t.$color-primary;
+  outline-offset: 2px;
 }
 
 .btn-primary {
@@ -80,26 +91,23 @@ h1 {
 }
 
 .btn-primary:active {
-  transform: scale(0.98);
+  transform: scale(0.99);
 }
 
-.btn-danger {
-  background: t.$color-danger;
-  color: white;
+.btn-subtle {
+  background: transparent;
+  color: t.$color-text-subtle;
 }
 
-.btn-danger:hover {
-  background: #c82333;
-}
-
-.btn-danger:active {
-  transform: scale(0.98);
+.btn-subtle:hover {
+  background: rgba(179, 38, 30, 0.06);
+  color: t.$color-danger;
 }
 
 .word-count {
-  font-size: 14px;
-  color: t.$color-text-faint;
-  font-weight: 500;
+  font-size: t.$text-base;
+  color: t.$color-text-subtle;
+  font-variant-numeric: tabular-nums;
 }
 
 .filter-tabs {
@@ -232,81 +240,84 @@ h1 {
 }
 
 .stat-item {
-  background: #f9f9f9;
-  border-radius: 8px;
-  border: 1px solid t.$color-border;
-  border-left: 3px solid t.$color-primary;
-  transition: box-shadow 0.15s, background 0.15s;
+  background: t.$color-surface;
+  border-radius: t.$radius-lg;
+  border: 1px solid t.$color-border-muted;
+  transition: border-color 0.15s, background 0.15s;
   overflow: hidden;
   cursor: pointer;
 }
 
+.stat-item:hover {
+  border-color: t.$color-control-border;
+}
+
 .stat-item.expanded {
-  border-left-color: t.$color-primary-hover;
+  border-color: t.$color-control-border;
 }
 
 .stat-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
+  gap: t.$space-4;
+  padding: t.$space-3 t.$space-4;
 }
 
-.stat-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.stat-item:hover .stat-header {
-  background: #f3f3f3;
-}
-
+.stat-item:hover .stat-header,
 .stat-item.expanded .stat-header {
-  background: #efefef;
+  background: t.$color-surface-alt;
 }
 
 .stat-word {
-  font-size: 22px;
+  font-size: t.$text-xl;
   font-weight: 500;
   color: t.$color-text-strong;
   letter-spacing: 0.02em;
 }
 
+// The count is data, not an action — it reads in text colour, with the unit
+// spelled out beside it instead of stacked in a micro-label.
 .stat-details {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  align-items: baseline;
+  gap: t.$space-2;
+  margin-left: auto;
 }
 
 .stat-count {
-  font-size: 22px;
-  font-weight: 700;
-  color: t.$color-primary;
+  font-size: t.$text-md;
+  font-weight: 600;
+  color: t.$color-text;
   font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
-  font-size: 11px;
-  color: #999;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: t.$text-sm;
+  color: t.$color-text-subtle;
 }
 
 .stat-expand-icon {
-  font-size: 10px;
-  color: #aaa;
-  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  color: t.$color-text-subtle;
+  margin-left: t.$space-2;
   transition: transform 0.2s, color 0.15s;
 }
 
+.stat-expand-icon svg {
+  display: block;
+}
+
 .stat-item.expanded .stat-expand-icon {
+  transform: rotate(90deg);
   color: t.$color-text-faint;
 }
 
 .stat-expanded {
-  padding: 16px;
-  border-top: 1px solid t.$color-border-bold;
-  background: #fafafa;
+  padding: t.$space-4;
+  border-top: 1px solid t.$color-border-muted;
+  background: t.$color-surface-alt;
 }
 
 .stat-loading,
