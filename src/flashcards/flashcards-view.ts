@@ -54,6 +54,25 @@ export function getCurrentWord(document: Document): string | undefined {
   return document.getElementById(ELEMENT_IDS.card)?.dataset.currentWord;
 }
 
+function isVisible(document: Document, id: string): boolean {
+  const el = document.getElementById(id);
+  return el !== null && el.style.display !== 'none';
+}
+
+export function isScreenVisible(document: Document, id: ScreenId): boolean {
+  return isVisible(document, id);
+}
+
+/** True once the answer is revealed and the rating buttons are actionable. */
+export function isAnswerVisible(document: Document): boolean {
+  return isVisible(document, ELEMENT_IDS.ratingBtns);
+}
+
+/** False while a lookup is in flight, so a reveal cannot be requested twice. */
+export function isAnswerRevealable(document: Document): boolean {
+  return isVisible(document, ELEMENT_IDS.showAnswerContainer);
+}
+
 export function renderFront(document: Document, word: string): void {
   const cardFront = document.getElementById(ELEMENT_IDS.cardFront);
   const cardBack = document.getElementById(ELEMENT_IDS.cardBack);

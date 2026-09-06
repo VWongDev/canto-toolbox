@@ -10,13 +10,26 @@ import {
   renderFront,
   renderBack,
   renderBackLoading,
-  renderBackError
+  renderBackError,
+  isScreenVisible,
+  isAnswerVisible,
+  isAnswerRevealable
 } from './flashcards-view.js';
 
 const MAX_CARDS = 20;
 const MIN_COUNT = 2;
 
 type Rating = 'again' | 'hard' | 'good' | 'easy';
+
+const RATING_KEYS: Readonly<Record<string, Rating>> = {
+  '1': 'again',
+  '2': 'hard',
+  '3': 'good',
+  '4': 'easy'
+};
+
+const ADVANCE_KEYS = [' ', 'Enter'];
+const DEFAULT_RATING: Rating = 'good';
 
 function fisherYatesShuffle<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -44,6 +57,7 @@ export class FlashcardManager {
     this.setupRatingButtons();
     this.setupShowAnswerButton();
     this.setupReviewAgainButton();
+    this.setupKeyboardShortcuts();
 
     this.client.getStatistics((response: StatisticsResponse | ErrorResponse) => {
       if (!response.success) {
@@ -117,6 +131,35 @@ export class FlashcardManager {
       if (!rating) return;
       this.rate(rating);
     });
+  }
+
+  private setupKeyboardShortcuts(): void {
+    this.document.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (this.handleKey(e.key)) e.preventDefault();
+    });
+  }
+
+  /** Returns true when the key was consumed by a shortcut. */
+  private handleKey(key: string): boolean {
+    if (isScreenVisible(this.document, SCREEN_IDS.finished)) {
+      if (!ADVANCE_KEYS.includes(key)) return false;
+      this.restartSession();
+      return true;
+    }
+
+    if (!isScreenVisible(this.document, SCREEN_IDS.review)) return false;
+
+    if (isAnswerVisible(this.document)) {
+      const rating = RATING_KEYS[key] ?? (ADVANCE_KEYS.includes(key) ? DEFAULT_RATING : undefined);
+      if (!rating) return false;
+      this.rate(rating);
+      return true;
+    }
+
+    if (!isAnswerRevealable(this.document) || !ADVANCE_KEYS.includes(key)) return false;
+    this.showAnswer();
+    return true;
   }
 
   private rate(rating: Rating): void {

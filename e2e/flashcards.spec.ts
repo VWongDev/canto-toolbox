@@ -217,3 +217,32 @@ test('Review Again resets counter to Card 1', async () => {
 
   await page.close();
 });
+
+test('keyboard shortcuts drive a full review session', async () => {
+  const now = Date.now();
+  const helper = await openExtensionPage();
+  await seedStorage(helper, {
+    [WORD_HIGH]: { count: 5, firstSeen: now, lastSeen: now },
+  });
+  await helper.close();
+
+  const page = await openFlashcardsPage();
+  await expect(page.locator('#review')).toBeVisible();
+
+  // Space reveals the answer
+  await page.keyboard.press('Space');
+  await expect(page.locator('.definition-container')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#rating-btns')).toBeVisible();
+
+  // 3 rates the card Good
+  await page.keyboard.press('3');
+  await expect(page.locator('#finished')).toBeVisible();
+  await expect(page.locator('#result-summary')).toHaveText('1 / 1 correct');
+
+  // Enter restarts the session
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#review')).toBeVisible();
+  await expect(page.locator('#counter')).toHaveText(/^Card 1 of /);
+
+  await page.close();
+});
