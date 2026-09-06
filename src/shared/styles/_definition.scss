@@ -4,16 +4,16 @@
 .definition-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: t.$space-4;
+  text-align: left;
 }
 
 .definition-word {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: t.$text-xl;
+  font-weight: 600;
   color: t.$color-text-strong;
-  text-align: center;
-  padding-bottom: 12px;
-  border-bottom: 2px solid t.$color-border-bold;
+  padding-bottom: t.$space-3;
+  border-bottom: 1px solid t.$color-border-bold;
 
   @include dark {
     color: t.$color-text-strong-dark;
@@ -24,7 +24,7 @@
 .definition-sections {
   display: flex;
   flex-direction: row;
-  gap: 20px;
+  gap: t.$space-5;
 }
 
 .definition-section {
@@ -33,40 +33,41 @@
 }
 
 .definition-label {
-  font-size: 11px;
+  font-size: t.$text-xs;
   font-weight: 600;
   text-transform: uppercase;
-  color: t.$color-text-faint;
+  color: t.$color-text-subtle;
   letter-spacing: 0.5px;
-  margin-bottom: 6px;
+  margin-bottom: t.$space-2;
 
-  @include dark { color: #aaa; }
+  @include dark { color: #999; }
 }
 
+// Romanisation is not a link, so it is not link-coloured.
 .definition-pinyin,
 .definition-jyutping {
-  font-size: 16px;
-  color: t.$color-primary;
-  font-weight: 500;
-  margin-bottom: 6px;
+  font-size: t.$text-md;
+  color: t.$color-text-strong;
+  font-weight: 600;
+  margin-bottom: t.$space-1;
   font-family: t.$font-romanisation;
 
-  @include dark { color: t.$color-primary-dark; }
+  @include dark { color: t.$color-text-strong-dark; }
 }
 
 .definition-text {
-  font-size: 13px;
+  font-size: t.$text-base;
   color: t.$color-text-muted;
   line-height: 1.6;
   list-style-type: disc;
-  padding-left: 18px;
+  padding-left: t.$space-4;
   margin: 0;
 
   @include dark { color: t.$color-text-muted-dark; }
 }
 
 .pronunciation-group {
-  margin-bottom: 12px;
+  margin-bottom: t.$space-3;
 }
 
 .pronunciation-group:last-child {

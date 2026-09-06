@@ -38,11 +38,11 @@
 }
 
 .popup-word {
-  font-size: 26px;
-  font-weight: bold;
+  font-size: t.$text-2xl;
+  font-weight: 600;
   color: t.$color-text-strong;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
+  margin-bottom: t.$space-3;
+  padding-bottom: t.$space-2;
   border-bottom: 1px solid t.$color-border-muted;
   text-align: center;
   word-break: break-word;
@@ -72,24 +72,25 @@
 }
 
 .popup-label {
-  font-size: 11px;
+  font-size: t.$text-xs;
   font-weight: 600;
   text-transform: uppercase;
-  color: t.$color-text-faint;
+  color: t.$color-text-subtle;
   letter-spacing: 0.5px;
-  margin-bottom: 3px;
+  margin-bottom: t.$space-2;
   overflow-wrap: break-word;
   word-wrap: break-word;
   max-width: 100%;
   column-span: all;
 }
 
+// Romanisation is not a link, so it is not link-coloured.
 .popup-pinyin,
 .popup-jyutping {
-  font-size: 15px;
-  color: t.$color-primary;
-  font-weight: 500;
-  margin-bottom: 5px;
+  font-size: t.$text-md;
+  color: t.$color-text-strong;
+  font-weight: 600;
+  margin-bottom: t.$space-1;
   font-family: t.$font-romanisation;
   overflow-wrap: break-word;
   word-wrap: break-word;
@@ -139,7 +140,7 @@
 
   .popup-pinyin,
   .popup-jyutping {
-    color: t.$color-primary-dark;
+    color: t.$color-text-strong-dark;
   }
 
   .popup-definition {

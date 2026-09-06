@@ -25,7 +25,8 @@ function createComponentChip(
       textContent: role
     }));
   }
-  return createElement({ className: 'popup-etymology-component', children });
+  const roleClass = role ? ` popup-etymology-component--${role}` : '';
+  return createElement({ className: `popup-etymology-component${roleClass}`, children });
 }
 
 function createComponentsRow(etymology: CharacterEtymology): HTMLElement | null {
