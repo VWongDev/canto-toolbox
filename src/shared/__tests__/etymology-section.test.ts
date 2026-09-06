@@ -107,7 +107,7 @@ describe('createEtymologySection', () => {
     expect(defs).toContain('child');
   });
 
-  it('shows only the first gloss and keeps the full definition on title', () => {
+  it('drops overflowing sense portions and appends an ellipsis', () => {
     const el = createEtymologySection([makeEtymology({
       etymologyType: 'pictophonetic',
       semantic: '口',
@@ -120,11 +120,25 @@ describe('createEtymologySection', () => {
     const defs = Array.from(el.querySelectorAll('.popup-etymology-component-def'));
     const mouth = defs.find(d => d.getAttribute('title') === 'mouth; entrance, gate, opening');
     const sheep = defs.find(d => d.getAttribute('title') === 'sheep, goat');
-    expect(mouth?.textContent).toBe('mouth');
+    expect(mouth?.textContent).toBe('mouth…');
     expect(sheep?.textContent).toBe('sheep, goat');
   });
 
-  it('leaves a definition without a semicolon unchanged', () => {
+  it('drops overflowing comma portions within a long first sense', () => {
+    const el = createEtymologySection([makeEtymology({
+      character: '白',
+      decomposition: '白',
+      etymologyType: 'pictographic',
+      componentDefinitions: {
+        '白': 'white, clear, pure, unblemished, bright',
+      },
+    })]);
+    const def = el.querySelector('.popup-etymology-component-def');
+    expect(def?.textContent).toBe('white, clear…');
+    expect(def?.getAttribute('title')).toBe('white, clear, pure, unblemished, bright');
+  });
+
+  it('leaves a short definition without separators unchanged', () => {
     const el = createEtymologySection([makeEtymology({
       etymologyType: 'ideographic',
       componentDefinitions: { '女': 'woman', '子': 'child' },

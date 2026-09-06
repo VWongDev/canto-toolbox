@@ -132,10 +132,6 @@
 .popup-etymology-component-def {
   font-size: 11px;
   color: t.$color-text-muted;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 14ch;
   min-width: 0;
 
   @include dark { color: t.$color-text-muted-dark; }

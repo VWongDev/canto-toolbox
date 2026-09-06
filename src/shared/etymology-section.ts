@@ -7,10 +7,60 @@ function parseComponents(decomposition: string): string[] {
   return [...decomposition].filter(ch => !IDS_COMPONENT_RE.test(ch));
 }
 
-/** First CEDICT-style sense (text before the first `;`). */
-export function firstGloss(definition: string): string {
-  const idx = definition.indexOf(';');
-  return (idx === -1 ? definition : definition.slice(0, idx)).trim();
+/** Soft cap for chip gloss text; truncation drops whole portions, never mid-portion. */
+export const MAX_CHIP_GLOSS_CHARS = 14;
+
+/**
+ * Fit as many `sep`-joined units as will fit under `maxChars`.
+ * When truncated, drops the overflowing unit and appends `…`.
+ * Returns `null` when even the first unit alone exceeds the cap.
+ */
+function fitUnits(units: string[], sep: string, maxChars: number): string | null {
+  if (units.length === 0) return '';
+  if (units[0]!.length > maxChars) return null;
+
+  const taken: string[] = [];
+  for (const unit of units) {
+    const candidate = taken.length === 0 ? unit : `${taken.join(sep)}${sep}${unit}`;
+    if (candidate.length <= maxChars) {
+      taken.push(unit);
+    } else {
+      break;
+    }
+  }
+
+  if (taken.length === units.length) return taken.join(sep);
+
+  while (taken.length > 0 && `${taken.join(sep)}…`.length > maxChars) {
+    taken.pop();
+  }
+  if (taken.length === 0) return null;
+  return `${taken.join(sep)}…`;
+}
+
+/**
+ * Chip gloss: keep whole `;` / `,` / word portions under the char cap.
+ * Overflowing portions are dropped and replaced with a trailing `…`.
+ */
+export function firstGloss(definition: string, maxChars = MAX_CHIP_GLOSS_CHARS): string {
+  const senses = definition.split(';').map(s => s.trim()).filter(Boolean);
+  if (senses.length === 0) return '';
+
+  const bySense = fitUnits(senses, '; ', maxChars);
+  if (bySense !== null) return bySense;
+
+  const byComma = fitUnits(
+    senses[0]!.split(',').map(s => s.trim()).filter(Boolean),
+    ', ',
+    maxChars,
+  );
+  if (byComma !== null) return byComma;
+
+  const byWord = fitUnits(senses[0]!.split(/\s+/).filter(Boolean), ' ', maxChars);
+  if (byWord !== null) return byWord;
+
+  // Single undividable token longer than the cap — show it whole rather than mid-split.
+  return senses[0]!;
 }
 
 function createComponentChip(
