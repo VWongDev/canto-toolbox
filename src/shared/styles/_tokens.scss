@@ -58,27 +58,51 @@ $color-control-text:   #333;
 $color-meaning-tint: rgba(42, 122, 59, 0.10);
 $color-sound-tint:   rgba(0, 85, 170, 0.10);
 
-// Colours — dark
-$color-primary-dark:       #4da6ff;
-$color-primary-hover-dark: #66b3ff;
-$color-text-dark:          #e0e0e0;
-$color-text-strong-dark:   #ffffff;
-$color-text-muted-dark:    #ccc;
-$color-text-subtle-dark:   #888;
-$color-bg-dark:            #141414;
-$color-surface-dark:       #222;
-$color-surface-alt-dark:   #3a3a3a;
-$color-border-dark:        rgba(255, 255, 255, 0.06);
-$color-border-muted-dark:  #555;
-$color-border-bold-dark:   #444;
-$color-meaning-dark:       #5cb87a;
-$color-sound-dark:         #5599dd;
-$color-danger-dark:        #f2857c;
+// Flashcard ratings — Anki-style Again / Hard / Good / Easy fills.
+$color-rating-again:       #e53935;
+$color-rating-again-hover: #c62828;
+$color-rating-hard:        #fb8c00;
+$color-rating-hard-hover:  #ef6c00;
+$color-rating-good:        #43a047;
+$color-rating-good-hover:  #2e7d32;
+$color-rating-easy:        #1e88e5;
+$color-rating-easy-hover:  #1565c0;
 
-$color-control-dark:        #2e2e2e;
-$color-control-hover-dark:  #3a3a3a;
-$color-control-border-dark: #4a4a4a;
-$color-control-text-dark:   #e0e0e0;
+// Colours — dark. Canvas is a lifted zinc, not crushed black; surfaces step
+// up in elevation. Primary-dark is the on-dark accent (text, progress, focus);
+// primary-fill-dark is for filled buttons so white labels stay readable.
+$color-primary-dark:            #6cb3ff;
+$color-primary-hover-dark:      #8ac4ff;
+$color-primary-fill-dark:       #1f6feb;
+$color-primary-fill-hover-dark: #1a5fd0;
+$color-text-dark:          #e8e8ed;
+$color-text-strong-dark:   #f5f5f7;
+$color-text-muted-dark:    #b4b4be;
+$color-text-subtle-dark:   #8e8e99;
+$color-text-faint-dark:    #7a7a86;
+$color-bg-dark:            #161618;
+$color-surface-dark:       #222326;
+$color-surface-alt-dark:   #2c2d32;
+$color-border-dark:        rgba(255, 255, 255, 0.08);
+$color-border-muted-dark:  rgba(255, 255, 255, 0.10);
+$color-border-bold-dark:   rgba(255, 255, 255, 0.14);
+$color-meaning-dark:       #6bc98a;
+$color-sound-dark:         #6ba8e0;
+$color-danger-dark:        #f09088;
 
-$color-meaning-tint-dark: rgba(92, 184, 122, 0.16);
-$color-sound-tint-dark:   rgba(85, 153, 221, 0.16);
+$color-control-dark:        #2a2b30;
+$color-control-hover-dark:  #34353b;
+$color-control-border-dark: rgba(255, 255, 255, 0.12);
+$color-control-text-dark:   #e8e8ed;
+
+$color-meaning-tint-dark: rgba(107, 201, 138, 0.22);
+$color-sound-tint-dark:   rgba(107, 168, 224, 0.22);
+
+$color-rating-again-dark:       #e0554d;
+$color-rating-again-hover-dark: #c94a44;
+$color-rating-hard-dark:        #e89a3c;
+$color-rating-hard-hover-dark:  #d48c32;
+$color-rating-good-dark:        #4caf63;
+$color-rating-good-hover-dark:  #3d9a52;
+$color-rating-easy-dark:        #4d9eef;
+$color-rating-easy-hover-dark:  #3d8ed9;

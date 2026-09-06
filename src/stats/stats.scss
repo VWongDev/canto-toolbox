@@ -79,29 +79,50 @@ h1 {
 .btn:focus-visible {
   outline: 2px solid t.$color-primary;
   outline-offset: 2px;
+
+  @include dark { outline-color: t.$color-primary-dark; }
 }
 
 .btn-primary {
   background: t.$color-primary;
   color: white;
-}
 
-.btn-primary:hover {
-  background: t.$color-primary-hover;
-}
+  &:hover {
+    background: t.$color-primary-hover;
+  }
 
-.btn-primary:active {
-  transform: scale(0.99);
+  &:active {
+    transform: scale(0.99);
+  }
+
+  @include dark {
+    background: t.$color-primary-fill-dark;
+    border-color: t.$color-primary-fill-dark;
+
+    &:hover {
+      background: t.$color-primary-fill-hover-dark;
+      border-color: t.$color-primary-fill-hover-dark;
+    }
+  }
 }
 
 .btn-subtle {
   background: transparent;
   color: t.$color-text-subtle;
-}
 
-.btn-subtle:hover {
-  background: rgba(179, 38, 30, 0.06);
-  color: t.$color-danger;
+  &:hover {
+    background: rgba(179, 38, 30, 0.06);
+    color: t.$color-danger;
+  }
+
+  @include dark {
+    color: t.$color-text-subtle-dark;
+
+    &:hover {
+      background: rgba(t.$color-danger-dark, 0.12);
+      color: t.$color-danger-dark;
+    }
+  }
 }
 
 .word-count {
@@ -330,6 +351,8 @@ h1 {
 
 .stat-error {
   color: t.$color-danger;
+
+  @include dark { color: t.$color-danger-dark; }
 }
 
 @include dark {
@@ -343,7 +366,7 @@ h1 {
   }
 
   .subtitle {
-    color: t.$color-text-subtle;
+    color: t.$color-text-subtle-dark;
   }
 
   .controls,
@@ -354,38 +377,34 @@ h1 {
   }
 
   .word-count {
-    color: #aaa;
+    color: t.$color-text-subtle-dark;
   }
 
   .stat-item {
-    background: #2a2a2a;
-    border-color: rgba(255, 255, 255, 0.07);
-    border-left-color: t.$color-primary-dark;
+    background: t.$color-surface-alt-dark;
+    border-color: t.$color-border-muted-dark;
   }
 
   .stat-item:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    border-color: t.$color-control-border-dark;
   }
 
   .stat-item.expanded {
-    border-left-color: t.$color-primary-hover-dark;
+    border-color: t.$color-control-border-dark;
   }
 
-  .stat-item:hover .stat-header {
-    background: #333;
-  }
-
+  .stat-item:hover .stat-header,
   .stat-item.expanded .stat-header {
-    background: #363636;
+    background: t.$color-control-hover-dark;
   }
 
   .stat-expanded {
     background: t.$color-surface-dark;
-    border-top-color: t.$color-surface-alt-dark;
+    border-top-color: t.$color-border-bold-dark;
   }
 
   .stat-loading {
-    color: #aaa;
+    color: t.$color-text-subtle-dark;
   }
 
   .stat-word {
@@ -397,17 +416,21 @@ h1 {
   }
 
   .stat-label {
-    color: t.$color-text-subtle;
+    color: t.$color-text-subtle-dark;
+  }
+
+  .stat-expand-icon {
+    color: t.$color-text-subtle-dark;
   }
 
   .empty-state {
-    color: t.$color-text-subtle;
+    color: t.$color-text-subtle-dark;
   }
 
   .filter-tab {
     background: t.$color-surface-dark;
     border-color: t.$color-border-dark;
-    color: #aaa;
+    color: t.$color-text-subtle-dark;
 
     &:hover {
       border-color: t.$color-primary-dark;
@@ -415,31 +438,31 @@ h1 {
     }
 
     &.active {
-      background: t.$color-primary-dark;
-      border-color: t.$color-primary-dark;
-      color: white;
+      background: t.$color-primary-fill-dark;
+      border-color: t.$color-primary-fill-dark;
+      color: #fff;
     }
   }
 
   .stage-badge {
     &--new {
       background: rgba(255, 255, 255, 0.08);
-      color: #aaa;
+      color: t.$color-text-subtle-dark;
     }
 
     &--learning {
-      background: rgba(245, 158, 11, 0.2);
-      color: #fbbf24;
+      background: rgba(t.$color-rating-hard-dark, 0.2);
+      color: t.$color-rating-hard-dark;
     }
 
     &--familiar {
-      background: rgba(59, 130, 246, 0.2);
-      color: #60a5fa;
+      background: rgba(t.$color-rating-easy-dark, 0.2);
+      color: t.$color-rating-easy-dark;
     }
 
     &--mastered {
-      background: rgba(34, 197, 94, 0.2);
-      color: #4ade80;
+      background: rgba(t.$color-rating-good-dark, 0.2);
+      color: t.$color-rating-good-dark;
     }
   }
 }

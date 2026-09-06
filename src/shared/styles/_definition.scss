@@ -40,7 +40,7 @@
   letter-spacing: 0.5px;
   margin-bottom: t.$space-2;
 
-  @include dark { color: #999; }
+  @include dark { color: t.$color-text-subtle-dark; }
 }
 
 // Romanisation is not a link, so it is not link-coloured.

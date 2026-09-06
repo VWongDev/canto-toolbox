@@ -123,19 +123,19 @@
 
 @include dark {
   .chinese-hover-popup {
-    background: #232323;
-    border-color: rgba(255, 255, 255, 0.10);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+    background: t.$color-surface-dark;
+    border-color: t.$color-border-muted-dark;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.45);
     color: t.$color-text-dark;
   }
 
   .popup-word {
     color: t.$color-text-strong-dark;
-    border-bottom-color: #383838;
+    border-bottom-color: t.$color-border-bold-dark;
   }
 
   .popup-label {
-    color: #aaa;
+    color: t.$color-text-subtle-dark;
   }
 
   .popup-pinyin,

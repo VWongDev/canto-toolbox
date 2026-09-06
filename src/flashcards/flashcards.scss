@@ -3,6 +3,27 @@
 @use '../shared/styles/etymology';
 @use '../shared/styles/definition';
 
+@mixin filled-btn($fill, $hover, $fill-dark, $hover-dark) {
+  background: $fill;
+  border-color: $fill;
+  color: #fff;
+
+  &:hover {
+    background: $hover;
+    border-color: $hover;
+  }
+
+  @include dark {
+    background: $fill-dark;
+    border-color: $fill-dark;
+
+    &:hover {
+      background: $hover-dark;
+      border-color: $hover-dark;
+    }
+  }
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -147,6 +168,8 @@ body {
 .btn:focus-visible {
   outline: 2px solid t.$color-primary;
   outline-offset: 2px;
+
+  @include dark { outline-color: t.$color-primary-dark; }
 }
 
 .key-hint {
@@ -165,7 +188,7 @@ body {
 
 // On a filled button the hint sits on the accent, not on the page.
 .btn-show-answer .key-hint,
-.btn-good .key-hint,
+.rating-btns .key-hint,
 .btn-primary .key-hint {
   background: rgb(255 255 255 / 22%);
 
@@ -194,23 +217,13 @@ body {
 
 .btn-show-answer {
   width: 100%;
-  background: t.$color-primary;
-  color: white;
   font-size: t.$text-md;
   padding: t.$space-3;
-}
-
-.btn-show-answer:hover {
-  background: t.$color-primary-hover;
+  @include filled-btn(t.$color-primary, t.$color-primary-hover, t.$color-primary-fill-dark, t.$color-primary-fill-hover-dark);
 }
 
 .btn-primary {
-  background: t.$color-primary;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: t.$color-primary-hover;
+  @include filled-btn(t.$color-primary, t.$color-primary-hover, t.$color-primary-fill-dark, t.$color-primary-fill-hover-dark);
 }
 
 .rating-btns {
@@ -219,54 +232,21 @@ body {
   gap: t.$space-2;
 }
 
-// Colour carries meaning only at the extremes: Again is tinted toward danger,
-// Good is the accented default, and the middle ratings stay neutral.
-.btn-again,
-.btn-hard,
-.btn-easy {
-  background: t.$color-control;
-  border-color: t.$color-control-border;
-  color: t.$color-control-text;
-
-  &:hover {
-    background: t.$color-control-hover;
-  }
-
-  @include dark {
-    background: t.$color-control-dark;
-    border-color: t.$color-control-border-dark;
-    color: t.$color-control-text-dark;
-
-    &:hover { background: t.$color-control-hover-dark; }
-  }
+// Anki-style rating row: Again red, Hard orange, Good green, Easy blue.
+.btn-again {
+  @include filled-btn(t.$color-rating-again, t.$color-rating-again-hover, t.$color-rating-again-dark, t.$color-rating-again-hover-dark);
 }
 
-.btn-again {
-  color: t.$color-danger;
-  border-color: rgba(179, 38, 30, 0.35);
-
-  &:hover {
-    background: rgba(179, 38, 30, 0.06);
-    border-color: rgba(179, 38, 30, 0.5);
-  }
-
-  @include dark {
-    color: t.$color-danger-dark;
-    border-color: rgba(242, 133, 124, 0.35);
-
-    &:hover { background: rgba(242, 133, 124, 0.10); }
-  }
+.btn-hard {
+  @include filled-btn(t.$color-rating-hard, t.$color-rating-hard-hover, t.$color-rating-hard-dark, t.$color-rating-hard-hover-dark);
 }
 
 .btn-good {
-  background: t.$color-primary;
-  border-color: t.$color-primary;
-  color: white;
+  @include filled-btn(t.$color-rating-good, t.$color-rating-good-hover, t.$color-rating-good-dark, t.$color-rating-good-hover-dark);
+}
 
-  &:hover {
-    background: t.$color-primary-hover;
-    border-color: t.$color-primary-hover;
-  }
+.btn-easy {
+  @include filled-btn(t.$color-rating-easy, t.$color-rating-easy-hover, t.$color-rating-easy-dark, t.$color-rating-easy-hover-dark);
 }
 
 .finished-icon {
@@ -293,6 +273,7 @@ body {
   padding: t.$space-5;
   color: t.$color-danger;
   font-size: t.$text-base;
+  @include dark { color: t.$color-danger-dark; }
 }
 
 @include dark {
@@ -302,7 +283,7 @@ body {
   }
 
   .progress-bar-container {
-    background: #333;
+    background: t.$color-surface-alt-dark;
   }
 
   .progress-bar {
@@ -310,25 +291,11 @@ body {
   }
 
   #counter {
-    color: t.$color-text-subtle;
+    color: t.$color-text-subtle-dark;
   }
 
   .card-characters {
     color: t.$color-text-strong-dark;
-  }
-
-  .btn-show-answer,
-  .btn-primary,
-  .btn-good {
-    background: #1a6cc4;
-    border-color: #1a6cc4;
-  }
-
-  .btn-show-answer:hover,
-  .btn-primary:hover,
-  .btn-good:hover {
-    background: #155a9e;
-    border-color: #155a9e;
   }
 
   .finished-icon {
@@ -340,11 +307,11 @@ body {
   }
 
   .result-summary {
-    color: #aaa;
+    color: t.$color-text-muted-dark;
   }
 
   #loading p,
   #empty-state p {
-    color: t.$color-text-subtle;
+    color: t.$color-text-subtle-dark;
   }
 }
