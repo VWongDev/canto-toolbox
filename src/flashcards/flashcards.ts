@@ -87,19 +87,21 @@ export class FlashcardManager {
     const btn = this.document.getElementById(ELEMENT_IDS.showAnswerBtn);
     if (!btn) return;
 
-    btn.addEventListener('click', () => {
-      const word = getCurrentWord(this.document);
-      if (!word) return;
+    btn.addEventListener('click', () => this.showAnswer());
+  }
 
-      renderBackLoading(this.document);
+  private showAnswer(): void {
+    const word = getCurrentWord(this.document);
+    if (!word) return;
 
-      this.client.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
-        if (!response.success || !response.definition) {
-          renderBackError(this.document);
-          return;
-        }
-        renderBack(this.document, word, response.definition);
-      });
+    renderBackLoading(this.document);
+
+    this.client.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
+      if (!response.success || !response.definition) {
+        renderBackError(this.document);
+        return;
+      }
+      renderBack(this.document, word, response.definition);
     });
   }
 
@@ -109,7 +111,9 @@ export class FlashcardManager {
 
     ratingBtns.addEventListener('click', (e: Event) => {
       if (!(e.target instanceof HTMLElement)) return;
-      const rating = e.target.dataset.rating as Rating | undefined;
+      const rating = e.target.closest<HTMLElement>('[data-rating]')?.dataset.rating as
+        | Rating
+        | undefined;
       if (!rating) return;
       this.rate(rating);
     });
@@ -133,13 +137,15 @@ export class FlashcardManager {
     const btn = this.document.getElementById(ELEMENT_IDS.reviewAgainBtn);
     if (!btn) return;
 
-    btn.addEventListener('click', () => {
-      this.reviewQueue = fisherYatesShuffle(this.sessionWords);
-      this.correctCount = 0;
-      this.totalCount = this.sessionWords.length;
-      setScreen(this.document, SCREEN_IDS.review);
-      this.showNextCard();
-    });
+    btn.addEventListener('click', () => this.restartSession());
+  }
+
+  private restartSession(): void {
+    this.reviewQueue = fisherYatesShuffle(this.sessionWords);
+    this.correctCount = 0;
+    this.totalCount = this.sessionWords.length;
+    setScreen(this.document, SCREEN_IDS.review);
+    this.showNextCard();
   }
 }
 
