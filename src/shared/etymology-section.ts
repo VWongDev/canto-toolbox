@@ -1,11 +1,6 @@
 import type { CharacterEtymology } from './types.js';
 import { createElement } from './dom-element.js';
-
-const IDS_COMPONENT_RE = /[\u2FF0-\u2FFB？]/;
-
-function parseComponents(decomposition: string): string[] {
-  return [...decomposition].filter(ch => !IDS_COMPONENT_RE.test(ch));
-}
+import { parseComponents } from './decomposition.js';
 
 /** Soft cap for chip gloss text; truncation drops whole portions, never mid-portion. */
 export const MAX_CHIP_GLOSS_CHARS = 14;

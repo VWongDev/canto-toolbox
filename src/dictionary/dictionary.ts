@@ -1,4 +1,5 @@
 import type { Dictionary, DictionaryEntry, DefinitionResult, EtymologyDictionary, CharacterEtymology } from '../shared/types.js';
+import { parseComponents } from '../shared/decomposition.js';
 
 const CANTONESE_MARKER = '(cantonese)';
 const MAX_WORD_LENGTH = 4;
@@ -60,7 +61,6 @@ function processDictionaryLookup(
   return filterCantonese ? filterOutCantoneseDefinitions(entries) : entries;
 }
 
-const IDS_COMPONENT_RE = /[\u2FF0-\u2FFB？]/;
 const etymologyCache = new Map<string, CharacterEtymology[]>();
 
 export function lookupEtymology(word: string): CharacterEtymology[] {
@@ -76,9 +76,7 @@ export function lookupEtymology(word: string): CharacterEtymology[] {
       if (entry.semantic) toResolve.add(entry.semantic);
       if (entry.phonetic) toResolve.add(entry.phonetic);
       if (toResolve.size === 0) {
-        for (const ch of entry.decomposition) {
-          if (!IDS_COMPONENT_RE.test(ch)) toResolve.add(ch);
-        }
+        for (const component of parseComponents(entry.decomposition)) toResolve.add(component);
       }
 
       const componentDefinitions: Record<string, string> = {};
