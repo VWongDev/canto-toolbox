@@ -67,4 +67,16 @@ describe('RedundantStore', () => {
       ).resolves.toBeUndefined();
     });
   });
+
+  describe('writeBoth', () => {
+    it('writes the value to both areas so a read cannot resurrect the other', async () => {
+      const sync = makeArea();
+      const local = makeArea();
+
+      await makeStore(sync, local).writeBoth('k', {});
+
+      expect(sync.set).toHaveBeenCalledWith({ k: {} });
+      expect(local.set).toHaveBeenCalledWith({ k: {} });
+    });
+  });
 });

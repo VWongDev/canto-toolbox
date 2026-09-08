@@ -43,6 +43,18 @@ export class RedundantStore {
     }
   }
 
+  /**
+   * Write the same value to both areas. Used where a partial write would let a
+   * reconciling read resurrect data from the other area (clearing, for
+   * instance) — unlike {@link mutate}, neither area is a fallback for the other.
+   */
+  async writeBoth<T>(key: string, value: T): Promise<void> {
+    await Promise.all([
+      this.manager.writeSync(key, value),
+      this.manager.writeLocal(key, value),
+    ]);
+  }
+
   private async writeArea<T>(
     area: 'sync' | 'local',
     key: string,

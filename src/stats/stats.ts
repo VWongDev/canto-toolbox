@@ -1,5 +1,6 @@
 import type { StatisticsResponse, LookupResponse, ErrorResponse, Statistics, FlashcardStage } from '../shared/types.js';
 import { statsClient, type StatsClient } from './stats-client.js';
+import { statsStorage, type StatsStorage } from './stats-storage.js';
 import {
   ELEMENT_IDS,
   getRequiredElements,
@@ -12,19 +13,17 @@ import {
   type StatsElements
 } from './stats-view.js';
 
-const STORAGE_KEY = 'wordStatistics';
-
 export class StatsManager {
   private readonly document: Document;
   private readonly client: StatsClient;
-  private readonly chromeStorage: typeof chrome.storage;
+  private readonly storage: StatsStorage;
   private cachedStatistics: Statistics | null = null;
   private activeFilters: Set<FlashcardStage> = new Set();
 
-  constructor(document: Document, client: StatsClient, chromeStorage: typeof chrome.storage) {
+  constructor(document: Document, client: StatsClient, storage: StatsStorage) {
     this.document = document;
     this.client = client;
-    this.chromeStorage = chromeStorage;
+    this.storage = storage;
   }
 
   init(): void {
@@ -100,8 +99,7 @@ export class StatsManager {
   }
 
   private async clearStatistics(): Promise<void> {
-    await this.chromeStorage.sync.set({ [STORAGE_KEY]: {} });
-    await this.chromeStorage.local.set({ [STORAGE_KEY]: {} });
+    await this.storage.clearStatistics();
     this.cachedStatistics = null;
     this.activeFilters = new Set();
     this.loadStatistics();
@@ -138,7 +136,7 @@ export class StatsManager {
   }
 }
 
-export const statsManager = new StatsManager(document, statsClient, chrome.storage);
+export const statsManager = new StatsManager(document, statsClient, statsStorage);
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => statsManager.init());

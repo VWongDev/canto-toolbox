@@ -1,11 +1,6 @@
-import { RedundantStore } from '../shared/redundant-store.js';
-import { StorageManager } from '../shared/storage-manager.js';
 import { registerHandlers } from '../shared/message-router.js';
+import { STATISTICS_KEY, statisticsStore } from '../shared/statistics-store.js';
 import type { FlashcardRating, Statistics } from '../shared/types.js';
-
-const STORAGE_KEY = 'wordStatistics';
-
-const store = new RedundantStore(new StorageManager(chrome.storage.sync, chrome.storage.local));
 
 function nextConsecutiveCorrect(current: number, rating: FlashcardRating): number {
   return rating === 'good' || rating === 'easy' ? current + 1 : 0;
@@ -14,7 +9,7 @@ function nextConsecutiveCorrect(current: number, rating: FlashcardRating): numbe
 export function register(): void {
   registerHandlers({
     update_flashcard: async (msg) => {
-      await store.mutate<Statistics>(STORAGE_KEY, (existing) => {
+      await statisticsStore.mutate<Statistics>(STATISTICS_KEY, (existing) => {
         const stats = { ...(existing ?? {}) };
         const stat = stats[msg.word];
         if (!stat) return stats;

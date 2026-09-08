@@ -1,24 +1,26 @@
 import { RedundantStore } from '../shared/redundant-store.js';
-import { StorageManager } from '../shared/storage-manager.js';
+import { STATISTICS_KEY, statisticsStore } from '../shared/statistics-store.js';
 import { mergeStatistics } from '../shared/statistics-utils.js';
 import type { Statistics } from '../shared/types';
 
-const STORAGE_KEY = 'wordStatistics';
-
 export interface StatsStorage {
   getStatistics(): Promise<Statistics>;
+  clearStatistics(): Promise<void>;
 }
 
 export class StatsStorageClient implements StatsStorage {
   constructor(private readonly store: RedundantStore) {}
 
   async getStatistics(): Promise<Statistics> {
-    return this.store.read<Statistics>(STORAGE_KEY, (sync, local) =>
+    return this.store.read<Statistics>(STATISTICS_KEY, (sync, local) =>
       mergeStatistics(sync ?? {}, local ?? {})
     );
   }
+
+  /** Both areas are emptied — a read reconciles them, so clearing one is not enough. */
+  async clearStatistics(): Promise<void> {
+    await this.store.writeBoth<Statistics>(STATISTICS_KEY, {});
+  }
 }
 
-export const statsStorage = new StatsStorageClient(
-  new RedundantStore(new StorageManager(chrome.storage.sync, chrome.storage.local))
-);
+export const statsStorage = new StatsStorageClient(statisticsStore);

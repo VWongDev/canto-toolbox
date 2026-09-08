@@ -1,10 +1,9 @@
 import { RedundantStore } from '../shared/redundant-store.js';
-import { StorageManager } from '../shared/storage-manager.js';
+import { STATISTICS_KEY, statisticsStore } from '../shared/statistics-store.js';
 import { createBatchedDebounce } from '../shared/debounce.js';
 import { BoundedMap } from '../shared/bounded-map.js';
 import type { Statistics } from '../shared/types';
 
-const STORAGE_KEY = 'wordStatistics';
 const DEBOUNCE_DELAY = 500;
 const MAX_WORDS = 500;
 
@@ -31,7 +30,7 @@ export class PopupStorageClient implements PopupStorage {
   }
 
   private async flushUpdates(updates: Map<string, number>): Promise<void> {
-    await this.store.mutate<Statistics>(STORAGE_KEY, (existing) => {
+    await this.store.mutate<Statistics>(STATISTICS_KEY, (existing) => {
       const now = Date.now();
       const stats = new BoundedMap<string, Statistics[string]>(
         MAX_WORDS,
@@ -51,6 +50,4 @@ export class PopupStorageClient implements PopupStorage {
   }
 }
 
-export const popupStorage = new PopupStorageClient(
-  new RedundantStore(new StorageManager(chrome.storage.sync, chrome.storage.local))
-);
+export const popupStorage = new PopupStorageClient(statisticsStore);
