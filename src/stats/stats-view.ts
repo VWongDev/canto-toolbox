@@ -1,7 +1,7 @@
 import type { FlashcardStage, WordStatistics, LookupResponse, ErrorResponse, Statistics } from '../shared/types.js';
 import { getFlashcardStage } from '../shared/statistics-utils.js';
 import { createElement } from '../shared/dom-element.js';
-import { createDefinitionElement, definitionPronunciationConfig } from '../shared/definition-section.js';
+import { createDefinitionElement } from '../shared/definition-section.js';
 
 export const ELEMENT_IDS = {
   loading: 'loading',
@@ -155,7 +155,7 @@ export function renderDefinition(
     return;
   }
 
-  container.appendChild(createDefinitionElement(word, response.definition, definitionPronunciationConfig, false));
+  container.appendChild(createDefinitionElement(word, response.definition, false));
   container.dataset.loaded = 'true';
 }
 

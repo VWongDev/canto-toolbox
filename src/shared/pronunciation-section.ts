@@ -1,49 +1,48 @@
 import type { DefinitionResult } from './types.js';
 import { createElement } from './dom-element.js';
+import { createDefinitionTextElement } from './definition-list.js';
 import { toToneMarks } from './pinyin.js';
 
-export interface PronunciationSectionConfig {
-  sectionClassName: string;
-  labelClassName: string;
-  pronunciationClassName: (key: 'pinyin' | 'jyutping') => string;
-  groupClassName: string;
-  createDefinitionElement: (definitions: string[]) => HTMLElement;
-  showDefinitionIfEmpty?: (pronunciationKey: 'pinyin' | 'jyutping') => boolean;
+export interface PronunciationSectionOptions {
+  /**
+   * Render the "Not found" placeholder for a reading that has no senses,
+   * instead of omitting the list entirely. The stats and flashcard surfaces
+   * use it on the Mandarin section so the two columns stay aligned; the popup
+   * simply shows nothing.
+   */
+  showPlaceholderWhenEmpty?: boolean;
 }
 
 export function createPronunciationSection(
   data: DefinitionResult['mandarin'] | DefinitionResult['cantonese'],
   label: string,
   pronunciationKey: 'pinyin' | 'jyutping',
-  config: PronunciationSectionConfig
+  { showPlaceholderWhenEmpty = false }: PronunciationSectionOptions = {}
 ): HTMLElement {
-  const entries = data?.entries || [];
-  const grouped = groupEntriesByRomanisation(entries);
-  const pronunciationClassName = config.pronunciationClassName(pronunciationKey);
+  const grouped = groupEntriesByRomanisation(data?.entries || []);
 
   const pronunciationGroups = Object.entries(grouped).map(([pronunciation, defs]) => {
-    const hasDefinition = defs && defs.length > 0;
     // Jyutping keeps its trailing tone digits — that is how it is written.
     const displayPronunciation =
       pronunciationKey === 'pinyin' ? toToneMarks(pronunciation) : pronunciation;
     const groupChildren: HTMLElement[] = [
-      createElement({ className: pronunciationClassName, textContent: displayPronunciation })
+      createElement({
+        className: `definition-${pronunciationKey}`,
+        textContent: displayPronunciation
+      })
     ];
 
-    const shouldShowDefinition = hasDefinition ||
-      (config.showDefinitionIfEmpty && config.showDefinitionIfEmpty(pronunciationKey));
-
-    if (shouldShowDefinition) {
-      groupChildren.push(config.createDefinitionElement(defs));
+    if (defs.length > 0 || showPlaceholderWhenEmpty) {
+      groupChildren.push(createDefinitionTextElement(defs));
     }
 
-    return createElement({ className: config.groupClassName, children: groupChildren });
+    return createElement({ className: 'pronunciation-group', children: groupChildren });
   });
 
   return createElement({
-    className: config.sectionClassName,
+    className: 'definition-section',
     children: [
-      createElement({ className: config.labelClassName, textContent: label }),
+      createElement({ className: 'definition-label', textContent: label }),
       ...pronunciationGroups
     ]
   });

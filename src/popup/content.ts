@@ -2,9 +2,8 @@ import type { DefinitionResult, LookupResponse, ErrorResponse } from '../shared/
 import { createElement } from '../shared/dom-element.js';
 import { popupClient, type PopupClient } from './popup-client.js';
 import popupStyles from './popup.scss?inline';
-import type { PronunciationSectionConfig } from '../shared/pronunciation-section.js';
 import { createEtymologySection } from '../shared/etymology-section.js';
-import { createMandarinSection, createCantoneseSection, createDefinitionList } from '../shared/definition-section.js';
+import { createDefinitionSections } from '../shared/definition-section.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
 const MAX_WORD_LENGTH = 4;
@@ -234,13 +233,7 @@ export class ChineseHoverPopupManager {
       popup.appendChild(createEtymologySection(definition.etymology));
     }
 
-    popup.appendChild(createElement({
-      className: 'popup-sections-container',
-      children: [
-        createMandarinSection(definition.mandarin, popupPronunciationConfig),
-        createCantoneseSection(definition.cantonese, popupPronunciationConfig)
-      ]
-    }));
+    popup.appendChild(createDefinitionSections(definition));
 
     this.document.body.appendChild(popup);
     this.currentPopup = popup;
@@ -352,18 +345,6 @@ function hasActiveSelection(): boolean {
   const selection = window.getSelection();
   return selection ? selection.toString().trim().length > 0 : false;
 }
-
-function createPopupDefinitionElement(definitions: string[]): HTMLElement {
-  return createDefinitionList(definitions, 'popup-definition', 'popup-definition-item');
-}
-
-const popupPronunciationConfig: PronunciationSectionConfig = {
-  sectionClassName: 'popup-section',
-  labelClassName: 'popup-label',
-  pronunciationClassName: (key) => key === 'pinyin' ? 'popup-pinyin' : 'popup-jyutping',
-  groupClassName: 'popup-pronunciation-group',
-  createDefinitionElement: createPopupDefinitionElement
-};
 
 function calculatePopupPosition(x: number, y: number, popupRect: DOMRect): { left: number; top: number } {
   const viewportWidth = window.innerWidth;

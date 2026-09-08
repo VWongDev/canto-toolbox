@@ -64,7 +64,7 @@ test('hovering Chinese text shows the definition popup', async () => {
   await expect(popup).toBeVisible({ timeout: 15000 });
   await expect(popup.locator('.popup-word')).toHaveText(/你/);
   // Mandarin + Cantonese sections both render
-  await expect(popup.locator('.popup-section')).toHaveCount(2);
+  await expect(popup.locator('.definition-section')).toHaveCount(2);
 
   await page.close();
 });

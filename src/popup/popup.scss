@@ -28,16 +28,8 @@
   box-sizing: border-box;
 }
 
-.popup-sections-container {
-  display: flex;
-  flex-direction: row;
-  gap: 24px;
-  align-items: flex-start;
-  min-width: 0;
-  width: 100%;
-  container-type: inline-size;
-}
-
+// The popup heading is centred and larger than the stats/flashcard
+// `.definition-word`, which sits above a left-aligned column.
 .popup-word {
   font-size: t.$text-2xl;
   font-weight: 600;
@@ -51,75 +43,41 @@
   letter-spacing: 0.02em;
 }
 
-.popup-section {
-  flex: 1;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  box-sizing: border-box;
-}
+// The popup floats over arbitrary host pages at a constrained width, so the
+// shared definition styles need wrapping and overflow containment that the
+// full-width stats and flashcard pages do not.
+.chinese-hover-popup {
+  .definition-sections {
+    align-items: flex-start;
+    min-width: 0;
+    width: 100%;
+  }
 
-.popup-pronunciation-group {
-  break-inside: avoid;
-  margin-bottom: 12px;
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  box-sizing: border-box;
-}
+  .definition-section,
+  .pronunciation-group {
+    max-width: 100%;
+    overflow: hidden;
+  }
 
-.popup-pronunciation-group:last-child {
-  margin-bottom: 0;
-}
+  .pronunciation-group {
+    break-inside: avoid;
+    min-width: 0;
+  }
 
-.popup-label {
-  font-size: t.$text-xs;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: t.$color-text-subtle;
-  letter-spacing: 0.5px;
-  margin-bottom: t.$space-2;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  max-width: 100%;
-  column-span: all;
-}
+  .definition-label,
+  .definition-pinyin,
+  .definition-jyutping,
+  .definition-text {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
 
-// Romanisation is not a link, so it is not link-coloured.
-.popup-pinyin,
-.popup-jyutping {
-  font-size: t.$text-md;
-  color: t.$color-text-strong;
-  font-weight: 600;
-  margin-bottom: t.$space-1;
-  font-family: t.$font-romanisation;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  word-break: break-word;
-  max-width: 100%;
-}
-
-.popup-definition {
-  font-size: 13px;
-  color: t.$color-text-muted;
-  line-height: 1.5;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  word-break: break-word;
-  max-width: 100%;
-  hyphens: auto;
-  box-sizing: border-box;
-  list-style-type: disc;
-  padding-left: 18px;
-  margin: 0;
-}
-
-.popup-definition-item {
-  margin-bottom: 4px;
-}
-
-.popup-definition-item:last-child {
-  margin-bottom: 0;
+  .definition-text {
+    line-height: 1.5;
+    padding-left: 18px;
+    hyphens: auto;
+  }
 }
 
 @include dark {
@@ -128,31 +86,18 @@
     border-color: t.$color-border-muted-dark;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.45);
     color: t.$color-text-dark;
+
+    .definition-item {
+      margin-bottom: 2px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
   }
 
   .popup-word {
     color: t.$color-text-strong-dark;
     border-bottom-color: t.$color-border-bold-dark;
-  }
-
-  .popup-label {
-    color: t.$color-text-subtle-dark;
-  }
-
-  .popup-pinyin,
-  .popup-jyutping {
-    color: t.$color-text-strong-dark;
-  }
-
-  .popup-definition {
-    color: t.$color-text-muted-dark;
-  }
-
-  .popup-definition-item {
-    margin-bottom: 2px;
-  }
-
-  .popup-definition-item:last-child {
-    margin-bottom: 0;
   }
 }

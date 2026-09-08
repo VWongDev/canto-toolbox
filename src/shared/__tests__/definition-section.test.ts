@@ -1,14 +1,11 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
 import {
-  createDefinitionTextElement,
-  createDefinitionList,
   createDefinitionElement,
   createMandarinSection,
   createCantoneseSection,
-  definitionPronunciationConfig,
-  MAX_VISIBLE_DEFINITIONS,
 } from '../definition-section.js';
+import { createDefinitionTextElement, MAX_VISIBLE_DEFINITIONS } from '../definition-list.js';
 import type { DefinitionResult } from '../types.js';
 
 const makeDefinition = (overrides: Partial<DefinitionResult> = {}): DefinitionResult => ({
@@ -30,13 +27,11 @@ describe('createDefinitionTextElement', () => {
     expect(createDefinitionTextElement([]).textContent).toBe('Not found');
     expect(createDefinitionTextElement(undefined).textContent).toBe('Not found');
   });
-});
 
-describe('createDefinitionList', () => {
   it('returns a bare list when there are at most MAX_VISIBLE_DEFINITIONS senses', () => {
     const defs = ['a', 'b', 'c'];
     expect(defs.length).toBe(MAX_VISIBLE_DEFINITIONS);
-    const el = createDefinitionList(defs, 'definition-text', 'definition-item');
+    const el = createDefinitionTextElement(defs);
     expect(el.tagName).toBe('UL');
     expect(el.classList.contains('definition-senses')).toBe(false);
     expect(el.querySelector('.definition-more')).toBeNull();
@@ -44,8 +39,7 @@ describe('createDefinitionList', () => {
   });
 
   it('wraps longer lists and hides overflow until expanded', () => {
-    const defs = ['a', 'b', 'c', 'd', 'e'];
-    const el = createDefinitionList(defs, 'definition-text', 'definition-item');
+    const el = createDefinitionTextElement(['a', 'b', 'c', 'd', 'e']);
     expect(el.className).toBe('definition-senses is-collapsed');
     expect(el.querySelectorAll('.definition-sense--overflow').length).toBe(2);
 
@@ -64,21 +58,23 @@ describe('createDefinitionList', () => {
     expect(btn.textContent).toBe('2 more');
     expect(btn.getAttribute('aria-expanded')).toBe('false');
   });
-
-  it('uses the provided list and item class names', () => {
-    const el = createDefinitionList(['only'], 'popup-definition', 'popup-definition-item');
-    expect(el.className).toBe('popup-definition');
-    expect(el.querySelector('.popup-definition-item')?.textContent).toBe('only');
-  });
 });
 
 describe('createMandarin/CantoneseSection', () => {
   it('labels the sections', () => {
     const def = makeDefinition();
-    expect(createMandarinSection(def.mandarin, definitionPronunciationConfig)
-      .querySelector('.definition-label')?.textContent).toBe('Mandarin');
-    expect(createCantoneseSection(def.cantonese, definitionPronunciationConfig)
-      .querySelector('.definition-label')?.textContent).toBe('Cantonese');
+    expect(createMandarinSection(def.mandarin).querySelector('.definition-label')?.textContent).toBe('Mandarin');
+    expect(createCantoneseSection(def.cantonese).querySelector('.definition-label')?.textContent).toBe('Cantonese');
+  });
+
+  it('holds the Mandarin column open with a placeholder but not the Cantonese one', () => {
+    const empty = { entries: [] };
+    expect(createMandarinSection(empty).querySelector('.definition-text')).toBeNull();
+    expect(createCantoneseSection(empty).querySelector('.definition-text')).toBeNull();
+
+    const noSenses = { entries: [{ traditional: '字', simplified: '字', romanisation: 'zi6', definitions: [] }] };
+    expect(createMandarinSection(noSenses).querySelector('.definition-text')?.textContent).toBe('Not found');
+    expect(createCantoneseSection(noSenses).querySelector('.definition-text')).toBeNull();
   });
 });
 

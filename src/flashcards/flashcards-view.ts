@@ -1,6 +1,6 @@
 import type { DefinitionResult } from '../shared/types.js';
 import { createElement } from '../shared/dom-element.js';
-import { createDefinitionElement, definitionPronunciationConfig } from '../shared/definition-section.js';
+import { createDefinitionElement } from '../shared/definition-section.js';
 
 export const ELEMENT_IDS = {
   progress: 'progress',
@@ -129,7 +129,7 @@ export function renderBack(document: Document, word: string, definition: Definit
     cardBack.replaceChildren();
     // The card front already shows the word, so the definition omits its heading.
     cardBack.appendChild(
-      createDefinitionElement(word, definition, definitionPronunciationConfig, false)
+      createDefinitionElement(word, definition, false)
     );
     cardBack.style.display = '';
   }
