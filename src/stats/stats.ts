@@ -93,8 +93,9 @@ export class StatsManager {
 
   private loadDefinition(word: string, container: HTMLElement): void {
     renderDefinitionLoading(container);
+    const context = this.cachedStatistics?.[word]?.context;
     this.client.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
-      renderDefinition(container, response, word);
+      renderDefinition(container, response, word, context);
     });
   }
 

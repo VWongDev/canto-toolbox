@@ -341,6 +341,35 @@ h1 {
   background: t.$color-surface-alt;
 }
 
+.stat-context {
+  margin-bottom: t.$space-3;
+  padding: t.$space-2 t.$space-3;
+  border-left: 3px solid t.$color-primary;
+  border-radius: 0 t.$radius-sm t.$radius-sm 0;
+  background: t.$color-surface-alt;
+}
+
+.stat-context-label {
+  display: block;
+  margin-bottom: 2px;
+  color: t.$color-text-subtle;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-context-sentence {
+  margin: 0;
+  color: t.$color-text-faint;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.stat-context-word {
+  color: t.$color-primary;
+  font-weight: 600;
+}
+
 .stat-loading,
 .stat-error {
   text-align: center;
@@ -405,6 +434,23 @@ h1 {
 
   .stat-loading {
     color: t.$color-text-subtle-dark;
+  }
+
+  .stat-context {
+    border-left-color: t.$color-primary-dark;
+    background: t.$color-surface-alt-dark;
+  }
+
+  .stat-context-label {
+    color: t.$color-text-subtle-dark;
+  }
+
+  .stat-context-sentence {
+    color: t.$color-text-faint-dark;
+  }
+
+  .stat-context-word {
+    color: t.$color-primary-dark;
   }
 
   .stat-word {
