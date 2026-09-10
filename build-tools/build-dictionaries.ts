@@ -7,7 +7,8 @@ import { fileURLToPath } from 'url';
 import { processMandarinDict } from './processors/mandarin-processor.js';
 import { processCantoneseDict } from './processors/cantonese-processor.js';
 import { processEtymologyDict } from './processors/etymology-processor.js';
-import type { Dictionary, EtymologyDictionary } from '../src/shared/types.js';
+import { processFrequencyData } from './processors/frequency-processor.js';
+import type { Dictionary, EtymologyDictionary, FrequencyRanks } from '../src/shared/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,10 +22,14 @@ const rootDir = join(__dirname, __dirname.includes('dist') ? '../../..' : '../..
 async function buildDictionaries(): Promise<void> {
   console.log('[Build] Starting dictionary preprocessing...');
   
-  const dictionaries: { name: string; processor: () => Promise<Dictionary | EtymologyDictionary> }[] = [
+  const dictionaries: {
+    name: string;
+    processor: () => Promise<Dictionary | EtymologyDictionary | FrequencyRanks>;
+  }[] = [
     { name: 'mandarin', processor: processMandarinDict },
     { name: 'cantonese', processor: processCantoneseDict },
     { name: 'etymology', processor: processEtymologyDict },
+    { name: 'frequency', processor: () => Promise.resolve(processFrequencyData()) },
   ];
 
   // Create output directory

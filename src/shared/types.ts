@@ -25,6 +25,11 @@ export interface DictionaryEntry {
 
 export type Dictionary = Record<string, DictionaryEntry[]>;
 
+/** Word → its rank in the SUBTLEX-CH corpus, 1 being the commonest. */
+export type FrequencyRanks = Record<string, number>;
+
+export type FrequencyBand = 'core' | 'common' | 'frequent' | 'uncommon' | 'rare';
+
 export type FlashcardRating = 'again' | 'hard' | 'good' | 'easy';
 export type FlashcardStage = 'new' | 'learning' | 'familiar' | 'mastered';
 
@@ -46,6 +51,12 @@ export interface Statistics {
   [word: string]: WordStatistics;
 }
 
+export interface WordFrequency {
+  /** 1 is the commonest word in the corpus. */
+  rank: number;
+  band: FrequencyBand;
+}
+
 export interface DefinitionResult {
   word: string;
   mandarin: {
@@ -55,6 +66,8 @@ export interface DefinitionResult {
     entries: DictionaryEntry[];
   };
   etymology?: CharacterEtymology[];
+  /** Absent when the word is rarer than the corpus cap. */
+  frequency?: WordFrequency;
 }
 
 export interface LookupMessage {

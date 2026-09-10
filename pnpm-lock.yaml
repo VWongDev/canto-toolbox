@@ -23,6 +23,9 @@ devDependencies:
   '@vitest/coverage-v8':
     specifier: 2.1.9
     version: 2.1.9(vitest@2.1.9)
+  chinese-lexicon:
+    specifier: ^1.0.43
+    version: 1.0.43
   eslint:
     specifier: ^10.2.0
     version: 10.2.0
@@ -1835,6 +1838,10 @@ packages:
       parse5-parser-stream: 7.1.2
       undici: 7.19.0
       whatwg-mimetype: 4.0.0
+    dev: true
+
+  /chinese-lexicon@1.0.43:
+    resolution: {integrity: sha512-VwIpl0i4OHCYdn4P5cUdiy+PhKxEeBw0iYfpTLuti6gqr+NsmGZpkIeVsSAJgdXHjkcrJQNGnqtGntbtv0zPbQ==}
     dev: true
 
   /chokidar@4.0.3:
