@@ -1,10 +1,7 @@
 import { registerHandlers } from '../shared/message-router.js';
 import { STATISTICS_KEY, statisticsStore } from '../shared/statistics-store.js';
-import type { FlashcardRating, Statistics } from '../shared/types.js';
-
-function nextConsecutiveCorrect(current: number, rating: FlashcardRating): number {
-  return rating === 'good' || rating === 'easy' ? current + 1 : 0;
-}
+import { reviewCard } from '../shared/scheduler.js';
+import type { Statistics } from '../shared/types.js';
 
 export function register(): void {
   registerHandlers({
@@ -14,15 +11,9 @@ export function register(): void {
         const stat = stats[msg.word];
         if (!stat) return stats;
 
-        const fc = stat.flashcard ?? { reviews: 0, consecutiveCorrect: 0 };
         stats[msg.word] = {
           ...stat,
-          flashcard: {
-            reviews: fc.reviews + 1,
-            consecutiveCorrect: nextConsecutiveCorrect(fc.consecutiveCorrect, msg.rating),
-            lastRating: msg.rating,
-            lastReviewed: Date.now(),
-          },
+          flashcard: reviewCard(stat.flashcard, msg.rating),
         };
         return stats;
       });

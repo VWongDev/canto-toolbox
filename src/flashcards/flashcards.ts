@@ -1,9 +1,11 @@
-import type { StatisticsResponse, LookupResponse, ErrorResponse } from '../shared/types.js';
+import type { StatisticsResponse, LookupResponse, ErrorResponse, Statistics } from '../shared/types.js';
+import { dueAt, isDue } from '../shared/scheduler.js';
 import { flashcardClient, type FlashcardClient } from './flashcard-client.js';
 import {
   ELEMENT_IDS,
   SCREEN_IDS,
   setScreen,
+  renderEmptyState,
   renderFinished,
   updateProgress,
   getCurrentWord,
@@ -18,6 +20,12 @@ import {
 
 const MAX_CARDS = 20;
 const MIN_COUNT = 2;
+
+/** Cap on unseen words per session, so due reviews are never crowded out. */
+const MAX_NEW_CARDS = 10;
+
+const NOTHING_TRACKED =
+  'No words to review yet.\nHover over Chinese words at least twice to unlock flashcard review.';
 
 type Rating = 'again' | 'hard' | 'good' | 'easy';
 
@@ -38,6 +46,59 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
     [result[i], result[j]] = [result[j]!, result[i]!];
   }
   return result;
+}
+
+/**
+ * A session is the words the scheduler says are owed, most overdue first,
+ * topped up with unseen words. Words already in the deck stay eligible however
+ * rarely they are hovered; unseen ones still have to clear the exposure gate
+ * before they are worth drilling.
+ */
+export function selectSession(statistics: Statistics, now: number = Date.now()): string[] {
+  const due: Array<{ word: string; due: number }> = [];
+  const unseen: string[] = [];
+
+  for (const [word, stat] of Object.entries(statistics)) {
+    const progress = stat.flashcard;
+    if (progress?.srs) {
+      if (isDue(progress, now)) due.push({ word, due: dueAt(progress) });
+    } else if (stat.count >= MIN_COUNT) {
+      unseen.push(word);
+    }
+  }
+
+  due.sort((a, b) => a.due - b.due);
+  const reviews = due.slice(0, MAX_CARDS).map(entry => entry.word);
+  const room = Math.min(MAX_NEW_CARDS, MAX_CARDS - reviews.length);
+
+  return [...reviews, ...fisherYatesShuffle(unseen).slice(0, room)];
+}
+
+/** Epoch ms of the soonest scheduled review, or undefined if the deck is empty. */
+function nextReviewAt(statistics: Statistics): number | undefined {
+  const scheduled = Object.values(statistics)
+    .map(stat => stat.flashcard?.srs?.due)
+    .filter((due): due is number => due !== undefined);
+
+  return scheduled.length > 0 ? Math.min(...scheduled) : undefined;
+}
+
+function formatRelative(deltaMs: number): string {
+  const format = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  const minutes = Math.round(deltaMs / 60_000);
+  if (Math.abs(minutes) < 60) return format.format(minutes, 'minute');
+
+  const hours = Math.round(minutes / 60);
+  if (Math.abs(hours) < 24) return format.format(hours, 'hour');
+
+  return format.format(Math.round(hours / 24), 'day');
+}
+
+function emptyStateMessage(statistics: Statistics, now: number): string {
+  const next = nextReviewAt(statistics);
+  if (next === undefined) return NOTHING_TRACKED;
+
+  return `All caught up.\nYour next review is due ${formatRelative(next - now)}.`;
 }
 
 export class FlashcardManager {
@@ -61,24 +122,22 @@ export class FlashcardManager {
 
     this.client.getStatistics((response: StatisticsResponse | ErrorResponse) => {
       if (!response.success) {
-        setScreen(this.document, SCREEN_IDS.emptyState);
+        renderEmptyState(this.document, NOTHING_TRACKED);
         return;
       }
 
-      const eligible = Object.entries(response.statistics)
-        .filter(([, stat]) => stat.count >= MIN_COUNT)
-        .map(([word]) => word);
+      const now = Date.now();
+      const session = selectSession(response.statistics, now);
 
-      if (eligible.length === 0) {
-        setScreen(this.document, SCREEN_IDS.emptyState);
+      if (session.length === 0) {
+        renderEmptyState(this.document, emptyStateMessage(response.statistics, now));
         return;
       }
 
-      const shuffled = fisherYatesShuffle(eligible).slice(0, MAX_CARDS);
-      this.sessionWords = shuffled;
-      this.reviewQueue = [...shuffled];
+      this.sessionWords = session;
+      this.reviewQueue = [...session];
       this.correctCount = 0;
-      this.totalCount = shuffled.length;
+      this.totalCount = session.length;
       setScreen(this.document, SCREEN_IDS.review);
       this.showNextCard();
     });

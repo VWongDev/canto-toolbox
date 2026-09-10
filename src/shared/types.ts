@@ -33,11 +33,30 @@ export type FrequencyBand = 'core' | 'common' | 'frequent' | 'uncommon' | 'rare'
 export type FlashcardRating = 'again' | 'hard' | 'good' | 'easy';
 export type FlashcardStage = 'new' | 'learning' | 'familiar' | 'mastered';
 
+/**
+ * Compact projection of an FSRS card. Dates are epoch milliseconds and reals
+ * are rounded, because every tracked word's progress shares one storage item.
+ */
+export interface SrsState {
+  /** Epoch ms at which the word is next due for review. */
+  due: number;
+  /** Days the memory is expected to last from the last review. */
+  stability: number;
+  difficulty: number;
+  scheduledDays: number;
+  learningSteps: number;
+  lapses: number;
+  /** FSRS `State`: 0 New, 1 Learning, 2 Review, 3 Relearning. */
+  state: number;
+}
+
 export interface FlashcardProgress {
   reviews: number;
   consecutiveCorrect: number;
   lastRating?: FlashcardRating;
   lastReviewed?: number;
+  /** Absent until the word's first review. */
+  srs?: SrsState;
 }
 
 export interface WordStatistics {

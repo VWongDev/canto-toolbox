@@ -31,6 +31,24 @@ export function setScreen(document: Document, id: ScreenId): void {
   });
 }
 
+/**
+ * The empty screen covers two different situations — nothing tracked yet, and
+ * a deck with nothing due — so its copy is set by the caller. Newlines become
+ * line breaks to match the markup's original two-line shape.
+ */
+export function renderEmptyState(document: Document, message: string): void {
+  setScreen(document, SCREEN_IDS.emptyState);
+
+  const paragraph = document.getElementById(SCREEN_IDS.emptyState)?.querySelector('p');
+  if (!paragraph) return;
+
+  paragraph.replaceChildren();
+  message.split('\n').forEach((line, index) => {
+    if (index > 0) paragraph.appendChild(document.createElement('br'));
+    paragraph.appendChild(document.createTextNode(line));
+  });
+}
+
 export function renderFinished(document: Document, correctCount: number, totalCount: number): void {
   setScreen(document, SCREEN_IDS.finished);
   const summaryEl = document.getElementById(ELEMENT_IDS.resultSummary);
