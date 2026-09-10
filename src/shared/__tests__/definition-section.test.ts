@@ -4,6 +4,7 @@ import {
   createDefinitionElement,
   createMandarinSection,
   createCantoneseSection,
+  findScriptVariant,
 } from '../definition-section.js';
 import { createDefinitionTextElement, MAX_VISIBLE_DEFINITIONS } from '../definition-list.js';
 import type { DefinitionResult } from '../types.js';
@@ -101,5 +102,58 @@ describe('createDefinitionElement', () => {
     }));
     // word + etymology + definition-sections
     expect(withEty.children.length).toBe(3);
+  });
+});
+
+describe('findScriptVariant', () => {
+  const varied = (word: string): DefinitionResult => ({
+    word,
+    mandarin: {
+      entries: [
+        { traditional: '廣東話', simplified: '广东话', romanisation: 'Guang3dong1 hua4', definitions: ['Cantonese'] },
+      ],
+    },
+    cantonese: { entries: [] },
+  });
+
+  it('offers the simplified form when reading traditional', () => {
+    expect(findScriptVariant(varied('廣東話'))).toEqual({ label: 'Simplified', form: '广东话' });
+  });
+
+  it('offers the traditional form when reading simplified', () => {
+    expect(findScriptVariant(varied('广东话'))).toEqual({ label: 'Traditional', form: '廣東話' });
+  });
+
+  it('offers nothing when the two scripts agree', () => {
+    expect(findScriptVariant(makeDefinition())).toBeNull();
+  });
+
+  it('offers nothing for a word matching no entry', () => {
+    expect(findScriptVariant(varied('別的'))).toBeNull();
+  });
+
+  it('finds the variant from the Cantonese entries too', () => {
+    const definition: DefinitionResult = {
+      word: '廣東話',
+      mandarin: { entries: [] },
+      cantonese: {
+        entries: [
+          { traditional: '廣東話', simplified: '广东话', romanisation: 'gwong2 dung1 waa2', definitions: ['Cantonese'] },
+        ],
+      },
+    };
+
+    expect(findScriptVariant(definition)).toEqual({ label: 'Simplified', form: '广东话' });
+  });
+
+  it('renders the counterpart above the readings', () => {
+    const el = createDefinitionElement('廣東話', varied('廣東話'));
+    expect(el.querySelector('.definition-variant-label')?.textContent).toBe('Simplified');
+    expect(el.querySelector('.definition-variant-form')?.textContent).toBe('广东话');
+  });
+
+  it('renders no variant row when the scripts agree', () => {
+    const el = createDefinitionElement('你好', makeDefinition());
+    expect(el.querySelector('.definition-variant')).toBeNull();
   });
 });
