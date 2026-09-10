@@ -1,5 +1,14 @@
-import type { Dictionary, DictionaryEntry, DefinitionResult, EtymologyDictionary, CharacterEtymology } from '../shared/types.js';
+import type {
+  Dictionary,
+  DictionaryEntry,
+  DefinitionResult,
+  EtymologyDictionary,
+  FrequencyRanks,
+  CharacterEtymology,
+  WordFrequency,
+} from '../shared/types.js';
 import { parseComponents } from '../shared/decomposition.js';
+import { bandForRank } from '../shared/frequency.js';
 
 const CANTONESE_MARKER = '(cantonese)';
 const MAX_WORD_LENGTH = 4;
@@ -7,6 +16,7 @@ const MAX_WORD_LENGTH = 4;
 let mandarinDict: Dictionary = {};
 let cantoneseDict: Dictionary = {};
 let etymologyDict: EtymologyDictionary = {};
+let frequencyRanks: FrequencyRanks = {};
 
 let dictionariesPromise: Promise<void> | null = null;
 
@@ -16,13 +26,35 @@ export function initDictionaries(): Promise<void> {
       fetch(chrome.runtime.getURL('data/mandarin.json')).then(r => r.json() as Promise<Dictionary>),
       fetch(chrome.runtime.getURL('data/cantonese.json')).then(r => r.json() as Promise<Dictionary>),
       fetch(chrome.runtime.getURL('data/etymology.json')).then(r => r.json() as Promise<EtymologyDictionary>),
-    ]).then(([mandarin, cantonese, etymology]) => {
+      fetch(chrome.runtime.getURL('data/frequency.json')).then(r => r.json() as Promise<FrequencyRanks>),
+    ]).then(([mandarin, cantonese, etymology, frequency]) => {
       mandarinDict = mandarin;
       cantoneseDict = cantonese;
       etymologyDict = etymology;
+      frequencyRanks = frequency;
     });
   }
   return dictionariesPromise;
+}
+
+/**
+ * The corpus is keyed by simplified forms, so a traditional word is found
+ * through its entries' simplified counterpart.
+ */
+export function lookupFrequency(word: string, entries: DictionaryEntry[]): WordFrequency | undefined {
+  let rank = frequencyRanks[word];
+
+  if (rank === undefined) {
+    for (const entry of entries) {
+      const simplified = entry.simplified;
+      if (simplified && simplified !== word && frequencyRanks[simplified] !== undefined) {
+        rank = frequencyRanks[simplified];
+        break;
+      }
+    }
+  }
+
+  return rank === undefined ? undefined : { rank, band: bandForRank(rank) };
 }
 
 function lookupInDict(dict: Dictionary, word: string): DictionaryEntry[] {
@@ -108,6 +140,14 @@ export function lookupWordInDictionaries(word: string): DefinitionResult {
   const etymology = lookupEtymology(word);
   if (etymology.length > 0) {
     result.etymology = etymology;
+  }
+
+  const frequency = lookupFrequency(word, [
+    ...result.mandarin.entries,
+    ...result.cantonese.entries,
+  ]);
+  if (frequency) {
+    result.frequency = frequency;
   }
 
   return result;

@@ -57,6 +57,17 @@ $color-tone-5:        #a05a00;
 $color-tone-6:        #0e6b6b;
 $color-tone-neutral:  #767676;
 
+// Frequency bands — warmer as a word gets commoner, so the chip reads as
+// priority at a glance.
+$color-band-core:        #8a4b00;
+$color-band-core-bg:     #fdf0d8;
+$color-band-common:      #1e6b3a;
+$color-band-common-bg:   #e4f4e8;
+$color-band-frequent:    #1a5490;
+$color-band-frequent-bg: #e4eefb;
+$color-band-rare:        #5f5f68;
+$color-band-rare-bg:     #eeeef0;
+
 // Neutral controls — colour is reserved for the primary action, so secondary
 // and tertiary buttons carry weight through surface and border only.
 $color-control:        #ffffff;
@@ -108,6 +119,16 @@ $color-tone-4-dark:        #d7a3f0;
 $color-tone-5-dark:        #e8b06a;
 $color-tone-6-dark:        #63cccc;
 $color-tone-neutral-dark:  #9a9aa4;
+
+// Frequency bands — dark canvas keeps the hue, drops the fill to a tint.
+$color-band-core-dark:        #f0b866;
+$color-band-core-bg-dark:     rgba(240, 184, 102, 0.14);
+$color-band-common-dark:      #7bd88f;
+$color-band-common-bg-dark:   rgba(123, 216, 143, 0.13);
+$color-band-frequent-dark:    #79b8ff;
+$color-band-frequent-bg-dark: rgba(121, 184, 255, 0.13);
+$color-band-rare-dark:        #9a9aa4;
+$color-band-rare-bg-dark:     rgba(255, 255, 255, 0.07);
 $color-danger-dark:        #f09088;
 
 $color-control-dark:        #2a2b30;

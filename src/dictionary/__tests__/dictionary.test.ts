@@ -45,11 +45,19 @@ const mockEtymology = {
   '字': { character: '字', decomposition: '⿱宀子', radical: '宀', etymologyType: 'pictophonetic', semantic: '宀', phonetic: '子' },
 };
 
+// Ranks from the real SUBTLEX-CH build; 廣東話 is genuinely outside the cap.
+const mockFrequency = {
+  '好': 10,
+  '字': 1207,
+  '广东话': 18450,
+};
+
 vi.stubGlobal('fetch', vi.fn((url: string) => {
   let data: unknown;
   if (url.includes('mandarin')) data = mockMandarin;
   else if (url.includes('cantonese')) data = mockCantonese;
   else if (url.includes('etymology')) data = mockEtymology;
+  else if (url.includes('frequency')) data = mockFrequency;
   return Promise.resolve({ json: () => Promise.resolve(data) });
 }));
 
@@ -212,5 +220,24 @@ describe('lookupWord', () => {
 
   it('throws when the word is not found', () => {
     expect(() => lookupWord('囧')).toThrow('囧');
+  });
+});
+
+describe('lookupFrequency', () => {
+  it('bands a very common word as core vocabulary', () => {
+    expect(lookupWord('好').frequency).toEqual({ rank: 10, band: 'core' });
+  });
+
+  it('bands a mid-frequency word by its rank', () => {
+    expect(lookupWord('字').frequency).toEqual({ rank: 1207, band: 'common' });
+  });
+
+  it('finds a traditional word through its simplified counterpart', () => {
+    // 廣東話 is not in the corpus under its traditional form; 广东话 is.
+    expect(lookupWord('廣東話').frequency).toEqual({ rank: 18450, band: 'uncommon' });
+  });
+
+  it('omits frequency for a word rarer than the corpus cap', () => {
+    expect(lookupWord('好字').frequency).toBeUndefined();
   });
 });

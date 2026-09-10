@@ -21,10 +21,80 @@
   }
 }
 
+.definition-body {
+  display: flex;
+  flex-direction: column;
+  gap: t.$space-3;
+}
+
 .definition-sections {
   display: flex;
   flex-direction: row;
   gap: t.$space-5;
+}
+
+// How common the word is, so the reader can tell what is worth learning.
+.frequency-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: baseline;
+  gap: t.$space-2;
+  padding: 2px t.$space-2;
+  border-radius: t.$radius-pill;
+  font-size: t.$text-xs;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: default;
+}
+
+.frequency-badge-rank {
+  font-weight: 500;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.frequency-badge--core {
+  background: t.$color-band-core-bg;
+  color: t.$color-band-core;
+}
+
+.frequency-badge--common {
+  background: t.$color-band-common-bg;
+  color: t.$color-band-common;
+}
+
+.frequency-badge--frequent {
+  background: t.$color-band-frequent-bg;
+  color: t.$color-band-frequent;
+}
+
+.frequency-badge--uncommon,
+.frequency-badge--rare {
+  background: t.$color-band-rare-bg;
+  color: t.$color-band-rare;
+}
+
+@include dark {
+  .frequency-badge--core {
+    background: t.$color-band-core-bg-dark;
+    color: t.$color-band-core-dark;
+  }
+
+  .frequency-badge--common {
+    background: t.$color-band-common-bg-dark;
+    color: t.$color-band-common-dark;
+  }
+
+  .frequency-badge--frequent {
+    background: t.$color-band-frequent-bg-dark;
+    color: t.$color-band-frequent-dark;
+  }
+
+  .frequency-badge--uncommon,
+  .frequency-badge--rare {
+    background: t.$color-band-rare-bg-dark;
+    color: t.$color-band-rare-dark;
+  }
 }
 
 .definition-section {
@@ -76,12 +146,6 @@
       background: t.$color-surface-alt-dark;
     }
   }
-}
-
-.definition-body {
-  display: flex;
-  flex-direction: column;
-  gap: t.$space-3;
 }
 
 .definition-variant {

@@ -2,6 +2,7 @@ import type { DefinitionResult, DictionaryEntry } from './types.js';
 import { createElement } from './dom-element.js';
 import { createPronunciationSection } from './pronunciation-section.js';
 import { createEtymologySection } from './etymology-section.js';
+import { createFrequencyBadge } from './frequency-badge.js';
 
 export function createMandarinSection(
   data: DefinitionResult['mandarin'],
@@ -87,12 +88,17 @@ export function createDefinitionSections(definition: DefinitionResult): HTMLElem
     ]
   });
 
+  // How common the word is comes first — it is what decides whether the rest
+  // is worth reading — then the script counterpart, then the readings.
   const variant = findScriptVariant(definition);
-  if (!variant) return columns;
 
   return createElement({
     className: 'definition-body',
-    children: [createScriptVariantElement(variant), columns],
+    children: [
+      createFrequencyBadge(definition.frequency),
+      ...(variant ? [createScriptVariantElement(variant)] : []),
+      columns,
+    ],
   });
 }
 
