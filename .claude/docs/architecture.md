@@ -92,9 +92,14 @@ flowchart TD
 - **Key class**: `ChineseHoverPopupManager` — popup display and selection logic.
 - **Responsibilities**: inject styles; listen for `mousemove`/`mouseout`/`mouseup`
   (RAF-throttled, cancelled on `destroy()`); detect Chinese with
-  `[一-鿿]+`; extract the word at the caret
-  (`document.caretRangeFromPoint`); request a lookup via `popup-client`
-  (`sendMessage`); render the popup with the shared section components.
+  `[一-鿿]+`; take the whole run at the caret
+  (`document.caretRangeFromPoint`, with a realm-safe `nodeType` check so
+  frames work) and send it with the hovered offset, leaving segmentation to
+  the dictionary; request a lookup via `popup-client` (`sendMessage`); render
+  the popup with the shared section components.
+- **Study signal**: showing a popup is not studying. After `DWELL_MS` with the
+  popup still on the same word, the script sends `track_word` — once per word,
+  along with `extractContext`'s snippet of the sentence it was met in.
 
 ### Service Worker (`src/service-worker.ts`)
 
@@ -104,8 +109,9 @@ flowchart TD
 
 ### Background Handlers (`*/background-handler.ts`)
 
-- **popup**: handles `lookup_word` (kicks off `initDictionaries()`, looks up the
-  word, tracks statistics) and `track_word`.
+- **popup**: handles `lookup_word` (kicks off `initDictionaries()`, then
+  `lookupWordAt` when the message carries a hovered segment, else `lookupWord`)
+  and `track_word` (the only path that writes statistics).
 - **stats**: handles `get_statistics` (reads merged sync+local statistics).
 - Message passing is plain functions, not a class. The typed helper is
   `sendMessage()` in `src/shared/message-manager.ts`; each feature has a thin
@@ -126,7 +132,8 @@ flowchart TD
 
 - **Key class**: `StatsManager`. Loads merged statistics via `stats-client`,
   renders the frequency list with lazily-expanded definitions (rendered by the
-  shared `definition-section`), word/hover counts, and a clear action.
+  shared `definition-section`), the sentence each word was met in, study
+  counts, and a clear action.
 
 ### Flashcards Page (`src/flashcards/`)
 
@@ -147,9 +154,11 @@ flowchart TD
    `lookupWord`, and replies with a `DefinitionResult` (async response channel,
    listener returns `true`).
 3. **Display** — content script renders the popup near the cursor.
-4. **Statistics** — every lookup/track increments the word count through
-   `RedundantStore` (write to sync, fall back to local). The stats/flashcards
-   pages read both areas and reconcile with `mergeStatistics`.
+4. **Statistics** — a `track_word` (sent only after the reader dwells on a
+   word) increments its count through `RedundantStore` (write to sync, fall
+   back to local) and records the sentence it was first met in. The
+   stats/flashcards pages read both areas and reconcile with
+   `mergeStatistics`.
 
 ## Storage
 
