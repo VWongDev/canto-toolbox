@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { mergeStatistics } from '../statistics-utils.js';
+import { getFlashcardStage, mergeStatistics } from '../statistics-utils.js';
+import { reviewCard } from '../scheduler.js';
+import type { FlashcardProgress, WordStatistics } from '../types.js';
 
 describe('mergeStatistics', () => {
   it('returns empty object when both args are empty', () => {
@@ -38,5 +40,43 @@ describe('mergeStatistics', () => {
       { 好: { count: 1, firstSeen: 100, lastSeen: 100 } }
     );
     expect(result['好']!.lastSeen).toBe(300);
+  });
+});
+
+describe('getFlashcardStage', () => {
+  const NOW = new Date('2026-01-01T00:00:00Z');
+  const DAY_MS = 86_400_000;
+
+  function drilled(reviews: number): WordStatistics {
+    let progress: FlashcardProgress | undefined;
+    let at = NOW;
+    for (let i = 0; i < reviews; i++) {
+      progress = reviewCard(progress, 'easy', at);
+      at = new Date(progress.srs!.due);
+    }
+    return { count: 5, firstSeen: 1, lastSeen: 2, flashcard: progress! };
+  }
+
+  it('is new for a word that has never been reviewed', () => {
+    expect(getFlashcardStage({ count: 5, firstSeen: 1, lastSeen: 2 }, NOW)).toBe('new');
+  });
+
+  it('is learning while the word is still in its learning steps', () => {
+    const flashcard = reviewCard(undefined, 'good', NOW);
+    const stat: WordStatistics = { count: 5, firstSeen: 1, lastSeen: 2, flashcard };
+    expect(getFlashcardStage(stat, NOW)).toBe('learning');
+  });
+
+  it('is mastered for a durable word reviewed on schedule', () => {
+    const stat = drilled(6);
+    expect(getFlashcardStage(stat, new Date(stat.flashcard!.lastReviewed!))).toBe('mastered');
+  });
+
+  it('decays out of mastered when the review never happens', () => {
+    const stat = drilled(6);
+    const stability = stat.flashcard!.srs!.stability;
+    const neglected = new Date(stat.flashcard!.lastReviewed! + stability * DAY_MS * 10);
+
+    expect(getFlashcardStage(stat, neglected)).toBe('familiar');
   });
 });

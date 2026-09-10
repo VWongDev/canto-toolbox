@@ -1,13 +1,16 @@
 import type { FlashcardProgress, FlashcardStage, Statistics, WordStatistics } from './types';
+import { isLearning, isMastered } from './scheduler.js';
 
-const MASTERED_THRESHOLD = 3;
-
-export function getFlashcardStage(stat: WordStatistics): FlashcardStage {
+/**
+ * Staging reads the scheduler rather than a raw streak, so a word decays out
+ * of `mastered` on its own once its recall probability drops — a streak from
+ * six months ago is not mastery.
+ */
+export function getFlashcardStage(stat: WordStatistics, now: Date = new Date()): FlashcardStage {
   const fc = stat.flashcard;
   if (!fc || fc.reviews === 0) return 'new';
-  if (fc.consecutiveCorrect >= MASTERED_THRESHOLD) return 'mastered';
-  if (fc.consecutiveCorrect > 0) return 'familiar';
-  return 'learning';
+  if (isLearning(fc)) return 'learning';
+  return isMastered(fc, now) ? 'mastered' : 'familiar';
 }
 
 function mergeFlashcardProgress(
