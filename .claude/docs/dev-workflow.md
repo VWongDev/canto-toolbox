@@ -36,7 +36,7 @@ pnpm build
 
 This runs:
 1. `tsc -p build-tools/tsconfig.json` — compiles build-tool scripts to `build-tools/dist/`
-2. `node build-tools/dist/build-tools/build-dictionaries.js` — processes raw dictionary submodule data into `src/data/mandarin.json` and `src/data/cantonese.json`
+2. `node build-tools/dist/build-tools/build-dictionaries.js` — processes raw dictionary submodule data into `public/data/{mandarin,cantonese,etymology,frequency}.json`
 3. `vite build` — bundles the extension into `dist/` (requires `--max-old-space-size=8192` due to large dictionary imports)
 
 Output goes to `dist/`. This directory is the unpacked Chrome extension.
@@ -120,5 +120,5 @@ Requires a full build first and uses Puppeteer to capture the extension UI.
 
 - **Dictionary submodules must be initialized** before `pnpm build:dict` will work. If `src/data/` is empty or missing, run `git submodule update --init --recursive`.
 - **Memory limit is required** for the Vite build step because dictionary JSON files are large. The `pnpm build` script sets this automatically; manual `vite build` calls need `NODE_OPTIONS=--max-old-space-size=8192`.
-- **`src/data/` is generated** — do not manually edit `mandarin.json` or `cantonese.json`. Changes belong in `build-tools/processors/`.
+- **`public/data/` is generated** — do not manually edit `mandarin.json`, `cantonese.json`, `etymology.json` or `frequency.json`. Changes belong in `build-tools/processors/`.
 - **`build-tools/dist/` is also generated** — if build tool scripts behave unexpectedly, run `pnpm clean` and rebuild from scratch.

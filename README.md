@@ -13,6 +13,7 @@ A Chrome extension that displays Chinese word definitions in both Mandarin and C
 - **Both Scripts**: Shows the traditional/simplified counterpart when they differ
 - **Works Everywhere**: Functions on any website with Chinese text
 - **Word Statistics**: Tracks your most frequently looked-up words
+- **Word Frequency**: Every definition shows how common the word is (Core 1000, Common, Frequent…) from the SUBTLEX-CH film-subtitle corpus, so you can tell what's worth learning first
 - **Flashcard Review**: Spaced-repetition review of your looked-up words
 - **Multi-word Selection**: Select multiple characters to look up phrases
 - **Radical Breakdown**: Per-character etymology with radical, structure (IDS decomposition), and pictographic/ideographic/pictophonetic hints
@@ -141,6 +142,12 @@ This extension uses high-quality, open-source dictionary data:
 - **Repository**: [skishore/makemeahanzi](https://github.com/skishore/makemeahanzi)
 - **License**: See [COPYING](https://github.com/skishore/makemeahanzi/blob/master/COPYING) in the repository
 - **Description**: Character etymology data (decomposition, radical, pictographic/pictophonetic hints) used in the extension’s etymology display.
+
+### SUBTLEX-CH (Word Frequency)
+- **Source**: Cai, Q., & Brysbaert, M. (2010). [SUBTLEX-CH: Chinese Word and Character Frequencies Based on Film Subtitles](https://doi.org/10.1371/journal.pone.0010729). *PLoS ONE*, 5(6), e10729.
+- **Package**: [chinese-lexicon](https://github.com/peterolson/chinese-lexicon) (build-time only)
+- **License**: ISC
+- **Description**: Word frequency ranks from a film-subtitle corpus, used to band each word by how common it is. Only the 20,000 commonest words are shipped — past that the distinction stops being actionable.
 
 ## Inspiration
 

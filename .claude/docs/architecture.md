@@ -50,7 +50,8 @@ canto-toolbox/
 ├── build-tools/               # Build-time dictionary processing
 │   ├── build-dictionaries.ts  # Dictionary build entry
 │   ├── benchmark.ts / check-bundle-size.ts / generate-screenshots.ts
-│   └── processors/            # cedict-parser, mandarin/cantonese/etymology, utils
+│   └── processors/            # cedict-parser, mandarin/cantonese/etymology,
+│                              # frequency, utils
 ├── dictionaries/              # Source data (git submodules)
 │   ├── mandarin/              # CC-CEDICT
 │   ├── cantonese/             # CC-Canto
@@ -164,6 +165,10 @@ flowchart TD
   `dictionaries/cantonese` (CC-Canto), `dictionaries/makemeahanzi` (etymology).
 - **build-tools/processors** — convert the raw submodule data into the unified
   JSON written to `public/data/` (deterministic, key-sorted output).
+- **chinese-lexicon** (dev only) — carries the SUBTLEX-CH word-frequency data
+  the frequency processor reads. Unlike the dictionaries it is an npm
+  devDependency rather than a submodule, since only the build reads it and
+  nothing of the package ships; the emitted `frequency.json` is ~290 KB.
 
 ## Extension Permissions
 
@@ -177,6 +182,11 @@ flowchart TD
 - **CC-Canto** — Cantonese–English with Jyutping (including entries with empty
   pinyin brackets, which the parser preserves).
 - **makemeahanzi** — character decomposition / etymology.
+- **SUBTLEX-CH** — word frequency from film subtitles (Cai & Brysbaert, 2010),
+  read from the `chinese-lexicon` devDependency. Capped at the 20,000
+  commonest words: past that, the difference between two ranks is "both rare".
+  The package also exposes an HSK helper, but it *estimates* a level from
+  character difficulty for words off the official list, so it is not used.
 
 Processed at build time into unified JSON under `public/data/`.
 
