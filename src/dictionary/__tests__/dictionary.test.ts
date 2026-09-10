@@ -5,7 +5,9 @@ import {
   hasValidDefinition,
   lookupWordInDictionaries,
   findLongestMatchingWord,
+  findWordCoveringOffset,
   lookupWord,
+  lookupWordAt,
   lookupEtymology,
 } from '../dictionary.js';
 import type { DictionaryEntry, DefinitionResult } from '../../shared/types.js';
@@ -239,5 +241,47 @@ describe('lookupFrequency', () => {
 
   it('omits frequency for a word rarer than the corpus cap', () => {
     expect(lookupWord('好字').frequency).toBeUndefined();
+  });
+});
+
+describe('findWordCoveringOffset', () => {
+  it('extends backwards past the cursor to the longest word', () => {
+    // Hovering 字 alone would match 字; the compound covering it wins.
+    expect(findWordCoveringOffset('好字', 1)!.matchedWord).toBe('好字');
+  });
+
+  it('still matches when the cursor is on the first character', () => {
+    expect(findWordCoveringOffset('好字', 0)!.matchedWord).toBe('好字');
+  });
+
+  it('finds a compound embedded in a longer run', () => {
+    expect(findWordCoveringOffset('囧好字囧', 2)!.matchedWord).toBe('好字');
+  });
+
+  it('falls back to the single character when no compound covers it', () => {
+    expect(findWordCoveringOffset('字囧', 0)!.matchedWord).toBe('字');
+  });
+
+  it('returns null when nothing in range is a word', () => {
+    expect(findWordCoveringOffset('囧', 0)).toBeNull();
+  });
+
+  it('rejects an offset outside the run', () => {
+    expect(findWordCoveringOffset('好字', 5)).toBeNull();
+    expect(findWordCoveringOffset('好字', -1)).toBeNull();
+  });
+
+  it('reports the matched word on the definition', () => {
+    expect(findWordCoveringOffset('好字', 1)!.definition.word).toBe('好字');
+  });
+});
+
+describe('lookupWordAt', () => {
+  it('returns the word covering the hovered character', () => {
+    expect(lookupWordAt('好字', 1).word).toBe('好字');
+  });
+
+  it('throws when no word covers the offset', () => {
+    expect(() => lookupWordAt('囧', 0)).toThrow();
   });
 });

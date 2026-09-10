@@ -184,3 +184,42 @@ export function lookupWord(word: string): DefinitionResult {
   console.error('[Dict] Word not found:', word);
   throw new Error(`Word "${word}" not found in dictionary`);
 }
+
+/**
+ * The longest dictionary word that *covers* the hovered character, rather than
+ * one that merely starts there — hovering the middle of 中國人 should find
+ * 中國人, not 國人. Candidates of equal length are tried nearest the cursor
+ * first, so the hovered character stays the anchor.
+ */
+export function findWordCoveringOffset(
+  run: string,
+  offset: number,
+): { definition: DefinitionResult; matchedWord: string } | null {
+  const characters = [...run];
+  if (offset < 0 || offset >= characters.length) return null;
+
+  for (let length = Math.min(MAX_WORD_LENGTH, characters.length); length >= 1; length--) {
+    const earliest = Math.max(0, offset - length + 1);
+    const latest = Math.min(offset, characters.length - length);
+
+    for (let start = latest; start >= earliest; start--) {
+      const candidate = characters.slice(start, start + length).join('');
+      const definition = lookupWordInDictionaries(candidate);
+      if (hasValidDefinition(definition)) {
+        definition.word = candidate;
+        return { definition, matchedWord: candidate };
+      }
+    }
+  }
+
+  return null;
+}
+
+/** Look up the hovered character's word, falling back to a plain lookup. */
+export function lookupWordAt(run: string, offset: number): DefinitionResult {
+  const match = findWordCoveringOffset(run, offset);
+  if (match) return match.definition;
+
+  console.error('[Dict] Word not found at offset:', offset, 'in', run);
+  throw new Error(`No word found at offset ${offset} of "${run}"`);
+}
