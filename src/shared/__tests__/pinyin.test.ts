@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toToneMarks } from '../pinyin.js';
+import { toSyllables, toToneMarks } from '../pinyin.js';
 
 describe('toToneMarks', () => {
   it('marks each tone on a simple syllable', () => {
@@ -44,5 +44,49 @@ describe('toToneMarks', () => {
 
   it('preserves the original spacing', () => {
     expect(toToneMarks('  ni3   hao3 ')).toBe('  nǐ   hǎo ');
+  });
+});
+
+describe('toSyllables', () => {
+  it('tags each Pinyin syllable with its tone and marks it', () => {
+    expect(toSyllables('ni3 hao3', 'pinyin')).toEqual([
+      { text: 'nǐ', tone: 3 },
+      { text: ' ' },
+      { text: 'hǎo', tone: 3 },
+    ]);
+  });
+
+  it('keeps Jyutping digits, which is how it is written', () => {
+    expect(toSyllables('nei5 hou2', 'jyutping')).toEqual([
+      { text: 'nei5', tone: 5 },
+      { text: ' ' },
+      { text: 'hou2', tone: 2 },
+    ]);
+  });
+
+  it('handles the Jyutping sixth tone', () => {
+    expect(toSyllables('sing6', 'jyutping')).toEqual([{ text: 'sing6', tone: 6 }]);
+  });
+
+  it('leaves the neutral tone unmarked but tagged', () => {
+    expect(toSyllables('ma5', 'pinyin')).toEqual([{ text: 'ma', tone: 5 }]);
+  });
+
+  it('passes through tokens with no tone', () => {
+    expect(toSyllables('CD ROM', 'pinyin')).toEqual([
+      { text: 'CD' },
+      { text: ' ' },
+      { text: 'ROM' },
+    ]);
+  });
+
+  it('returns nothing for an empty romanisation', () => {
+    expect(toSyllables('', 'pinyin')).toEqual([]);
+  });
+
+  it('rejoins to the same text toToneMarks produces', () => {
+    const romanisation = 'Xiang1 gang3';
+    const rejoined = toSyllables(romanisation, 'pinyin').map(s => s.text).join('');
+    expect(rejoined).toBe(toToneMarks(romanisation));
   });
 });

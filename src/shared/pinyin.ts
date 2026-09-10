@@ -7,7 +7,8 @@ const TONE_MARKS: Record<string, string[]> = {
   ü: ['ǖ', 'ǘ', 'ǚ', 'ǜ']
 };
 
-const SYLLABLE = /^([a-zA-ZüÜ:]+)([1-5])$/;
+// Pinyin tones run 1-5, Jyutping 1-6.
+const SYLLABLE = /^([a-zA-ZüÜ:]+)([1-6])$/;
 
 /**
  * The vowel a tone mark sits on: `a` and `e` always win, the `o` of `ou`
@@ -30,7 +31,8 @@ function toneVowelIndex(syllable: string): number {
 
 function convertSyllable(syllable: string, tone: number): string {
   const normalised = syllable.replace(/u:/gi, 'ü').replace(/v/g, 'ü').replace(/V/g, 'Ü');
-  if (tone === 5) return normalised;
+  // Neutral (5) carries no mark, and there is no Pinyin tone 6 to mark.
+  if (tone >= 5) return normalised;
 
   const index = toneVowelIndex(normalised);
   if (index < 0) return normalised;
@@ -55,4 +57,32 @@ export function toToneMarks(pinyin: string): string {
       return match ? convertSyllable(match[1]!, Number(match[2])) : token;
     })
     .join('');
+}
+
+export interface Syllable {
+  text: string;
+  /** 1-5 for Pinyin, 1-6 for Jyutping; undefined when the token has no tone. */
+  tone?: number;
+}
+
+/**
+ * Split a romanisation into syllables carrying their tone, so each can be
+ * coloured. Pinyin is converted to tone marks on the way through; Jyutping
+ * keeps its trailing digits, which is how it is written. Whitespace is
+ * preserved as toneless tokens so the string still renders as written.
+ */
+export function toSyllables(romanisation: string, reading: 'pinyin' | 'jyutping'): Syllable[] {
+  return romanisation
+    .split(/(\s+)/)
+    .filter(token => token.length > 0)
+    .map(token => {
+      const match = SYLLABLE.exec(token);
+      if (!match) return { text: token };
+
+      const tone = Number(match[2]);
+      return {
+        text: reading === 'pinyin' ? convertSyllable(match[1]!, tone) : token,
+        tone,
+      };
+    });
 }

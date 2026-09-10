@@ -32,15 +32,108 @@
   min-width: 0;
 }
 
+.definition-heading {
+  display: flex;
+  align-items: center;
+  gap: t.$space-2;
+  margin-bottom: t.$space-2;
+}
+
 .definition-label {
   font-size: t.$text-xs;
   font-weight: 600;
   text-transform: uppercase;
   color: t.$color-text-subtle;
   letter-spacing: 0.5px;
-  margin-bottom: t.$space-2;
 
   @include dark { color: t.$color-text-subtle-dark; }
+}
+
+.pronunciation-speak {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  border-radius: t.$radius-sm;
+  background: none;
+  color: t.$color-text-subtle;
+  cursor: pointer;
+  line-height: 0;
+
+  &:hover {
+    color: t.$color-primary;
+    background: t.$color-surface-alt;
+  }
+
+  &:active { transform: scale(0.92); }
+
+  @include dark {
+    color: t.$color-text-subtle-dark;
+
+    &:hover {
+      color: t.$color-primary-dark;
+      background: t.$color-surface-alt-dark;
+    }
+  }
+}
+
+.definition-body {
+  display: flex;
+  flex-direction: column;
+  gap: t.$space-3;
+}
+
+.definition-variant {
+  display: flex;
+  align-items: baseline;
+  gap: t.$space-2;
+}
+
+.definition-variant-label {
+  font-size: t.$text-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: t.$color-text-subtle;
+  letter-spacing: 0.5px;
+
+  @include dark { color: t.$color-text-subtle-dark; }
+}
+
+.definition-variant-form {
+  font-size: t.$text-md;
+  color: t.$color-text-muted;
+
+  @include dark { color: t.$color-text-muted-dark; }
+}
+
+/**
+ * Tone colours supplement the mark or digit, which still carries the tone —
+ * colour is never the only cue. Mandarin follows the familiar MDBG/Pleco
+ * mapping; Cantonese needs six hues and keeps level tones cool, contour tones
+ * warm. Both palettes are lightened for dark mode to stay legible.
+ */
+.tone-pinyin-1 { color: t.$color-tone-1; }
+.tone-pinyin-2 { color: t.$color-tone-2; }
+.tone-pinyin-3 { color: t.$color-tone-3; }
+.tone-pinyin-4 { color: t.$color-tone-4; }
+.tone-pinyin-5 { color: t.$color-tone-neutral; }
+
+.tone-jyutping-1 { color: t.$color-tone-1; }
+.tone-jyutping-2 { color: t.$color-tone-2; }
+.tone-jyutping-3 { color: t.$color-tone-3; }
+.tone-jyutping-4 { color: t.$color-tone-4; }
+.tone-jyutping-5 { color: t.$color-tone-5; }
+.tone-jyutping-6 { color: t.$color-tone-6; }
+
+@include dark {
+  .tone-pinyin-1, .tone-jyutping-1 { color: t.$color-tone-1-dark; }
+  .tone-pinyin-2, .tone-jyutping-2 { color: t.$color-tone-2-dark; }
+  .tone-pinyin-3, .tone-jyutping-3 { color: t.$color-tone-3-dark; }
+  .tone-pinyin-4, .tone-jyutping-4 { color: t.$color-tone-4-dark; }
+  .tone-pinyin-5 { color: t.$color-tone-neutral-dark; }
+  .tone-jyutping-5 { color: t.$color-tone-5-dark; }
+  .tone-jyutping-6 { color: t.$color-tone-6-dark; }
 }
 
 // Romanisation is not a link, so it is not link-coloured.

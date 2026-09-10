@@ -46,6 +46,17 @@ $color-meaning:       #2a7a3b;
 $color-sound:         #0055aa;
 $color-danger:        #b3261e;
 
+// Tone colours. Mandarin 1-4 follow the MDBG/Pleco convention learners will
+// already know; Cantonese reuses those four and adds two for its extra tones.
+// Every hue clears 4.5:1 on the light surfaces.
+$color-tone-1:        #c0392b;
+$color-tone-2:        #1e7a3c;
+$color-tone-3:        #1f6feb;
+$color-tone-4:        #7d3c98;
+$color-tone-5:        #a05a00;
+$color-tone-6:        #0e6b6b;
+$color-tone-neutral:  #767676;
+
 // Neutral controls — colour is reserved for the primary action, so secondary
 // and tertiary buttons carry weight through surface and border only.
 $color-control:        #ffffff;
@@ -88,6 +99,15 @@ $color-border-muted-dark:  rgba(255, 255, 255, 0.10);
 $color-border-bold-dark:   rgba(255, 255, 255, 0.14);
 $color-meaning-dark:       #6bc98a;
 $color-sound-dark:         #6ba8e0;
+
+// Tone colours, lightened for the dark canvas.
+$color-tone-1-dark:        #ff8a80;
+$color-tone-2-dark:        #7bd88f;
+$color-tone-3-dark:        #79b8ff;
+$color-tone-4-dark:        #d7a3f0;
+$color-tone-5-dark:        #e8b06a;
+$color-tone-6-dark:        #63cccc;
+$color-tone-neutral-dark:  #9a9aa4;
 $color-danger-dark:        #f09088;
 
 $color-control-dark:        #2a2b30;
