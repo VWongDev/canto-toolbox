@@ -14,7 +14,7 @@ A Chrome extension that displays Chinese word definitions in both Mandarin and C
 - **Works Everywhere**: Functions on any website with Chinese text
 - **Word Statistics**: Tracks your most frequently looked-up words
 - **Word Frequency**: Every definition shows how common the word is (Core 1000, Common, Frequent…) from the SUBTLEX-CH film-subtitle corpus, so you can tell what's worth learning first
-- **Flashcard Review**: Spaced-repetition review of your looked-up words
+- **Flashcard Review**: FSRS spaced repetition — each rating schedules when the word comes back, and the session shows what's due
 - **Multi-word Selection**: Select multiple characters to look up phrases
 - **Radical Breakdown**: Per-character etymology with radical, structure (IDS decomposition), and pictographic/ideographic/pictophonetic hints
 - **Dark Mode Support**: Automatically adapts to your system theme
@@ -118,7 +118,7 @@ Screenshots are written to `screenshots/`. Chrome runs in headed mode because ex
    - Hover counts for each word
    - Detailed definitions for each tracked word
 
-4. **Flashcard review**: Once you've hovered over words at least twice, open the flashcard review page to quiz yourself with spaced repetition — rate each card as Again, Hard, Good, or Easy.
+4. **Flashcard review**: Once you've hovered over words at least twice, open the flashcard review page to quiz yourself — rate each card as Again, Hard, Good, or Easy. Ratings feed the [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) scheduler, so each word comes back when you're about to forget it rather than at random. When nothing is due, the page tells you when your next review lands.
 
 ## Dictionary Resources
 

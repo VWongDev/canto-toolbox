@@ -33,7 +33,8 @@ canto-toolbox/
 │   │   ├── message-manager.ts # sendMessage() typed message helper
 │   │   ├── storage-manager.ts # Thin chrome.storage wrapper
 │   │   ├── redundant-store.ts # sync→local reconciliation policy
-│   │   ├── statistics-utils.ts# mergeStatistics()
+│   │   ├── statistics-utils.ts# mergeStatistics(), getFlashcardStage()
+│   │   ├── scheduler.ts       # FSRS review scheduling
 │   │   ├── bounded-map.ts     # Top-N-by-sort-key map
 │   │   ├── debounce.ts        # createBatchedDebounce()
 │   │   ├── dom-element.ts     # createElement()
@@ -129,9 +130,14 @@ flowchart TD
 
 ### Flashcards Page (`src/flashcards/`)
 
-- Spaced-review over tracked words (count ≥ `MIN_COUNT`, capped at
-  `MAX_CARDS`, Fisher-Yates shuffled). "Again" re-queues a card; other ratings
-  advance. Definitions render via the shared `definition-section`.
+- Spaced review driven by `src/shared/scheduler.ts` (FSRS). `selectSession`
+  takes the words the scheduler says are due, most overdue first, then tops the
+  session up with unseen words (count ≥ `MIN_COUNT`, capped at
+  `MAX_NEW_CARDS`) to `MAX_CARDS`. With nothing due, the empty screen reports
+  when the next review lands.
+- "Again" re-queues a card within the session; every rating is also sent to the
+  service worker, which advances the word's FSRS state. Definitions render via
+  the shared `definition-section`.
 
 ## Data Flow
 
@@ -159,6 +165,8 @@ flowchart TD
 - **TypeScript / Vite** — typed source, bundling (`vite build`, needs
   `--max-old-space-size`).
 - **Vitest / Playwright** — unit and e2e tests.
+- **ts-fsrs** — the FSRS review scheduler. The only runtime dependency; the
+  four ratings the review UI offers are its grade scale exactly.
 - **Chrome Extension APIs** — `chrome.storage.sync|local` (statistics),
   `chrome.runtime` (message passing, `getURL`).
 - **Dictionary submodules** — `dictionaries/mandarin` (CC-CEDICT),
@@ -200,7 +208,13 @@ Processed at build time into unified JSON under `public/data/`.
   read/write reconciliation policy over `StorageManager`.
 - **`mergeStatistics`** (`src/shared/statistics-utils.ts`) — sums counts and
   reconciles first/last-seen across storage areas.
-- **`BoundedMap`** (`src/shared/bounded-map.ts`) — top-N-by-sort-key map.
+- **`getFlashcardStage`** (`src/shared/statistics-utils.ts`) — new / learning /
+  familiar / mastered, derived from the scheduler so `mastered` decays.
+- **`reviewCard` / `isDue`** (`src/shared/scheduler.ts`) — FSRS scheduling,
+  persisted as the compact `SrsState` on each word's `flashcard` progress.
+- **`BoundedMap`** (`src/shared/bounded-map.ts`) — top-N-by-sort-key map;
+  statistics rank reviewed words above unreviewed ones so pruning cannot
+  discard review history.
 - **`createBatchedDebounce`** (`src/shared/debounce.ts`) — accumulates keyed
   counts and flushes a batch.
 - **`createElement`** (`src/shared/dom-element.ts`) — DOM creation helper.
