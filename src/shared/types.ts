@@ -64,6 +64,12 @@ export interface WordStatistics {
   firstSeen: number;
   lastSeen: number;
   flashcard?: FlashcardProgress;
+  /**
+   * A snippet of the sentence the word was first met in. The strongest memory
+   * hook available and free to capture, so it is kept for recall — one per
+   * word, since every tracked word shares a single storage item.
+   */
+  context?: string;
 }
 
 export interface Statistics {
@@ -89,14 +95,27 @@ export interface DefinitionResult {
   frequency?: WordFrequency;
 }
 
+/**
+ * The run of Chinese text under the cursor and the hovered index within it.
+ * Segmentation needs the dictionary, which lives in the service worker, so the
+ * content script sends the raw run and lets the lookup pick the word.
+ */
+export interface HoverSegment {
+  run: string;
+  offset: number;
+}
+
 export interface LookupMessage {
   type: 'lookup_word';
   word: string;
+  segment?: HoverSegment;
 }
 
 export interface TrackWordMessage {
   type: 'track_word';
   word: string;
+  /** Sentence the word was met in, recorded the first time it is studied. */
+  context?: string;
 }
 
 export interface GetStatisticsMessage {

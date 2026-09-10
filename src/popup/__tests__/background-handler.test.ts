@@ -3,13 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../dictionary/dictionary.js', () => ({
   initDictionaries: vi.fn(() => Promise.resolve()),
   lookupWord: vi.fn(),
+  lookupWordAt: vi.fn(),
 }));
 vi.mock('../popup-storage.js', () => ({
   popupStorage: { updateStatistics: vi.fn() },
 }));
 
 import { register } from '../background-handler.js';
-import { initDictionaries, lookupWord } from '../../dictionary/dictionary.js';
+import { initDictionaries, lookupWord, lookupWordAt } from '../../dictionary/dictionary.js';
 import { popupStorage } from '../popup-storage.js';
 import type { BackgroundMessage, BackgroundResponse, DefinitionResult } from '../../shared/types.js';
 
@@ -36,10 +37,11 @@ describe('popup background-handler register()', () => {
     vi.mocked(chrome.runtime.onMessage.addListener).mockClear();
     vi.mocked(initDictionaries).mockResolvedValue(undefined);
     vi.mocked(lookupWord).mockReset();
+    vi.mocked(lookupWordAt).mockReset();
     vi.mocked(popupStorage.updateStatistics).mockReset();
   });
 
-  it('answers a lookup_word message and tracks the word', async () => {
+  it('answers a lookup_word message', async () => {
     vi.mocked(lookupWord).mockReturnValue(DEFINITION);
     const listener = registerAndGetListener();
     const sendResponse = vi.fn();
@@ -49,7 +51,33 @@ describe('popup background-handler register()', () => {
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
     expect(sendResponse).toHaveBeenCalledWith({ success: true, type: 'lookup_word', definition: DEFINITION });
-    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('好');
+  });
+
+  it('does not record a lookup as a study', async () => {
+    vi.mocked(lookupWord).mockReturnValue(DEFINITION);
+    const listener = registerAndGetListener();
+    const sendResponse = vi.fn();
+
+    listener({ type: 'lookup_word', word: '好' }, {}, sendResponse);
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(popupStorage.updateStatistics).not.toHaveBeenCalled();
+  });
+
+  it('segments from the hovered run when one is supplied', async () => {
+    vi.mocked(lookupWordAt).mockReturnValue(DEFINITION);
+    const listener = registerAndGetListener();
+    const sendResponse = vi.fn();
+
+    listener(
+      { type: 'lookup_word', word: '中國人', segment: { run: '中國人', offset: 1 } },
+      {},
+      sendResponse,
+    );
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(lookupWordAt).toHaveBeenCalledWith('中國人', 1);
+    expect(lookupWord).not.toHaveBeenCalled();
   });
 
   it('reports an error response when lookup throws', async () => {
@@ -81,9 +109,19 @@ describe('popup background-handler register()', () => {
     const keptOpen = listener({ type: 'track_word', word: '謝謝' }, {}, sendResponse);
 
     expect(keptOpen).toBe(true);
-    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝');
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', undefined);
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
     expect(sendResponse).toHaveBeenCalledWith({ success: true, type: 'track_word' });
+  });
+
+  it('passes the sentence context through to storage', async () => {
+    const listener = registerAndGetListener();
+    const sendResponse = vi.fn();
+
+    listener({ type: 'track_word', word: '謝謝', context: '真的很謝謝你' }, {}, sendResponse);
+
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', '真的很謝謝你');
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
   });
 
   it('ignores unknown message types', () => {

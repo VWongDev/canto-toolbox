@@ -1,4 +1,9 @@
-import type { DefinitionResult, LookupResponse, ErrorResponse } from '../shared/types.js';
+import type {
+  DefinitionResult,
+  HoverSegment,
+  LookupResponse,
+  ErrorResponse,
+} from '../shared/types.js';
 import { createElement } from '../shared/dom-element.js';
 import { popupClient, type PopupClient } from './popup-client.js';
 import popupStyles from './popup.scss?inline';
@@ -6,9 +11,20 @@ import { createEtymologySection } from '../shared/etymology-section.js';
 import { createDefinitionSections } from '../shared/definition-section.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
-const MAX_WORD_LENGTH = 4;
 const THROTTLE_INTERVAL_MS = 16;
 const HOVER_DEBOUNCE_MS = 50;
+
+/**
+ * How long the popup must stay on a word before it counts as studied. The
+ * popup follows the cursor, so without a dwell the statistics record every
+ * word scrolled past rather than the ones actually read.
+ */
+const DWELL_MS = 400;
+
+/** Longest sentence snippet sent along with a tracked word. */
+const MAX_CONTEXT_CHARS = 60;
+
+const SENTENCE_BOUNDARY = /[\u3002\uff01\uff1f\uff1b\uff1a\u3001\n.!?;]/;
 const SELECTION_HIDE_DELAY_MS = 200;
 const SELECTION_TRACKING_DELAY_MS = 300;
 const POPUP_OFFSET_PX = 15;
@@ -16,7 +32,10 @@ const SELECTION_PADDING_PX = 10;
 const VIEWPORT_MARGIN_PX = 10;
 
 interface CursorResult {
-  word: string;
+  /** The contiguous run of Chinese characters under the cursor. */
+  run: string;
+  /** Index of the hovered character within `run`. */
+  runOffset: number;
   textNode: Text;
   offset: number;
 }
@@ -27,6 +46,7 @@ export class ChineseHoverPopupManager {
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private selectionPopupTimer: ReturnType<typeof setTimeout> | null = null;
+  private trackTimer: ReturnType<typeof setTimeout> | null = null;
   private lastHoveredWord: string | null = null;
   private lastHoveredOffset = -1;
   private currentPopup: HTMLElement | null = null;
@@ -99,7 +119,16 @@ export class ChineseHoverPopupManager {
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
     this.currentSelection = rect;
-    this.lookupAndShowWord(chineseWords.join(''), rect.left + rect.width / 2, rect.top - 10);
+
+    const anchorText = selection.anchorNode?.textContent;
+    const context = anchorText ? extractContext(anchorText, selection.anchorOffset) : undefined;
+
+    this.lookupAndShowWord(
+      chineseWords.join(''),
+      rect.left + rect.width / 2,
+      rect.top - 10,
+      { ...(context && { context }) },
+    );
   }
 
   private handleMouseOut(event: MouseEvent): void {
@@ -134,7 +163,7 @@ export class ChineseHoverPopupManager {
 
     if (hasActiveSelection()) return;
 
-    const result = getChineseWordAtCursor(event);
+    const result = getChineseWordAtCursor(this.document, event);
     if (!result) {
       if (this.isHoveringChinese || this.currentPopup) {
         this.resetHoverState();
@@ -144,7 +173,7 @@ export class ChineseHoverPopupManager {
       return;
     }
 
-    const { word, textNode, offset } = result;
+    const { run, runOffset, textNode, offset } = result;
     this.isHoveringChinese = true;
     this.clearTimer('hide');
 
@@ -153,15 +182,22 @@ export class ChineseHoverPopupManager {
     this.lastHoveredElement = textNode;
     this.lastHoveredOffset = offset;
 
-    if (word !== this.lastHoveredWord || characterChanged) {
-      this.lastHoveredWord = word;
+    const key = `${run}@${runOffset}`;
+    if (key !== this.lastHoveredWord || characterChanged) {
+      this.lastHoveredWord = key;
       this.clearTimer('hover');
+
+      const context = extractContext(textNode.textContent ?? '', offset);
+      const show = (): void =>
+        this.lookupAndShowWord(run, event.clientX, event.clientY, {
+          segment: { run, offset: runOffset },
+          context,
+        });
+
       if (characterChanged) {
-        this.lookupAndShowWord(word, event.clientX, event.clientY);
+        show();
       } else {
-        this.hoverTimer = setTimeout(() => {
-          this.lookupAndShowWord(word, event.clientX, event.clientY);
-        }, HOVER_DEBOUNCE_MS);
+        this.hoverTimer = setTimeout(show, HOVER_DEBOUNCE_MS);
       }
     }
   }
@@ -187,24 +223,54 @@ export class ChineseHoverPopupManager {
     }
   }
 
-  private lookupAndShowWord(word: string, x: number, y: number): void {
-    if (this.currentPopup?.dataset.word === word) {
-      positionPopup(this.currentPopup, x, y);
-      this.client.trackWord(word, (response) => {
-        if (!response.success) {
-          console.error('[Content] Track word failed:', response.error);
+  private lookupAndShowWord(
+    word: string,
+    x: number,
+    y: number,
+    { segment, context }: { segment?: HoverSegment; context?: string } = {},
+  ): void {
+    this.client.lookupWord(
+      word,
+      (response: LookupResponse | ErrorResponse) => {
+        if (!response.success || !('definition' in response)) {
+          console.error('[Content] Lookup failed:', response.error);
+          return;
         }
-      });
-      return;
-    }
 
-    this.client.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
-      if (response.success && 'definition' in response) {
-        this.showPopup(response.definition.word || word, response.definition, x, y);
-      } else {
-        console.error('[Content] Lookup failed:', response.error);
-      }
-    });
+        const matched = response.definition.word || word;
+        if (this.currentPopup?.dataset.word === matched) {
+          // Same word, new cursor position: reposition without restarting the
+          // dwell, so moving across one word still counts as a single study.
+          positionPopup(this.currentPopup, x, y);
+          return;
+        }
+
+        this.showPopup(matched, response.definition, x, y);
+        this.scheduleTracking(matched, context);
+      },
+      segment,
+    );
+  }
+
+  /**
+   * Statistics are written only once the popup has held on a word — a lookup
+   * alone is as likely to be the cursor passing over text as it is a reader
+   * stopping to read it.
+   */
+  private scheduleTracking(word: string, context?: string): void {
+    this.clearTimer('track');
+    this.trackTimer = setTimeout(() => {
+      this.trackTimer = null;
+      this.client.trackWord(
+        word,
+        (response) => {
+          if (!response.success) {
+            console.error('[Content] Track word failed:', response.error);
+          }
+        },
+        context,
+      );
+    }, DWELL_MS);
   }
 
   private showPopup(word: string, definition: DefinitionResult, x: number, y: number): void {
@@ -241,6 +307,9 @@ export class ChineseHoverPopupManager {
   }
 
   private hidePopup(): void {
+    // A word the reader moved off before the dwell elapsed was never studied.
+    this.clearTimer('track');
+
     if (this.currentPopup) {
       this.currentPopup.remove();
       this.currentPopup = null;
@@ -250,9 +319,10 @@ export class ChineseHoverPopupManager {
     }
   }
 
-  private clearTimer(type: 'hide' | 'hover' | 'selection'): void {
+  private clearTimer(type: 'hide' | 'hover' | 'selection' | 'track'): void {
     if (type === 'hide') { clearTimeout(this.hideTimer!); this.hideTimer = null; }
     else if (type === 'hover') { clearTimeout(this.hoverTimer!); this.hoverTimer = null; }
+    else if (type === 'track') { clearTimeout(this.trackTimer!); this.trackTimer = null; }
     else { clearTimeout(this.selectionPopupTimer!); this.selectionPopupTimer = null; }
   }
 
@@ -286,15 +356,34 @@ if (document.readyState === 'loading') {
   popupManager.init();
 }
 
-function getTextNodeAtCursor(event: MouseEvent): { textNode: Text; offset: number } | null {
+/**
+ * The content script runs on arbitrary pages, where a caret can land in
+ * another realm (a frame's document), and `instanceof Text` is false across
+ * realms. `nodeType` is the check that survives that.
+ */
+function getTextNodeAtCursor(
+  document: Document,
+  event: MouseEvent,
+): { textNode: Text; offset: number } | null {
   const range = document.caretRangeFromPoint(event.clientX, event.clientY);
-  if (range?.startContainer instanceof Text) {
-    return { textNode: range.startContainer, offset: range.startOffset };
+  const container = range?.startContainer;
+
+  if (container && container.nodeType === Node.TEXT_NODE) {
+    return { textNode: container as Text, offset: range.startOffset };
   }
   return null;
 }
 
-function extractChineseWordFromText(text: string, offset: number): string | null {
+/**
+ * The whole run of Chinese under the cursor, plus where in it the cursor sits.
+ * Which word that is depends on the dictionary, so the choice is deferred to
+ * the service worker — hovering the middle of 中國人 should find 中國人 rather
+ * than the 國人 a forward-only scan from the cursor would give.
+ */
+export function findChineseRunAt(
+  text: string,
+  offset: number,
+): { run: string; runOffset: number } | null {
   CHINESE_REGEX.lastIndex = 0;
   let match;
 
@@ -303,9 +392,7 @@ function extractChineseWordFromText(text: string, offset: number): string | null
     const end = start + match[0].length;
 
     if (offset >= start && offset < end) {
-      const relativeOffset = offset - start;
-      const maxLength = Math.min(MAX_WORD_LENGTH, match[0].length - relativeOffset);
-      return match[0].substring(relativeOffset, relativeOffset + maxLength);
+      return { run: match[0], runOffset: offset - start };
     }
 
     if (start > offset) break;
@@ -314,12 +401,36 @@ function extractChineseWordFromText(text: string, offset: number): string | null
   return null;
 }
 
-function getChineseWordAtCursor(event: MouseEvent): CursorResult | null {
-  const cursorData = getTextNodeAtCursor(event);
+/** The sentence around the cursor, windowed so a long one stays readable. */
+export function extractContext(text: string, offset: number): string {
+  let start = offset;
+  while (start > 0 && !SENTENCE_BOUNDARY.test(text[start - 1]!)) start--;
+
+  let end = offset;
+  while (end < text.length && !SENTENCE_BOUNDARY.test(text[end]!)) end++;
+
+  const sentence = text.slice(start, end).trim();
+  if (sentence.length <= MAX_CONTEXT_CHARS) return sentence;
+
+  // Centre the window on the hovered character so the word survives the trim.
+  const within = offset - start;
+  const from = Math.max(0, Math.min(within - MAX_CONTEXT_CHARS / 2, sentence.length - MAX_CONTEXT_CHARS));
+  return sentence.slice(from, from + MAX_CONTEXT_CHARS).trim();
+}
+
+function getChineseWordAtCursor(document: Document, event: MouseEvent): CursorResult | null {
+  const cursorData = getTextNodeAtCursor(document, event);
   if (!cursorData?.textNode.textContent || cursorData.offset < 0) return null;
 
-  const word = extractChineseWordFromText(cursorData.textNode.textContent, cursorData.offset);
-  return word ? { word, textNode: cursorData.textNode, offset: cursorData.offset } : null;
+  const found = findChineseRunAt(cursorData.textNode.textContent, cursorData.offset);
+  if (!found) return null;
+
+  return {
+    run: found.run,
+    runOffset: found.runOffset,
+    textNode: cursorData.textNode,
+    offset: cursorData.offset,
+  };
 }
 
 function extractChineseWordsFromText(text: string): string[] {

@@ -1,18 +1,39 @@
 import { sendMessage } from '../shared/message-manager.js';
-import type { LookupResponse, TrackWordResponse, ErrorResponse } from '../shared/types.js';
+import type {
+  HoverSegment,
+  LookupResponse,
+  TrackWordResponse,
+  ErrorResponse,
+} from '../shared/types.js';
 
 export interface PopupClient {
-  lookupWord(word: string, callback: (r: LookupResponse | ErrorResponse) => void): void;
-  trackWord(word: string, callback: (r: TrackWordResponse | ErrorResponse) => void): void;
+  lookupWord(
+    word: string,
+    callback: (r: LookupResponse | ErrorResponse) => void,
+    segment?: HoverSegment,
+  ): void;
+  trackWord(
+    word: string,
+    callback: (r: TrackWordResponse | ErrorResponse) => void,
+    context?: string,
+  ): void;
 }
 
 export class PopupMessageClient implements PopupClient {
-  lookupWord(word: string, callback: (r: LookupResponse | ErrorResponse) => void): void {
-    sendMessage({ type: 'lookup_word', word }, callback);
+  lookupWord(
+    word: string,
+    callback: (r: LookupResponse | ErrorResponse) => void,
+    segment?: HoverSegment,
+  ): void {
+    sendMessage({ type: 'lookup_word', word, ...(segment && { segment }) }, callback);
   }
 
-  trackWord(word: string, callback: (r: TrackWordResponse | ErrorResponse) => void): void {
-    sendMessage({ type: 'track_word', word }, callback);
+  trackWord(
+    word: string,
+    callback: (r: TrackWordResponse | ErrorResponse) => void,
+    context?: string,
+  ): void {
+    sendMessage({ type: 'track_word', word, ...(context && { context }) }, callback);
   }
 }
 
