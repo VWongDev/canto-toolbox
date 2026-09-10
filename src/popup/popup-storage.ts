@@ -7,6 +7,16 @@ import type { Statistics } from '../shared/types';
 const DEBOUNCE_DELAY = 500;
 const MAX_WORDS = 500;
 
+/**
+ * Hover count decides which words get evicted when the cap is hit, but a word
+ * that has been reviewed carries progress that cannot be recovered by hovering
+ * it again — so anything in the flashcard deck outranks every unreviewed word
+ * regardless of how rarely it is seen.
+ */
+function evictionRank(entry: Statistics[string]): number {
+  return entry.flashcard ? Number.MAX_SAFE_INTEGER : entry.count;
+}
+
 export interface PopupStorage {
   updateStatistics(word: string): void;
 }
@@ -34,7 +44,7 @@ export class PopupStorageClient implements PopupStorage {
       const now = Date.now();
       const stats = new BoundedMap<string, Statistics[string]>(
         MAX_WORDS,
-        (entry) => entry.count,
+        evictionRank,
         Object.entries(existing ?? {})
       );
 
