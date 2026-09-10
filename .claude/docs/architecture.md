@@ -38,6 +38,7 @@ canto-toolbox/
 │   │   ├── debounce.ts        # createBatchedDebounce()
 │   │   ├── dom-element.ts     # createElement()
 │   │   ├── pronunciation-section.ts # Pronunciation section component
+│   │   ├── speech.ts          # Browser TTS, per-reading voice matching
 │   │   ├── etymology-section.ts     # Etymology section component
 │   │   ├── definition-section.ts    # Shared definition-container component
 │   │   ├── styles/            # Shared SCSS partials (tokens, dark mode, …)
@@ -196,4 +197,12 @@ Processed at build time into unified JSON under `public/data/`.
 - **`dictionary.ts`** — `initDictionaries`, `lookupWord`, `lookupEtymology`.
 - **`pronunciation-section.ts` / `etymology-section.ts` /
   `definition-section.ts`** — shared UI components; `definition-section`
-  composes the other two and is reused by popup, stats and flashcards.
+  composes the other two and is reused by popup, stats and flashcards. Because
+  they are shared, the audio button, tone colours and script variant appear on
+  all three surfaces from one implementation.
+- **`toSyllables`** (`src/shared/pinyin.ts`) — splits a romanisation into
+  tone-tagged syllables so each can be coloured; Pinyin gets tone marks,
+  Jyutping keeps its digits.
+- **`speech.ts`** — `canSpeak` / `speak` over the browser's speech synthesis.
+  Voice matching is strict per reading: Cantonese never falls back to a
+  Mandarin voice, since the wrong pronunciation is worse than none.

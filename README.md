@@ -8,6 +8,9 @@ A Chrome extension that displays Chinese word definitions in both Mandarin and C
 
 - **Hover Detection**: Automatically detects Chinese characters as you move your mouse over text
 - **Dual Language Support**: Shows definitions in both Mandarin (with Pinyin) and Cantonese (with Jyutping)
+- **Hear It**: Tap the speaker on either reading to hear the word — Mandarin in a Mandarin voice, Cantonese in a Cantonese one. If your browser has no Cantonese voice the button stays hidden rather than reading it in Mandarin
+- **Tone Colours**: Every syllable is coloured by tone, alongside the tone mark or digit
+- **Both Scripts**: Shows the traditional/simplified counterpart when they differ
 - **Works Everywhere**: Functions on any website with Chinese text
 - **Word Statistics**: Tracks your most frequently looked-up words
 - **Flashcard Review**: Spaced-repetition review of your looked-up words
