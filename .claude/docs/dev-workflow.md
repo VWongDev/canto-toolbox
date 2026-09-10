@@ -61,7 +61,7 @@ pnpm build:scripts && NODE_OPTIONS=--max-old-space-size=8192 vite build
 pnpm clean
 ```
 
-Removes `dist/`, `src/data/`, and `build-tools/dist/`.
+Removes `dist/`, the generated JSON in `public/data/`, and `build-tools/dist/`.
 
 ## Loading the Extension in Chrome
 
@@ -118,7 +118,7 @@ Requires a full build first and uses Puppeteer to capture the extension UI.
 
 ## Key Build Gotchas
 
-- **Dictionary submodules must be initialized** before `pnpm build:dict` will work. If `src/data/` is empty or missing, run `git submodule update --init --recursive`.
+- **Dictionary submodules must be initialized** before `pnpm build:dict` will work. If `public/data/` holds only `radicals.json`, run `git submodule update --init --recursive`.
 - **Memory limit is required** for the Vite build step because dictionary JSON files are large. The `pnpm build` script sets this automatically; manual `vite build` calls need `NODE_OPTIONS=--max-old-space-size=8192`.
 - **`public/data/` is generated** — do not manually edit `mandarin.json`, `cantonese.json`, `etymology.json` or `frequency.json`. Changes belong in `build-tools/processors/`.
 - **`build-tools/dist/` is also generated** — if build tool scripts behave unexpectedly, run `pnpm clean` and rebuild from scratch.

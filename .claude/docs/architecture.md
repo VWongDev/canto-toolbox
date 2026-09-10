@@ -47,7 +47,8 @@ canto-toolbox/
 │   └── vite-env.d.ts
 ├── public/
 │   └── data/                  # radicals.json (checked in);
-│                              # mandarin/cantonese/etymology.json (generated)
+│                              # mandarin/cantonese/etymology/frequency.json
+│                              # (generated)
 ├── build-tools/               # Build-time dictionary processing
 │   ├── build-dictionaries.ts  # Dictionary build entry
 │   ├── benchmark.ts / check-bundle-size.ts / generate-screenshots.ts
@@ -121,9 +122,9 @@ flowchart TD
 
 - **Purpose**: Load and search the dictionaries.
 - **Loading**: `initDictionaries()` lazily `fetch`es
-  `chrome.runtime.getURL('data/{mandarin,cantonese,etymology}.json')` (the JSON
-  is a packaged `web_accessible_resource`, **not** statically imported/bundled)
-  and parses it into in-memory maps **once**.
+  `chrome.runtime.getURL('data/{mandarin,cantonese,etymology,frequency}.json')`
+  (the JSON is a packaged `web_accessible_resource`, **not** statically
+  imported/bundled) and parses it into in-memory maps **once**.
 - **Lookup**: after the one-time async load, `lookupWord` is synchronous —
   longest-match over up to `MAX_WORD_LENGTH`, Cantonese-marker filtering, and
   `lookupEtymology` for character breakdown.
