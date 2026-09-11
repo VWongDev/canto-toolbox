@@ -6,14 +6,10 @@ Read Chinese on the web without leaving the page. Hover any word for Mandarin an
 
 ## Features
 
-- **Nothing to type or copy**: hover Chinese anywhere on any site and the word under your cursor comes up instantly. Drag-select for longer phrases
-- **Mandarin and Cantonese together**: Pinyin and Jyutping side by side, every syllable coloured by tone, with the traditional/simplified counterpart when they differ
-- **Hear either reading aloud**: tap the speaker beside it. A Cantonese reading is spoken by a Cantonese voice or not at all — never a Mandarin stand-in
-- **Know what's worth learning**: each word is banded by how common it is (Core 1000, Common, Frequent…) from a film-subtitle corpus
-- **See inside the characters**: radical, structure and pictographic origin for every character
-- **Remembers what you read**: words you pause on are saved along with the sentence you met them in
-- **Flashcards that schedule themselves**: FSRS spaced repetition brings each word back just before you'd forget it
-- **Instant, offline, private**: the dictionaries ship with the extension — no accounts, no API calls, no lookup ever leaves your browser. Dark mode included
+- **Nothing to type or copy**: hover Chinese anywhere on any site and the word under your cursor comes up instantly
+- **Mandarin and Cantonese together**: both readings side by side, tone-coloured, each with a speaker button and its own definitions
+- **Reading becomes revision**: words you pause on are saved with the sentence you met them in, then come back as spaced-repetition flashcards
+- **Instant, offline, private**: the dictionaries ship with the extension — no accounts, no API calls, no lookup ever leaves your browser
 
 ## Screenshots
 
