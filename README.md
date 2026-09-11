@@ -1,25 +1,19 @@
 # Canto Toolbox
 
-A Chrome extension that displays Chinese word definitions in both Mandarin and Cantonese when you hover over Chinese characters on any webpage. Perfect for language learners and anyone reading Chinese text online.
+Read Chinese on the web without leaving the page. Hover any word for Mandarin and Cantonese definitions, then review what you looked up with spaced repetition — so reading doubles as study.
 
 > **Note**: This project is an experiment in using [Claude Code](https://docs.anthropic.com/en/docs/claude-code) as an AI-assisted development environment.
 
 ## Features
 
-- **Hover Detection**: Automatically detects Chinese characters as you move your mouse over text, matching the longest word that covers the character you're on — hover the middle of 中國人 and you get 中國人, not 國人
-- **Dual Language Support**: Shows definitions in both Mandarin (with Pinyin) and Cantonese (with Jyutping)
-- **Hear It**: Tap the speaker on either reading to hear the word — Mandarin in a Mandarin voice, Cantonese in a Cantonese one. If your browser has no Cantonese voice the button stays hidden rather than reading it in Mandarin
-- **Tone Colours**: Every syllable is coloured by tone, alongside the tone mark or digit
-- **Both Scripts**: Shows the traditional/simplified counterpart when they differ
-- **Works Everywhere**: Functions on any website with Chinese text
-- **Word Statistics**: Tracks the words you actually stop to read — a word counts only once you pause on it — and remembers the sentence you met it in
-- **Word Frequency**: Every definition shows how common the word is (Core 1000, Common, Frequent…) from the SUBTLEX-CH film-subtitle corpus, so you can tell what's worth learning first
-- **Flashcard Review**: FSRS spaced repetition — each rating schedules when the word comes back, and the session shows what's due
-- **Multi-word Selection**: Select multiple characters to look up phrases
-- **Radical Breakdown**: Per-character etymology with radical, structure (IDS decomposition), and pictographic/ideographic/pictophonetic hints
-- **Dark Mode Support**: Automatically adapts to your system theme
-- **Offline Dictionary**: Uses local dictionary files - no API calls required
-- **Fast Lookups**: Pre-processed dictionaries for instant results
+- **Nothing to type or copy**: hover Chinese anywhere on any site and the word under your cursor comes up instantly. Drag-select for longer phrases
+- **Mandarin and Cantonese together**: Pinyin and Jyutping side by side, every syllable coloured by tone, with the traditional/simplified counterpart when they differ
+- **Hear either reading aloud**: tap the speaker beside it. A Cantonese reading is spoken by a Cantonese voice or not at all — never a Mandarin stand-in
+- **Know what's worth learning**: each word is banded by how common it is (Core 1000, Common, Frequent…) from a film-subtitle corpus
+- **See inside the characters**: radical, structure and pictographic origin for every character
+- **Remembers what you read**: words you pause on are saved along with the sentence you met them in
+- **Flashcards that schedule themselves**: FSRS spaced repetition brings each word back just before you'd forget it
+- **Instant, offline, private**: the dictionaries ship with the extension — no accounts, no API calls, no lookup ever leaves your browser. Dark mode included
 
 ## Screenshots
 
@@ -105,20 +99,9 @@ Screenshots are written to `screenshots/`. Chrome runs in headed mode because ex
 
 ## Usage
 
-1. **Hover over Chinese text**: Simply move your mouse over any Chinese characters on a webpage. A popup will appear showing:
-   - The word in large text
-   - Mandarin pronunciation (Pinyin) and definitions
-   - Cantonese pronunciation (Jyutping) and definitions
-   - Radical breakdown and etymology for each character (when available)
-
-2. **Select multiple characters**: Click and drag to select multiple Chinese characters to look up phrases or compound words.
-
-3. **View statistics**: Click the extension icon in the Chrome toolbar to see:
-   - Your most frequently looked-up words
-   - Hover counts for each word
-   - Detailed definitions for each tracked word
-
-4. **Flashcard review**: Once you've hovered over words at least twice, open the flashcard review page to quiz yourself — rate each card as Again, Hard, Good, or Easy. Ratings feed the [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) scheduler, so each word comes back when you're about to forget it rather than at random. When nothing is due, the page tells you when your next review lands.
+1. **Read**: hover Chinese text for a popup with both readings, definitions, frequency, and a per-character breakdown. Drag-select for a phrase.
+2. **Track**: pause on a word and it's saved. The extension icon opens your word list with the sentence each one came from.
+3. **Review**: open the flashcard page and rate each card Again, Hard, Good or Easy. The [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) scheduler decides when it comes back; when nothing is due, the page says when the next review lands.
 
 ## Dictionary Resources
 
