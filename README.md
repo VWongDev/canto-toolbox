@@ -37,7 +37,7 @@ Read Chinese on the web without leaving the page. Hover any word for Mandarin an
 
 ### Prerequisites
 
-- **Node.js** >= 18.0.0
+- **Node.js** >= 22.0.0 (24 is what the dev shell and CI use)
 - **pnpm** >= 8.0.0
 - **Git** (for initializing dictionary submodules)
 

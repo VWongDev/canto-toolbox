@@ -11,7 +11,7 @@ nix develop
 This drops you into a shell with the correct Node.js and pnpm versions already available. No manual version management needed.
 
 Without Nix, install manually:
-- Node.js >= 18
+- Node.js >= 22 (the dev shell and CI both use 24)
 - pnpm >= 8 (use `pnpm@8.15.0` as specified in `packageManager`)
 
 Either way, initialize git submodules before building:
