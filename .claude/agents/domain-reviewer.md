@@ -15,15 +15,16 @@ type):
   via `chrome.runtime.getURL('data/*.json')`.
 - `src/popup/` — content script, popup client/storage, and the `lookup_word` /
   `track_word` background handler. May import from `src/shared/` and
-  `src/ocr/image-controller.ts`. Lookups are forwarded to the offscreen
+  `src/ocr/media-controller.ts`. Lookups are forwarded to the offscreen
   document rather than run in the worker; popup must not import
   `src/dictionary/`.
-- `src/ocr/` — reading Chinese out of images: the image controller and overlay
-  that run in the content script, plus the offscreen engine (cache/queue) and
-  the `ocr_image` background handler. May import from `src/shared/`. It
-  produces hoverable text and nothing else, so it must not import from
-  `src/popup/`, `src/dictionary/`, `src/stats/` or `src/flashcards/` — the
-  popup finds its output through the DOM, not through a call.
+- `src/ocr/` — reading Chinese out of images and paused video frames: the media
+  controller, frame capture and overlay that run in the content script, plus
+  the offscreen engine (cache/queue) and the `ocr_image` / `capture_tab`
+  background handlers. May import from `src/shared/`. It produces hoverable
+  text and nothing else, so it must not import from `src/popup/`,
+  `src/dictionary/`, `src/stats/` or `src/flashcards/` — the popup finds its
+  output through the DOM, not through a call.
 - `src/offscreen/` — composition root for the offscreen document. It imports
   `src/dictionary/offscreen-handler.ts` and `src/ocr/offscreen.ts` and calls
   their `register()`. This is the one offscreen place allowed to reach into
@@ -52,7 +53,7 @@ type):
 2. `src/dictionary/` must import only from `src/shared/`.
 3. The feature domains `src/popup/`, `src/stats/`, `src/flashcards/` and
    `src/ocr/` must not import from one another. The single exception is
-   `src/popup/content.ts` importing `src/ocr/image-controller.ts` to start it:
+   `src/popup/content.ts` importing `src/ocr/media-controller.ts` to start it:
    both run in the content script, and one entry point has to bootstrap the
    other. That import is a bootstrap only — nothing else may cross, in either
    direction. `src/popup/` must not import `src/dictionary/`; lookups go

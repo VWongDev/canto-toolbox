@@ -36,12 +36,13 @@ canto-toolbox/
 │   │   ├── session.ts         # Card selection across the review directions
 │   │   ├── background-handler.ts # update_flashcard / set_word_status
 │   │   └── flashcard-client.ts
-│   ├── ocr/                   # Reading Chinese out of images
-│   │   ├── image-controller.ts # Image hover, the badge, overlay lifecycle
+│   ├── ocr/                   # Reading Chinese out of images and video frames
+│   │   ├── media-controller.ts # Media hover, the badge, overlay lifecycle
+│   │   ├── capture.ts         # Video frame → pixels, canvas or tab screenshot
 │   │   ├── overlay.ts         # Recognised box → positioned transparent text
 │   │   ├── engine.ts          # PaddleOCR over onnxruntime-web, models on disk
 │   │   ├── offscreen.ts       # Engine cache and queue; loaded lazily
-│   │   ├── background-handler.ts # ocr_image; forwards to the offscreen host
+│   │   ├── background-handler.ts # ocr_image / capture_tab; forwards to the host
 │   │   ├── ocr-client.ts
 │   │   └── ocr.scss
 │   ├── dictionary/
@@ -200,27 +201,52 @@ flowchart TD
   `enrich` to the winner alone. `lookupEtymology` memoises into a capped cache,
   since the same characters recur as the cursor moves.
 
-### Image OCR (`src/ocr/`)
+### Media OCR (`src/ocr/`)
 
-- **Purpose**: make Chinese baked into an image readable by everything that
-  already reads Chinese on the page. It is a text *source*, not a second
-  lookup path: `overlay.ts` turns recognised boxes into transparent,
-  positioned text nodes, and from there the content script's own
-  `caretRangeFromPoint` handling finds them exactly as it finds text the page
-  wrote itself. `ChineseHoverPopupManager`, `dictionary/`, `stats/` and
-  `flashcards/` do not know images exist; the one wire between the two is
-  `content.ts` starting `imageOcrManager` alongside `popupManager`, since both
-  run in the content script and one entry point has to bootstrap the other.
-- **Trigger**: `image-controller.ts` shows a badge on hovering an image at
-  least `MIN_IMAGE_SIDE_PX` on both sides; clicking it reads that image. The
-  model loads on the first click, never on page load.
+- **Purpose**: make Chinese baked into a picture — an image, or the frame a
+  video is paused on — readable by everything that already reads Chinese on
+  the page. It is a text *source*, not a second lookup path: `overlay.ts` turns
+  recognised boxes into transparent, positioned text nodes, and from there the
+  content script's own `caretRangeFromPoint` handling finds them exactly as it
+  finds text the page wrote itself. `ChineseHoverPopupManager`, `dictionary/`,
+  `stats/` and `flashcards/` do not know pictures exist; the one wire between
+  the two is `content.ts` starting `mediaOcrManager` alongside `popupManager`,
+  since both run in the content script and one entry point has to bootstrap
+  the other.
+- **Trigger**: `media-controller.ts` shows a badge on hovering an image or
+  video at least `MIN_MEDIA_SIDE_PX` on both sides; clicking it reads it. The
+  model loads on the first click, never on page load. A video is only offered
+  **while paused** — a frame the reader is still watching is one they have
+  already left, and the badge would fight the player's own controls for the
+  same corner.
+- **Following playback**: once a frame is read, `play` clears the overlay (text
+  read off one frame is wrong for every frame after it) while `pause` and
+  `seeked` read the new frame, so stepping between subtitles needs no further
+  clicks. A pause on the frame already read is ignored.
+- **Capturing a frame** (`capture.ts`): drawing the element is tried first —
+  free, no permission, and it yields the video's own resolution. On a 1080p
+  stream in an 822px-wide player that is over twice the linear resolution a
+  screenshot of the tab would give, which is most of the difference between
+  reading subtitles and guessing at them. Media-Source video (what every
+  streaming player uses, YouTube included) is fed by the page itself and so is
+  *not* tainted, which is why this works where re-fetching a URL cannot. Only a
+  `SecurityError` falls back to `chrome.tabs.captureVisibleTab`, which sees
+  composited pixels and is blind to nothing but DRM; the crop back to the
+  video's rect derives its scale from the screenshot rather than trusting
+  `devicePixelRatio`, which lies on a zoomed page.
+- Note that **captions a site renders as DOM text need none of this** — the
+  popup already reads them. YouTube's own captions are `<span>` text nodes, so
+  OCR is only for subtitles burned into the picture.
 - **Where it runs**: the shared offscreen document (`src/offscreen/offscreen.html`).
   The service worker has no DOM and is torn down on idle, which would discard
   the loaded weights between one image and the next; `ensureOffscreenDocument()`
   (`src/shared/offscreen-document.ts`) starts the document and the worker
   forwards. `src/ocr/offscreen.ts` serialises requests behind one queue — a
   single inference session cannot usefully be contended for — and caches
-  results by image URL in a `BoundedMap`. The engine module is dynamically
+  results by image URL in a `BoundedMap`. A `data:` source is never cached: the
+  key would be the whole picture, megabytes of string per entry, and a hit
+  would need byte-identical pixels twice, which a video frame never produces.
+  The engine module is dynamically
   imported on the first `ocr_run`, so hosting dictionaries in the same
   document does not load the model on hover.
 - **Engine**: `engine.ts` runs PP-OCRv6 tiny through `ppu-paddle-ocr/web` over
@@ -348,10 +374,11 @@ flowchart TD
 - `storage` — statistics tracking.
 - `offscreen` — the document that holds the parsed dictionaries and the OCR engine.
 - `host_permissions: ["<all_urls>"]` — lets the offscreen document fetch an
-  image's bytes. Reading them in the content script instead is not an option:
-  a cross-origin image taints a canvas. This adds no install warning the
-  extension did not already carry, since the content script is declared
-  statically with `<all_urls>` and asks for the same access.
+  image's bytes, and lets the worker screenshot the visible tab for a video
+  frame a canvas may not read. Reading image bytes in the content script
+  instead is not an option: a cross-origin image taints a canvas. This adds no
+  install warning the extension did not already carry, since the content script
+  is declared statically with `<all_urls>` and asks for the same access.
 - The content script is declared statically in `manifest.json`; there is no
   `scripting` or `activeTab` permission.
 - `content_security_policy.extension_pages` allows `'wasm-unsafe-eval'`, which
@@ -420,6 +447,9 @@ is written in.
 - **`placeItem` / `placeResult` / `createOverlay`** (`src/ocr/overlay.ts`) — a
   recognised box in the image's own pixels turned into a transparent text node
   the caret can land in, at whatever size the page draws the image.
+- **`captureFrame` / `captureSize`** (`src/ocr/capture.ts`) — the current video
+  frame as a `data:` URL, drawn from the element where that is allowed and cut
+  out of a tab screenshot where it is not.
 - **`recognise`** (`src/ocr/engine.ts`) — image URL → text with boxes, over the
   packaged PP-OCRv6 model.
 - **`dictionary.ts`** — `initDictionaries`, `lookupWord`, `lookupWordAt`,

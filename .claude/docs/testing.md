@@ -83,6 +83,10 @@ romanisation, definitions or ranks.
   `message-manager.ts`, `speech.ts`
 - `src/stats/ordering.ts` / `overview.ts` — sorting, band filtering, the summary
 - `src/flashcards/session.ts` — which card a word offers and in what order
+- `src/ocr/capture.ts` — the capture-size cap, and which failure falls back to
+  a tab screenshot. happy-dom has no canvas, so the tests stub it and assert
+  the sizes asked for — including that the crop scales by the ratio the
+  screenshot was actually taken at
 - `src/ocr/overlay.ts` — recognised box → placed span: axis scaling, and the
   character-per-slot spacing the caret depends on
 - `build-tools/processors/cedict-parser.ts` — the CC-CEDICT/CC-Canto line format
@@ -96,6 +100,10 @@ romanisation, definitions or ranks.
   `definition-section.ts`, `context-sentence.ts`
 - tone colouring across the shared sections
 - `src/popup/content.ts` — hover detection and the dwell study signal
+- `src/ocr/media-controller.ts` — when the badge is offered, and how an overlay
+  follows playback: cleared on `play`, re-read on `seeked`, and the same frame
+  never read twice. `capture.js` is mocked, so these are about the lifecycle
+  rather than pixels
 - `src/stats/stats-view.ts` and `src/flashcards/flashcards-view.ts`, driven
   through their page controllers
 
@@ -117,8 +125,12 @@ Chromium with the unpacked `dist/` loaded. `ocr.spec.ts` draws its own test
 image with `sharp` rather than checking a PNG in, so the text the image holds
 cannot drift from the text asserted; it reads the image through the badge, then
 hovers a character of the overlay and asserts the popup *and* the statistics
-entry — the claim the whole OCR design rests on. The Playwright MCP server
-(`.mcp.json`) is available to drive the browser interactively while debugging.
+entry — the claim the whole OCR design rests on. Its video cases have the page
+record their own source through `MediaRecorder`, so there is no video file
+checked in and no dependency on ffmpeg being installed; keep that recording
+short, since four tests doing it in parallel workers is real wall-clock load.
+The Playwright MCP server (`.mcp.json`) is available to drive the browser
+interactively while debugging.
 
 ## Manual Verification
 
