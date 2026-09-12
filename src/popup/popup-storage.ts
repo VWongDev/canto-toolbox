@@ -43,6 +43,8 @@ export interface WordDetails {
   context?: string;
   rank?: number;
   decomposable?: boolean;
+  /** The reader asked for this word outright rather than dwelling on it. */
+  pinned?: boolean;
 }
 
 export interface PopupStorage {
@@ -77,6 +79,7 @@ export class PopupStorageClient implements PopupStorage {
         ...(context && { context: context.slice(0, MAX_CONTEXT_LENGTH) }),
         ...(details.rank !== undefined && { rank: details.rank }),
         ...(details.decomposable !== undefined && { decomposable: details.decomposable }),
+        ...(details.pinned !== undefined && { pinned: details.pinned }),
       });
     }
 
@@ -110,6 +113,12 @@ export class PopupStorageClient implements PopupStorage {
         // words tracked before they were recorded.
         if (seen?.rank !== undefined) entry.rank = seen.rank;
         if (seen?.decomposable !== undefined) entry.decomposable = seen.decomposable;
+
+        // Asking for a word is also a way of saying it is no longer retired.
+        if (seen?.pinned) {
+          entry.pinned = true;
+          delete entry.suppressed;
+        }
 
         stats.set(word, entry);
       }

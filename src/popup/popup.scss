@@ -28,19 +28,75 @@
   box-sizing: border-box;
 }
 
-// The popup heading is centred and larger than the stats/flashcard
-// `.definition-word`, which sits above a left-aligned column.
-.popup-word {
-  font-size: t.$text-2xl;
-  font-weight: 600;
-  color: t.$color-text-strong;
+// The heading row keeps the word centred by giving the study button a column
+// of its own, rather than letting it push the word off-centre.
+.popup-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: t.$space-2;
   margin-bottom: t.$space-3;
   padding-bottom: t.$space-2;
   border-bottom: 1px solid t.$color-border-muted;
+
+  @include dark {
+    border-bottom-color: t.$color-border-bold-dark;
+  }
+}
+
+// The popup heading is centred and larger than the stats/flashcard
+// `.definition-word`, which sits above a left-aligned column.
+.popup-word {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  font-size: t.$text-2xl;
+  font-weight: 600;
+  color: t.$color-text-strong;
   text-align: center;
   word-break: break-word;
   overflow-wrap: break-word;
   letter-spacing: 0.02em;
+}
+
+.popup-study {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 2px t.$space-2;
+  border: 1px solid t.$color-border-muted;
+  border-radius: t.$radius-sm;
+  background: transparent;
+  color: t.$color-text-subtle;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.6;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    border-color: t.$color-primary;
+    color: t.$color-primary;
+  }
+
+  &:disabled {
+    border-color: transparent;
+    color: t.$color-primary;
+    cursor: default;
+  }
+
+  @include dark {
+    border-color: t.$color-border-bold-dark;
+    color: t.$color-text-subtle-dark;
+
+    &:hover:not(:disabled) {
+      border-color: t.$color-primary-dark;
+      color: t.$color-primary-dark;
+    }
+
+    &:disabled {
+      border-color: transparent;
+      color: t.$color-primary-dark;
+    }
+  }
 }
 
 // The popup floats over arbitrary host pages at a constrained width, so the
@@ -98,6 +154,5 @@
 
   .popup-word {
     color: t.$color-text-strong-dark;
-    border-bottom-color: t.$color-border-bold-dark;
   }
 }

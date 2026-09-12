@@ -94,6 +94,7 @@ export class FlashcardManager {
     this.setupRatingButtons();
     this.setupShowAnswerButton();
     this.setupReviewAgainButton();
+    this.setupKnowButton();
     this.setupKeyboardShortcuts();
 
     this.client.getStatistics((response: StatisticsResponse | ErrorResponse) => {
@@ -232,6 +233,11 @@ export class FlashcardManager {
 
     if (!isScreenVisible(this.document, SCREEN_IDS.review)) return false;
 
+    if (key === 'k' || key === 'K') {
+      this.retireCurrentWord();
+      return true;
+    }
+
     if (isAnswerVisible(this.document)) {
       const rating = RATING_KEYS[key] ?? (ADVANCE_KEYS.includes(key) ? DEFAULT_RATING : undefined);
       if (!rating) return false;
@@ -259,6 +265,33 @@ export class FlashcardManager {
       this.scheduled.add(key);
       this.client.updateFlashcard(card.word, rating, card.direction, () => {});
     }
+
+    this.showNextCard();
+  }
+
+  private setupKnowButton(): void {
+    const btn = this.document.getElementById(ELEMENT_IDS.knowBtn);
+    if (!btn) return;
+
+    btn.addEventListener('click', () => this.retireCurrentWord());
+  }
+
+  /**
+   * Retire the word on screen. The commonest words are the ones hovered most,
+   * so without this the deck fills with 的 and 是 and keeps asking about them;
+   * a reader who already knows a word should be able to say so once.
+   */
+  private retireCurrentWord(): void {
+    const card = this.currentCard();
+    if (!card) return;
+
+    this.client.setWordStatus(card.word, { suppressed: true }, () => {});
+
+    // Its other cards are owed no answer either, and a retired word must not
+    // come back through the restart the finished screen offers.
+    this.reviewQueue = this.reviewQueue.filter(queued => queued.word !== card.word);
+    this.sessionCards = this.sessionCards.filter(queued => queued.word !== card.word);
+    this.totalCount = Math.max(this.totalCount - 1, this.correctCount);
 
     this.showNextCard();
   }

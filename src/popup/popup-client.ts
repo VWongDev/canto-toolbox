@@ -17,6 +17,12 @@ export interface PopupClient {
     callback: (r: TrackWordResponse | ErrorResponse) => void,
     context?: string,
   ): void;
+  /** Track the word and add it to the deck outright, skipping the exposure gate. */
+  pinWord(
+    word: string,
+    callback: (r: TrackWordResponse | ErrorResponse) => void,
+    context?: string,
+  ): void;
 }
 
 export class PopupMessageClient implements PopupClient {
@@ -34,6 +40,14 @@ export class PopupMessageClient implements PopupClient {
     context?: string,
   ): void {
     sendMessage({ type: 'track_word', word, ...(context && { context }) }, callback);
+  }
+
+  pinWord(
+    word: string,
+    callback: (r: TrackWordResponse | ErrorResponse) => void,
+    context?: string,
+  ): void {
+    sendMessage({ type: 'track_word', word, pin: true, ...(context && { context }) }, callback);
   }
 }
 

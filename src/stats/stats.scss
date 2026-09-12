@@ -342,6 +342,51 @@ h1 {
   background: t.$color-surface-alt;
 }
 
+// What the reader can say about a word that hovering cannot: that they know
+// it already, or that they want it drilled now.
+.stat-actions {
+  display: flex;
+  gap: t.$space-2;
+  margin-top: t.$space-3;
+}
+
+.stat-action {
+  padding: 3px t.$space-3;
+  border: 1px solid t.$color-border-muted;
+  border-radius: t.$radius-sm;
+  background: transparent;
+  color: t.$color-text-subtle;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: t.$color-primary;
+    color: t.$color-primary;
+  }
+
+  @include dark {
+    border-color: t.$color-border-bold-dark;
+    color: t.$color-text-subtle-dark;
+
+    &:hover {
+      border-color: t.$color-primary-dark;
+      color: t.$color-primary-dark;
+    }
+  }
+}
+
+.stat-action--on {
+  border-color: t.$color-primary;
+  color: t.$color-primary;
+  font-weight: 600;
+
+  @include dark {
+    border-color: t.$color-primary-dark;
+    color: t.$color-primary-dark;
+  }
+}
+
 .stat-loading,
 .stat-error {
   text-align: center;

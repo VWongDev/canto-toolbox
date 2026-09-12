@@ -142,12 +142,16 @@ export interface TrackWordMessage {
   pin?: boolean;
 }
 
-/** Retire a word from review, or put a retired one back. */
-export interface SetWordStatusMessage {
-  type: 'set_word_status';
-  word: string;
+/** The reader's own decisions about a word, as opposed to what was observed. */
+export interface WordStatus {
   suppressed?: boolean;
   pinned?: boolean;
+}
+
+/** Retire a word from review, or put a retired one back. */
+export interface SetWordStatusMessage extends WordStatus {
+  type: 'set_word_status';
+  word: string;
 }
 
 export interface GetStatisticsMessage {

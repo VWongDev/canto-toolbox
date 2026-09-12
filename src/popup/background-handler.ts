@@ -72,6 +72,7 @@ export function register(): void {
       popupStorage.updateStatistics(msg.word, {
         ...(await describe(msg.word)),
         ...(msg.context && { context: msg.context }),
+        ...(msg.pin && { pinned: true }),
       });
       return { success: true, type: 'track_word' };
     },

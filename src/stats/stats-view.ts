@@ -1,4 +1,4 @@
-import type { FlashcardStage, WordStatistics, LookupResponse, ErrorResponse, Statistics } from '../shared/types.js';
+import type { FlashcardStage, WordStatistics, LookupResponse, ErrorResponse, Statistics, WordStatus } from '../shared/types.js';
 import { getFlashcardStage } from '../shared/statistics-utils.js';
 import { createElement } from '../shared/dom-element.js';
 import { createDefinitionElement } from '../shared/definition-section.js';
@@ -37,6 +37,9 @@ export interface StatsElements {
 
 /** Lazily loads and renders a word's definition into its expanded container. */
 export type LoadDefinition = (word: string, container: HTMLElement) => void;
+
+/** Records a decision the reader made about a word, then re-renders the list. */
+export type SetWordStatus = (word: string, status: WordStatus) => void;
 
 export function getRequiredElements(document: Document): StatsElements | null {
   const loadingEl = document.getElementById(ELEMENT_IDS.loading);
@@ -90,6 +93,7 @@ export function renderStatistics(
   elements: StatsElements,
   loadDefinition: LoadDefinition,
   activeFilters: Set<FlashcardStage>,
+  setStatus: SetWordStatus,
 ): void {
   const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
   const allWords = Object.keys(statistics);
@@ -127,7 +131,7 @@ export function renderStatistics(
   sortedWords.forEach(word => {
     const stat = statistics[word];
     if (!stat) return;
-    statsListEl.appendChild(createStatItem(word, stat, loadDefinition));
+    statsListEl.appendChild(createStatItem(word, stat, loadDefinition, setStatus));
   });
 }
 
@@ -170,7 +174,54 @@ function createStageBadge(stage: FlashcardStage): HTMLElement {
   });
 }
 
-function createStatItem(word: string, stat: WordStatistics, loadDefinition: LoadDefinition): HTMLElement {
+/**
+ * Retiring and choosing are the two things the reader can say about a word
+ * that hovering cannot: that they already know it, and that they want it
+ * studied sooner than the exposure gate would allow.
+ */
+function createStatusControls(
+  word: string,
+  stat: WordStatistics,
+  setStatus: SetWordStatus,
+): HTMLElement {
+  const retired = stat.suppressed === true;
+  const pinned = stat.pinned === true;
+
+  const know = createElement<HTMLButtonElement>({
+    tag: 'button',
+    className: `stat-action${retired ? ' stat-action--on' : ''}`,
+    textContent: retired ? 'Retired' : 'I know this',
+    attributes: { title: retired ? 'Put this word back in the deck' : 'Stop reviewing this word' },
+    listeners: {
+      click: (event: Event) => {
+        event.stopPropagation();
+        setStatus(word, { suppressed: !retired });
+      },
+    },
+  });
+
+  const study = createElement<HTMLButtonElement>({
+    tag: 'button',
+    className: `stat-action${pinned ? ' stat-action--on' : ''}`,
+    textContent: pinned ? 'Studying' : 'Study this',
+    attributes: { title: pinned ? 'Stop prioritising this word' : 'Add this word to the deck now' },
+    listeners: {
+      click: (event: Event) => {
+        event.stopPropagation();
+        setStatus(word, { pinned: !pinned });
+      },
+    },
+  });
+
+  return createElement({ className: 'stat-actions', children: [study, know] });
+}
+
+function createStatItem(
+  word: string,
+  stat: WordStatistics,
+  loadDefinition: LoadDefinition,
+  setStatus: SetWordStatus,
+): HTMLElement {
   const stage = getFlashcardStage(stat);
 
   const item = createElement({
@@ -213,16 +264,20 @@ function createStatItem(word: string, stat: WordStatistics, loadDefinition: Load
   header.appendChild(wordRow);
   header.appendChild(detailsEl);
 
+  // The definition is rendered into a container of its own, so re-rendering it
+  // cannot take the row's controls with it.
+  const definitionEl = createElement({ className: 'stat-definition' });
   const expandedContent = createElement({
     className: 'stat-expanded',
-    style: { display: 'none' }
+    style: { display: 'none' },
+    children: [definitionEl, createStatusControls(word, stat, setStatus)],
   });
 
   item.appendChild(header);
   item.appendChild(expandedContent);
 
   header.addEventListener('click', () => {
-    toggleExpansion(item, word, expandedContent, loadDefinition);
+    toggleExpansion(item, word, expandedContent, definitionEl, loadDefinition);
   });
 
   return item;
@@ -232,6 +287,7 @@ function toggleExpansion(
   item: HTMLElement,
   word: string,
   expandedContent: HTMLElement,
+  definitionEl: HTMLElement,
   loadDefinition: LoadDefinition
 ): void {
   const isExpanded = expandedContent.style.display !== 'none';
@@ -240,11 +296,8 @@ function toggleExpansion(
     expandedContent.style.display = 'none';
     item.classList.remove('expanded');
   } else {
-    if (!expandedContent.dataset.loaded) {
-      loadDefinition(word, expandedContent);
-    } else {
-      expandedContent.style.display = 'block';
-    }
+    expandedContent.style.display = 'block';
+    if (!definitionEl.dataset.loaded) loadDefinition(word, definitionEl);
     item.classList.add('expanded');
   }
 }

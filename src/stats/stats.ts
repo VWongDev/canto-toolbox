@@ -1,4 +1,12 @@
-import type { StatisticsResponse, LookupResponse, ErrorResponse, Statistics, FlashcardStage } from '../shared/types.js';
+import type {
+  StatisticsResponse,
+  LookupResponse,
+  ErrorResponse,
+  Statistics,
+  FlashcardStage,
+  WordStatistics,
+  WordStatus,
+} from '../shared/types.js';
 import { statsClient, type StatsClient } from './stats-client.js';
 import { statsStorage, type StatsStorage } from './stats-storage.js';
 import {
@@ -62,9 +70,41 @@ export class StatsManager {
     this.cachedStatistics = response.statistics;
     updateFilterCounts(elements, response.statistics);
     this.setupFilterTabs(elements);
-    renderStatistics(response.statistics, elements, (word, container) => {
-      this.loadDefinition(word, container);
-    }, this.activeFilters);
+    this.render(elements, response.statistics);
+  }
+
+  private render(elements: StatsElements, statistics: Statistics): void {
+    renderStatistics(
+      statistics,
+      elements,
+      (word, container) => this.loadDefinition(word, container),
+      this.activeFilters,
+      (word, status) => this.setWordStatus(elements, word, status),
+    );
+  }
+
+  /**
+   * A retired or chosen word changes which stage it counts towards and whether
+   * the deck will offer it, so the list is rebuilt from the updated record
+   * rather than just the one row being repainted.
+   */
+  private setWordStatus(elements: StatsElements, word: string, status: WordStatus): void {
+    const stat = this.cachedStatistics?.[word];
+    if (!stat || !this.cachedStatistics) return;
+
+    const updated: WordStatistics = { ...stat };
+    if (status.suppressed !== undefined) {
+      if (status.suppressed) updated.suppressed = true;
+      else delete updated.suppressed;
+    }
+    if (status.pinned !== undefined) {
+      if (status.pinned) updated.pinned = true;
+      else delete updated.pinned;
+    }
+
+    this.cachedStatistics = { ...this.cachedStatistics, [word]: updated };
+    this.client.setWordStatus(word, status, () => {});
+    this.render(elements, this.cachedStatistics);
   }
 
   private setupFilterTabs(elements: StatsElements): void {
@@ -83,11 +123,7 @@ export class StatsManager {
 
       updateFilterTabStates(elements.filterTabsEl, this.activeFilters);
 
-      if (this.cachedStatistics) {
-        renderStatistics(this.cachedStatistics, elements, (word, container) => {
-          this.loadDefinition(word, container);
-        }, this.activeFilters);
-      }
+      if (this.cachedStatistics) this.render(elements, this.cachedStatistics);
     });
   }
 

@@ -26,6 +26,15 @@ const MASTERED_STABILITY_DAYS = 60;
 /** Below this recall probability a word has lapsed out of `mastered` again. */
 const MASTERED_RETRIEVABILITY = 0.7;
 
+/**
+ * Failures before a card is treated as a leech. FSRS answers a lapse by
+ * shortening the interval, which is the right response to forgetting but not
+ * to a card that keeps being forgotten: past this many, the interval is not
+ * what is wrong, and drilling it on repeat costs the session slots every other
+ * word could have used.
+ */
+export const LEECH_LAPSES = 8;
+
 const PRECISION = 4;
 
 function toCard(progress: FlashcardProgress | undefined, now: Date): Card {
@@ -70,11 +79,17 @@ export function reviewCard(
 
   return {
     reviews: card.reps,
+    correct: (progress?.correct ?? 0) + (correct ? 1 : 0),
     consecutiveCorrect: correct ? (progress?.consecutiveCorrect ?? 0) + 1 : 0,
     lastRating: rating,
     lastReviewed: now.getTime(),
     srs: toSrsState(card),
   };
+}
+
+/** A card that has been forgotten so often that rescheduling it is not the answer. */
+export function isLeech(progress: FlashcardProgress | undefined): boolean {
+  return (progress?.srs?.lapses ?? 0) >= LEECH_LAPSES;
 }
 
 /** Never-reviewed words are due immediately. */

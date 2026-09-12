@@ -42,6 +42,7 @@ function createClient(overrides: Partial<FlashcardClient> = {}): FlashcardClient
     updateFlashcard: vi.fn((_word, _rating, _direction, cb) =>
       cb({ success: true, type: 'update_flashcard' })
     ),
+    setWordStatus: vi.fn((_word, _status, cb) => cb({ success: true, type: 'set_word_status' })),
     ...overrides
   };
 }
@@ -216,6 +217,56 @@ describe('FlashcardManager keyboard shortcuts', () => {
 
     expect(isVisible('review')).toBe(true);
     expect(document.getElementById('counter')!.textContent).toBe('Card 1 of 2');
+  });
+});
+
+describe('FlashcardManager retiring a word', () => {
+  let document: Document;
+  let client: FlashcardClient;
+
+  function press(key: string): void {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+  }
+
+  beforeEach(() => {
+    document = new DOMParser().parseFromString(HTML, 'text/html');
+    client = createClient();
+    new FlashcardManager(document, client).init();
+  });
+
+  it('retires the word on screen and moves on', () => {
+    const first = document.getElementById('card')!.dataset.currentWord;
+
+    press('k');
+
+    expect(client.setWordStatus).toHaveBeenCalledWith(
+      first,
+      { suppressed: true },
+      expect.any(Function)
+    );
+    expect(document.getElementById('card')!.dataset.currentWord).not.toBe(first);
+  });
+
+  it('shrinks the session rather than leaving a card unanswered', () => {
+    press('k');
+    expect(document.getElementById('counter')!.textContent).toBe('Card 1 of 1');
+  });
+
+  it('does not bring a retired word back when the session restarts', () => {
+    const first = document.getElementById('card')!.dataset.currentWord;
+    press('k');
+    press(' ');
+    press('3');
+
+    expect(document.getElementById('finished')!.style.display).not.toBe('none');
+    press('Enter');
+
+    expect(document.getElementById('card')!.dataset.currentWord).not.toBe(first);
+  });
+
+  it('does not send the retired card to the scheduler', () => {
+    press('k');
+    expect(client.updateFlashcard).not.toHaveBeenCalled();
   });
 });
 

@@ -146,6 +146,60 @@ describe('popup background-handler register()', () => {
     expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', { rank: 312 });
   });
 
+  it('marks a word the reader asked for outright as pinned', async () => {
+    const listener = registerAndGetListener();
+    const sendResponse = vi.fn();
+
+    listener({ type: 'track_word', word: '謝謝', pin: true }, {}, sendResponse);
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', { pinned: true });
+  });
+
+  it('marks a single character with named parts as decomposable', async () => {
+    vi.mocked(lookupWordInDictionaries).mockReturnValue({
+      ...DEFINITION,
+      word: '好',
+      etymology: [
+        {
+          character: '好',
+          decomposition: '⿰女子',
+          radical: '女',
+          componentDefinitions: { 女: 'woman', 子: 'child' },
+        },
+      ],
+    });
+    const listener = registerAndGetListener();
+    const sendResponse = vi.fn();
+
+    listener({ type: 'track_word', word: '好' }, {}, sendResponse);
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('好', { decomposable: true });
+  });
+
+  it('leaves a compound word without a components card', async () => {
+    vi.mocked(lookupWordInDictionaries).mockReturnValue({
+      ...DEFINITION,
+      word: '你好',
+      etymology: [
+        {
+          character: '你',
+          decomposition: '⿰亻尔',
+          radical: '亻',
+          componentDefinitions: { 亻: 'person' },
+        },
+      ],
+    });
+    const listener = registerAndGetListener();
+    const sendResponse = vi.fn();
+
+    listener({ type: 'track_word', word: '你好' }, {}, sendResponse);
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('你好', {});
+  });
+
   it('still tracks the word when the dictionary cannot rank it', async () => {
     vi.mocked(lookupWordInDictionaries).mockImplementation(() => {
       throw new Error('no data');

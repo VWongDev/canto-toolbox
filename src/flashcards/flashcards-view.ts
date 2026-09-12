@@ -15,6 +15,7 @@ export const ELEMENT_IDS = {
   card: 'card',
   showAnswerBtn: 'show-answer-btn',
   reviewAgainBtn: 'review-again-btn',
+  knowBtn: 'know-btn',
   resultSummary: 'result-summary'
 } as const;
 

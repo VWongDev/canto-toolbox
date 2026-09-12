@@ -96,8 +96,18 @@ body {
   max-width: 640px;
   margin: 0 auto;
   padding: t.$space-3 t.$space-5 0;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: t.$space-3;
   flex-shrink: 0;
+}
+
+// Retiring sits away from the rating row on purpose: it is a decision about
+// the word, not an answer to the card, and a misclick would bury it.
+.btn-know {
+  padding: 2px t.$space-2;
+  font-size: 12px;
 }
 
 #counter {

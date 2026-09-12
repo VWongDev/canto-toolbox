@@ -24,6 +24,9 @@ const DWELL_MS = 400;
 /** Longest sentence snippet sent along with a tracked word. */
 const MAX_CONTEXT_CHARS = 60;
 
+const STUDY_LABEL = '+ Study';
+const STUDY_ADDED_LABEL = 'Added';
+
 const SENTENCE_BOUNDARY = /[\u3002\uff01\uff1f\uff1b\uff1a\u3001\n.!?;]/;
 const SELECTION_HIDE_DELAY_MS = 200;
 const SELECTION_TRACKING_DELAY_MS = 300;
@@ -245,7 +248,7 @@ export class ChineseHoverPopupManager {
           return;
         }
 
-        this.showPopup(matched, response.definition, x, y);
+        this.showPopup(matched, response.definition, x, y, context);
         this.scheduleTracking(matched, context);
       },
       segment,
@@ -273,7 +276,44 @@ export class ChineseHoverPopupManager {
     }, DWELL_MS);
   }
 
-  private showPopup(word: string, definition: DefinitionResult, x: number, y: number): void {
+  /**
+   * Adds the word to the deck on the spot. Dwelling is a good guess at what a
+   * reader is studying, but it is only a guess: a word met once and known to
+   * matter should not have to be hovered twice more to be drilled.
+   */
+  private createStudyButton(word: string, context?: string): HTMLElement {
+    return createElement<HTMLButtonElement>({
+      tag: 'button',
+      className: 'popup-study',
+      textContent: STUDY_LABEL,
+      attributes: { type: 'button', title: 'Add this word to your flashcards' },
+      listeners: {
+        click: (event: Event) => {
+          event.stopPropagation();
+          const button = event.currentTarget as HTMLButtonElement;
+          button.textContent = STUDY_ADDED_LABEL;
+          button.disabled = true;
+
+          this.clearTimer('track');
+          this.client.pinWord(
+            word,
+            (response) => {
+              if (!response.success) console.error('[Content] Study word failed:', response.error);
+            },
+            context,
+          );
+        },
+      },
+    });
+  }
+
+  private showPopup(
+    word: string,
+    definition: DefinitionResult,
+    x: number,
+    y: number,
+    context?: string,
+  ): void {
     this.hidePopup();
     this.clearTimer('hide');
 
@@ -293,7 +333,15 @@ export class ChineseHoverPopupManager {
       }
     });
 
-    popup.appendChild(createElement({ className: 'popup-word', textContent: definition.word || word }));
+    popup.appendChild(
+      createElement({
+        className: 'popup-header',
+        children: [
+          createElement({ className: 'popup-word', textContent: definition.word || word }),
+          this.createStudyButton(word, context),
+        ],
+      }),
+    );
 
     if (definition.etymology?.length) {
       popup.appendChild(createEtymologySection(definition.etymology));
