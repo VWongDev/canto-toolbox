@@ -190,8 +190,10 @@ export class ChineseHoverPopupManager {
     const { run, runOffset, textNode, offset } = result;
     this.isHoveringChinese = true;
 
+    // Caret offsets are whole characters, so any difference at all is a move
+    // to another character.
     const characterChanged = textNode !== this.lastHoveredElement ||
-                            Math.abs(offset - this.lastHoveredOffset) >= 0.5;
+                            offset !== this.lastHoveredOffset;
     this.lastHoveredElement = textNode;
     this.lastHoveredOffset = offset;
 
