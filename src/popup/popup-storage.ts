@@ -98,6 +98,10 @@ export class PopupStorageClient implements PopupStorage {
         Object.entries(existing ?? {})
       );
 
+      // Collected and written in one go, so a batch of new words is ranked
+      // against the record once rather than after each word in it.
+      const touched: Array<[string, Statistics[string]]> = [];
+
       for (const [word, count] of updates) {
         const entry = stats.get(word) ?? { count: 0, firstSeen: now, lastSeen: now };
         entry.count += count;
@@ -120,9 +124,10 @@ export class PopupStorageClient implements PopupStorage {
           delete entry.suppressed;
         }
 
-        stats.set(word, entry);
+        touched.push([word, entry]);
       }
 
+      stats.setAll(touched);
       return stats.toObject();
     });
   }

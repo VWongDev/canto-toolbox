@@ -25,6 +25,19 @@ export class BoundedMap<K extends PropertyKey, V> {
     }
   }
 
+  /**
+   * Insert many entries and prune once at the end. Pruning sorts everything it
+   * holds, so doing it per insert costs a full sort for each entry of a batch
+   * that overflows — and the entries pruned early might have been kept anyway
+   * once the rest of the batch arrived.
+   */
+  setAll(entries: Iterable<[K, V]>): void {
+    for (const [key, value] of entries) {
+      this.entries.set(key, value);
+    }
+    this.prune();
+  }
+
   has(key: K): boolean {
     return this.entries.has(key);
   }

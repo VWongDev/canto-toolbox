@@ -1,6 +1,43 @@
 import { describe, it, expect } from 'vitest';
 import { BoundedMap } from '../bounded-map.js';
 
+describe('BoundedMap.setAll', () => {
+  it('keeps the top entries of the whole batch', () => {
+    const map = new BoundedMap<string, number>(2, value => value);
+    map.setAll([['a', 1], ['b', 5], ['c', 3]]);
+
+    expect(map.size).toBe(2);
+    expect(map.get('b')).toBe(5);
+    expect(map.get('c')).toBe(3);
+    expect(map.get('a')).toBeUndefined();
+  });
+
+  it('keeps a late arrival that outranks an earlier one', () => {
+    // Pruning per insert would have dropped the low entry before the high one
+    // it should have been compared against ever arrived.
+    const map = new BoundedMap<string, number>(1, value => value);
+    map.setAll([['low', 1], ['high', 9]]);
+
+    expect(map.get('high')).toBe(9);
+  });
+
+  it('overwrites an existing key rather than adding beside it', () => {
+    const map = new BoundedMap<string, number>(3, value => value);
+    map.setAll([['a', 1]]);
+    map.setAll([['a', 7]]);
+
+    expect(map.size).toBe(1);
+    expect(map.get('a')).toBe(7);
+  });
+
+  it('accepts an empty batch', () => {
+    const map = new BoundedMap<string, number>(2, value => value, [['a', 1]]);
+    map.setAll([]);
+
+    expect(map.size).toBe(1);
+  });
+});
+
 describe('BoundedMap', () => {
   it('stores and retrieves values', () => {
     const map = new BoundedMap<string, number>(10, (v) => v);
