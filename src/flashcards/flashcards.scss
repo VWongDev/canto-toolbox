@@ -125,8 +125,10 @@ body {
   flex: 0 0 auto;
   min-height: 180px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: t.$space-3;
 }
 
 .card-characters {
@@ -136,6 +138,77 @@ body {
   letter-spacing: 0.04em;
   line-height: 1.1;
   text-align: center;
+}
+
+// Which of the word's cards this is. The three ask for different things, so
+// the question is named rather than left to be inferred from the layout.
+.card-prompt {
+  display: flex;
+  align-items: center;
+  gap: t.$space-2;
+}
+
+.card-kind {
+  padding: 2px t.$space-2;
+  border-radius: t.$radius-sm;
+  background: t.$color-surface-alt;
+  color: t.$color-text-subtle;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  @include dark {
+    background: t.$color-surface-alt-dark;
+    color: t.$color-text-subtle-dark;
+  }
+}
+
+.card-kind--production {
+  background: rgba(t.$color-primary, 0.12);
+  color: t.$color-primary;
+
+  @include dark {
+    background: rgba(t.$color-primary-dark, 0.18);
+    color: t.$color-primary-dark;
+  }
+}
+
+.card-ask {
+  color: t.$color-text-subtle;
+  font-size: 13px;
+
+  @include dark {
+    color: t.$color-text-subtle-dark;
+  }
+}
+
+// The meaning standing in for the word on a production card: large enough to
+// be the question, never so large it reads as the answer.
+.card-gloss {
+  max-width: 34ch;
+  color: t.$color-text-strong;
+  font-size: 20px;
+  line-height: 1.4;
+  text-align: center;
+
+  @include dark {
+    color: t.$color-text-strong-dark;
+  }
+}
+
+.card-gloss--missing {
+  color: t.$color-text-faint;
+  font-style: italic;
+
+  @include dark {
+    color: t.$color-text-faint-dark;
+  }
+}
+
+.card-front .context {
+  margin-bottom: 0;
+  max-width: 34ch;
 }
 
 .card-back {

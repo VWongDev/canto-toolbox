@@ -42,6 +42,7 @@ function evictionRank(entry: Statistics[string]): number {
 export interface WordDetails {
   context?: string;
   rank?: number;
+  decomposable?: boolean;
 }
 
 export interface PopupStorage {
@@ -75,6 +76,7 @@ export class PopupStorageClient implements PopupStorage {
       this.pendingDetails.set(word, {
         ...(context && { context: context.slice(0, MAX_CONTEXT_LENGTH) }),
         ...(details.rank !== undefined && { rank: details.rank }),
+        ...(details.decomposable !== undefined && { decomposable: details.decomposable }),
       });
     }
 
@@ -104,9 +106,10 @@ export class PopupStorageClient implements PopupStorage {
         // sightings do not overwrite it.
         if (seen?.context && !entry.context) entry.context = seen.context;
 
-        // Rank never changes, but writing it on every sighting backfills words
-        // tracked before it was recorded.
+        // Neither fact changes, but writing them on every sighting backfills
+        // words tracked before they were recorded.
         if (seen?.rank !== undefined) entry.rank = seen.rank;
+        if (seen?.decomposable !== undefined) entry.decomposable = seen.decomposable;
 
         stats.set(word, entry);
       }

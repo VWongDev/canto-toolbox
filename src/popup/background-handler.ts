@@ -6,6 +6,20 @@ import {
 } from '../dictionary/dictionary.js';
 import { popupStorage, type WordDetails } from './popup-storage.js';
 import { registerHandlers } from '../shared/message-router.js';
+import type { DefinitionResult } from '../shared/types.js';
+
+/**
+ * Whether the word can carry a components card: one character, and an
+ * etymology entry that actually names the parts it is built from.
+ */
+function isDecomposable(word: string, definition: DefinitionResult): boolean {
+  if ([...word].length !== 1) return false;
+
+  const etymology = definition.etymology?.[0];
+  if (!etymology) return false;
+
+  return Object.keys(etymology.componentDefinitions ?? {}).length > 0;
+}
 
 export function register(): void {
   const dictionariesReady = initDictionaries();
@@ -18,8 +32,16 @@ export function register(): void {
   async function describe(word: string): Promise<WordDetails> {
     try {
       await dictionariesReady;
-      const rank = lookupWordInDictionaries(word).frequency?.rank;
-      return rank === undefined ? {} : { rank };
+      const definition = lookupWordInDictionaries(word);
+      const rank = definition.frequency?.rank;
+
+      return {
+        ...(rank !== undefined && { rank }),
+        // Only a single character has parts worth asking about: the components
+        // of a compound word are its own characters, which the card back shows
+        // anyway.
+        ...(isDecomposable(word, definition) && { decomposable: true }),
+      };
     } catch (error) {
       console.error('[Background] Could not describe tracked word:', error);
       return {};

@@ -1,4 +1,10 @@
-import type { FlashcardProgress, FlashcardStage, Statistics, WordStatistics } from './types';
+import type {
+  FlashcardProgress,
+  FlashcardStage,
+  ReviewDirection,
+  Statistics,
+  WordStatistics,
+} from './types';
 import { isLearning, isMastered } from './scheduler.js';
 
 /**
@@ -13,8 +19,26 @@ export function getFlashcardStage(stat: WordStatistics, now: Date = new Date()):
   return isMastered(fc, now) ? 'mastered' : 'familiar';
 }
 
+/**
+ * Where each direction's schedule is stored. Recognition keeps the original
+ * `flashcard` key so decks recorded before there were other directions read
+ * back unchanged.
+ */
+export const DIRECTION_FIELD: Readonly<Record<ReviewDirection, keyof WordStatistics>> = {
+  recognition: 'flashcard',
+  production: 'production',
+  components: 'components',
+};
+
 /** Every schedule a word carries, in the order cards are introduced. */
 export const DIRECTION_KEYS = ['flashcard', 'production', 'components'] as const;
+
+export function progressFor(
+  stat: WordStatistics,
+  direction: ReviewDirection,
+): FlashcardProgress | undefined {
+  return stat[DIRECTION_FIELD[direction]] as FlashcardProgress | undefined;
+}
 
 /** When any of the word's cards was last answered, or undefined if none was. */
 export function lastReviewedAt(stat: WordStatistics): number | undefined {

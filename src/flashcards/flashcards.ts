@@ -2,11 +2,11 @@ import type {
   StatisticsResponse,
   LookupResponse,
   ErrorResponse,
+  DefinitionResult,
   Statistics,
-  WordStatistics,
 } from '../shared/types.js';
-import { dueAt, isDue } from '../shared/scheduler.js';
 import { flashcardClient, type FlashcardClient } from './flashcard-client.js';
+import { cardKey, nextReviewAt, selectSession, type ReviewCard } from './session.js';
 import {
   ELEMENT_IDS,
   SCREEN_IDS,
@@ -15,7 +15,9 @@ import {
   renderFinished,
   updateProgress,
   getCurrentWord,
+  getCurrentDirection,
   renderFront,
+  renderFrontLoading,
   renderBack,
   renderBackLoading,
   renderBackError,
@@ -23,12 +25,6 @@ import {
   isAnswerVisible,
   isAnswerRevealable
 } from './flashcards-view.js';
-
-const MAX_CARDS = 20;
-const MIN_COUNT = 2;
-
-/** Cap on unseen words per session, so due reviews are never crowded out. */
-const MAX_NEW_CARDS = 10;
 
 const NOTHING_TRACKED =
   'No words to review yet.\nHover over Chinese words at least twice to unlock flashcard review.';
@@ -54,68 +50,6 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
   return result;
 }
 
-/**
- * Which unseen word is worth a session slot. The commonest word the reader has
- * met pays back the most for the same effort, so new cards follow the corpus
- * rank rather than arriving in whatever order a shuffle produced. A word the
- * corpus never ranked is rarer than its cap and goes last; ties fall back to
- * how often the reader has actually met it.
- */
-function compareNewWords(a: WordStatistics, b: WordStatistics): number {
-  const rankA = a.rank ?? Infinity;
-  const rankB = b.rank ?? Infinity;
-  if (rankA !== rankB) return rankA - rankB;
-  return b.count - a.count;
-}
-
-/**
- * A session is the words the scheduler says are owed, most overdue first,
- * topped up with unseen words. Words already in the deck stay eligible however
- * rarely they are hovered; unseen ones still have to clear the exposure gate
- * before they are worth drilling.
- */
-export function selectSession(statistics: Statistics, now: number = Date.now()): string[] {
-  const due: Array<{ word: string; due: number }> = [];
-  const unseen: Array<{ word: string; stat: WordStatistics }> = [];
-
-  for (const [word, stat] of Object.entries(statistics)) {
-    const progress = stat.flashcard;
-    if (progress?.srs) {
-      if (isDue(progress, now)) due.push({ word, due: dueAt(progress) });
-    } else if (stat.count >= MIN_COUNT) {
-      unseen.push({ word, stat });
-    }
-  }
-
-  due.sort((a, b) => a.due - b.due);
-  unseen.sort((a, b) => compareNewWords(a.stat, b.stat));
-
-  const reviews = due.slice(0, MAX_CARDS).map(entry => entry.word);
-  const room = Math.min(MAX_NEW_CARDS, MAX_CARDS - reviews.length);
-
-  return [...reviews, ...unseen.slice(0, room).map(entry => entry.word)];
-}
-
-function collectContexts(statistics: Statistics, words: string[]): Map<string, string> {
-  const contexts = new Map<string, string>();
-
-  for (const word of words) {
-    const context = statistics[word]?.context;
-    if (context) contexts.set(word, context);
-  }
-
-  return contexts;
-}
-
-/** Epoch ms of the soonest scheduled review, or undefined if the deck is empty. */
-function nextReviewAt(statistics: Statistics): number | undefined {
-  const scheduled = Object.values(statistics)
-    .map(stat => stat.flashcard?.srs?.due)
-    .filter((due): due is number => due !== undefined);
-
-  return scheduled.length > 0 ? Math.min(...scheduled) : undefined;
-}
-
 function formatRelative(deltaMs: number): string {
   const format = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
   const minutes = Math.round(deltaMs / 60_000);
@@ -137,12 +71,12 @@ function emptyStateMessage(statistics: Statistics, now: number): string {
 export class FlashcardManager {
   private readonly document: Document;
   private readonly client: FlashcardClient;
-  private reviewQueue: string[] = [];
-  private sessionWords: string[] = [];
+  private reviewQueue: ReviewCard[] = [];
+  private sessionCards: ReviewCard[] = [];
   private correctCount = 0;
   private totalCount = 0;
-  /** Sentence each word was met in, kept from the statistics the session was built from. */
-  private contexts = new Map<string, string>();
+  /** Definitions already fetched this session, keyed by word. */
+  private readonly definitions = new Map<string, DefinitionResult>();
   /**
    * Cards whose answer has already reached the scheduler this session. A
    * requeued "Again" and a "Review again" round are drills, not new evidence
@@ -176,8 +110,7 @@ export class FlashcardManager {
         return;
       }
 
-      this.contexts = collectContexts(response.statistics, session);
-      this.sessionWords = session;
+      this.sessionCards = session;
       this.reviewQueue = [...session];
       this.correctCount = 0;
       this.totalCount = session.length;
@@ -187,8 +120,8 @@ export class FlashcardManager {
   }
 
   showNextCard(): void {
-    const word = this.reviewQueue.shift();
-    if (word === undefined) {
+    const card = this.reviewQueue.shift();
+    if (card === undefined) {
       renderFinished(this.document, this.correctCount, this.totalCount);
       return;
     }
@@ -196,7 +129,48 @@ export class FlashcardManager {
     const queued = this.reviewQueue.length;
     const done = this.totalCount - queued - 1;
     updateProgress(this.document, done, this.totalCount);
-    renderFront(this.document, word);
+
+    // Only the production card needs the dictionary to pose its question; the
+    // others are drawn from the word alone and must not wait on a lookup.
+    if (card.direction === 'production') {
+      renderFrontLoading(this.document, card);
+      this.withDefinition(card, definition => renderFront(this.document, card, definition));
+      return;
+    }
+
+    renderFront(this.document, card);
+  }
+
+  /** Fetch the word's definition, or hand back the copy this session already has. */
+  private withDefinition(
+    card: ReviewCard,
+    render: (definition: DefinitionResult | undefined) => void,
+  ): void {
+    const cached = this.definitions.get(card.word);
+    if (cached) {
+      render(cached);
+      return;
+    }
+
+    this.client.lookupWord(card.word, (response: LookupResponse | ErrorResponse) => {
+      if (!this.isCurrent(card)) return;
+
+      if (!response.success || !response.definition) {
+        render(undefined);
+        return;
+      }
+
+      this.definitions.set(card.word, response.definition);
+      render(response.definition);
+    });
+  }
+
+  /** A lookup that returns after the reader has moved on must not redraw the card. */
+  private isCurrent(card: ReviewCard): boolean {
+    return (
+      getCurrentWord(this.document) === card.word &&
+      getCurrentDirection(this.document) === card.direction
+    );
   }
 
   private setupShowAnswerButton(): void {
@@ -207,18 +181,24 @@ export class FlashcardManager {
   }
 
   private showAnswer(): void {
-    const word = getCurrentWord(this.document);
-    if (!word) return;
+    const card = this.currentCard();
+    if (!card) return;
 
     renderBackLoading(this.document);
 
-    this.client.lookupWord(word, (response: LookupResponse | ErrorResponse) => {
-      if (!response.success || !response.definition) {
-        renderBackError(this.document);
-        return;
-      }
-      renderBack(this.document, word, response.definition, this.contexts.get(word));
+    this.withDefinition(card, definition => {
+      if (definition) renderBack(this.document, card, definition);
+      else renderBackError(this.document);
     });
+  }
+
+  /** The card on screen, rebuilt from the session so its context travels with it. */
+  private currentCard(): ReviewCard | undefined {
+    const word = getCurrentWord(this.document);
+    const direction = getCurrentDirection(this.document);
+    if (!word || !direction) return undefined;
+
+    return this.sessionCards.find(card => card.word === word && card.direction === direction);
   }
 
   private setupRatingButtons(): void {
@@ -265,18 +245,19 @@ export class FlashcardManager {
   }
 
   private rate(rating: Rating): void {
-    const word = getCurrentWord(this.document);
-    if (!word) return;
+    const card = this.currentCard();
+    if (!card) return;
 
     if (rating === 'again' || rating === 'hard') {
-      this.reviewQueue.push(word);
+      this.reviewQueue.push(card);
     } else {
       this.correctCount++;
     }
 
-    if (!this.scheduled.has(word)) {
-      this.scheduled.add(word);
-      this.client.updateFlashcard(word, rating, () => {});
+    const key = cardKey(card);
+    if (!this.scheduled.has(key)) {
+      this.scheduled.add(key);
+      this.client.updateFlashcard(card.word, rating, card.direction, () => {});
     }
 
     this.showNextCard();
@@ -290,9 +271,9 @@ export class FlashcardManager {
   }
 
   private restartSession(): void {
-    this.reviewQueue = fisherYatesShuffle(this.sessionWords);
+    this.reviewQueue = fisherYatesShuffle(this.sessionCards);
     this.correctCount = 0;
-    this.totalCount = this.sessionWords.length;
+    this.totalCount = this.sessionCards.length;
     setScreen(this.document, SCREEN_IDS.review);
     this.showNextCard();
   }

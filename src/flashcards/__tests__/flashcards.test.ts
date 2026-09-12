@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { FlashcardManager } from '../flashcards.js';
 import type { FlashcardClient } from '../flashcard-client.js';
-import type { DefinitionResult } from '../../shared/types.js';
+import type { DefinitionResult, Statistics } from '../../shared/types.js';
 
 // The real page markup, minus the asset references happy-dom would try to fetch.
 const HTML = readFileSync('src/flashcards/flashcards.html', 'utf-8')
@@ -39,7 +39,9 @@ function createClient(overrides: Partial<FlashcardClient> = {}): FlashcardClient
     lookupWord: vi.fn((_word, cb) =>
       cb({ success: true, type: 'lookup_word', definition: DEFINITION })
     ),
-    updateFlashcard: vi.fn((_word, _rating, cb) => cb({ success: true, type: 'update_flashcard' })),
+    updateFlashcard: vi.fn((_word, _rating, _direction, cb) =>
+      cb({ success: true, type: 'update_flashcard' })
+    ),
     ...overrides
   };
 }
@@ -95,7 +97,12 @@ describe('FlashcardManager keyboard shortcuts', () => {
     press(' ');
     press('4');
 
-    expect(client.updateFlashcard).toHaveBeenCalledWith(word, 'easy', expect.any(Function));
+    expect(client.updateFlashcard).toHaveBeenCalledWith(
+      word,
+      'easy',
+      'recognition',
+      expect.any(Function)
+    );
   });
 
   it('rates Good on Space once the answer is visible', () => {
@@ -105,7 +112,12 @@ describe('FlashcardManager keyboard shortcuts', () => {
     press(' ');
     press(' ');
 
-    expect(client.updateFlashcard).toHaveBeenCalledWith(word, 'good', expect.any(Function));
+    expect(client.updateFlashcard).toHaveBeenCalledWith(
+      word,
+      'good',
+      'recognition',
+      expect.any(Function)
+    );
   });
 
   it('does not rate before the answer is revealed', () => {
@@ -204,5 +216,95 @@ describe('FlashcardManager keyboard shortcuts', () => {
 
     expect(isVisible('review')).toBe(true);
     expect(document.getElementById('counter')!.textContent).toBe('Card 1 of 2');
+  });
+});
+
+describe('FlashcardManager production cards', () => {
+  let document: Document;
+  let client: FlashcardClient;
+
+  /** A word whose recognition card has graduated, so production is what is owed. */
+  const GRADUATED: Statistics = {
+    你好: {
+      count: 5,
+      firstSeen: 1,
+      lastSeen: 2,
+      context: '你好嗎',
+      flashcard: {
+        reviews: 3,
+        consecutiveCorrect: 3,
+        lastReviewed: 1,
+        srs: {
+          due: Date.now() + 86_400_000,
+          stability: 10,
+          difficulty: 5,
+          scheduledDays: 10,
+          learningSteps: 0,
+          lapses: 0,
+          state: 2,
+        },
+      },
+    },
+  };
+
+  function start(): void {
+    client = createClient({
+      getStatistics: vi.fn(cb =>
+        cb({ success: true, type: 'get_statistics', statistics: GRADUATED })
+      ),
+    });
+    new FlashcardManager(document, client).init();
+  }
+
+  beforeEach(() => {
+    document = new DOMParser().parseFromString(HTML, 'text/html');
+  });
+
+  it('asks for the word from its meaning', () => {
+    start();
+    const front = document.getElementById('card-front')!;
+
+    expect(document.getElementById('card')!.dataset.currentDirection).toBe('production');
+    expect(front.querySelector('.card-gloss')?.textContent).toBe('hello');
+  });
+
+  it('keeps the word itself off the production front', () => {
+    start();
+    expect(document.getElementById('card-front')!.textContent).not.toContain('你好');
+  });
+
+  it('prompts with the context sentence blanked out', () => {
+    start();
+    const blank = document.getElementById('card-front')!.querySelector('.context-blank');
+
+    expect(blank?.textContent).toHaveLength(2);
+  });
+
+  it('reveals the word on the answer', () => {
+    start();
+    document.getElementById('show-answer-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
+
+    const back = document.getElementById('card-back')!;
+    expect(back.querySelector('.definition-word')?.textContent).toBe('你好');
+  });
+
+  it('rates the production card rather than the recognition one', () => {
+    start();
+    document.getElementById('show-answer-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true }));
+
+    expect(client.updateFlashcard).toHaveBeenCalledWith(
+      '你好',
+      'good',
+      'production',
+      expect.any(Function)
+    );
+  });
+
+  it('looks the word up once for both the question and the answer', () => {
+    start();
+    document.getElementById('show-answer-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
+
+    expect(client.lookupWord).toHaveBeenCalledTimes(1);
   });
 });
