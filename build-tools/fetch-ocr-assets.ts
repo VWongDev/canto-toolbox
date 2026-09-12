@@ -4,7 +4,7 @@
 import { createHash } from 'crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, __dirname.includes('dist') ? '../../..' : '../..');
@@ -48,23 +48,61 @@ const MODELS = [
  */
 const ORT_RUNTIME = ['ort-wasm-simd-threaded.wasm', 'ort-wasm-simd-threaded.mjs'];
 
+/**
+ * Hugging Face rate-limits anonymous downloads per source address, and every
+ * CI runner shares a pool of them — so a 429 here says nothing about this
+ * build and everything about the neighbours. Retry it.
+ */
+const RETRYABLE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
+export const MAX_ATTEMPTS = 5;
+const BACKOFF_BASE_MS = 2000;
+
 function digest(bytes: Buffer): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-async function fetchModel(url: string, expected: string): Promise<Buffer> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`${url} returned ${response.status} ${response.statusText}`);
-  }
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  const bytes = Buffer.from(await response.arrayBuffer());
-  const actual = digest(bytes);
-  if (expected && actual !== expected) {
-    throw new Error(`${url} digest mismatch: expected ${expected}, got ${actual}`);
-  }
+/** How long to wait before attempt `n`, preferring the server's own answer. */
+export function backoffMs(attempt: number, retryAfter: string | null): number {
+  const seconds = Number(retryAfter);
+  if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
 
-  return bytes;
+  // Exponential, with jitter so parallel builds do not retry in lockstep.
+  return BACKOFF_BASE_MS * 2 ** (attempt - 1) + Math.floor(Math.random() * 1000);
+}
+
+export async function fetchModel(url: string, expected: string): Promise<Buffer> {
+  for (let attempt = 1; ; attempt++) {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const retryable = RETRYABLE_STATUSES.has(response.status);
+      if (!retryable || attempt === MAX_ATTEMPTS) {
+        throw new Error(`${url} returned ${response.status} ${response.statusText}`);
+      }
+
+      const wait = backoffMs(attempt, response.headers.get('retry-after'));
+      console.warn(
+        `[OCR] ${response.status} on ${url} — retrying in ${Math.round(wait / 1000)}s ` +
+          `(attempt ${attempt} of ${MAX_ATTEMPTS})`,
+      );
+      await sleep(wait);
+      continue;
+    }
+
+    const bytes = Buffer.from(await response.arrayBuffer());
+    const actual = digest(bytes);
+    // A digest mismatch is never retried: the bytes arrived intact and are the
+    // wrong bytes, which is the case this check exists to stop.
+    if (expected && actual !== expected) {
+      throw new Error(`${url} digest mismatch: expected ${expected}, got ${actual}`);
+    }
+
+    return bytes;
+  }
 }
 
 async function fetchOcrAssets(): Promise<void> {
@@ -78,20 +116,20 @@ async function fetchOcrAssets(): Promise<void> {
 
   const unpinned: string[] = [];
 
-  await Promise.all(
-    MODELS.map(async ({ file, url, sha256 }) => {
-      const target = join(modelDir, file);
-      if (existsSync(target) && (!sha256 || digest(readFileSync(target)) === sha256)) {
-        console.log(`[OCR] Cached ${file}`);
-        return;
-      }
+  // One at a time. Three files is not worth parallelising, and three
+  // simultaneous requests are what trips the rate limit in the first place.
+  for (const { file, url, sha256 } of MODELS) {
+    const target = join(modelDir, file);
+    if (existsSync(target) && (!sha256 || digest(readFileSync(target)) === sha256)) {
+      console.log(`[OCR] Cached ${file}`);
+      continue;
+    }
 
-      const bytes = await fetchModel(url, sha256);
-      writeFileSync(target, bytes);
-      if (!sha256) unpinned.push(`  ${file}: '${digest(bytes)}'`);
-      console.log(`[OCR] Fetched ${file} (${(bytes.length / 1e6).toFixed(2)} MB)`);
-    }),
-  );
+    const bytes = await fetchModel(url, sha256);
+    writeFileSync(target, bytes);
+    if (!sha256) unpinned.push(`  ${file}: '${digest(bytes)}'`);
+    console.log(`[OCR] Fetched ${file} (${(bytes.length / 1e6).toFixed(2)} MB)`);
+  }
 
   for (const file of ORT_RUNTIME) {
     const source = join(rootDir, 'node_modules/onnxruntime-web/dist', file);
@@ -109,4 +147,8 @@ async function fetchOcrAssets(): Promise<void> {
   console.log('[OCR] OCR assets ready.');
 }
 
-void fetchOcrAssets();
+// Only when run as a script. Importing it — as the tests do — must not start
+// downloading several megabytes of model.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  void fetchOcrAssets();
+}
