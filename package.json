@@ -54,6 +54,7 @@
   },
   "packageManager": "pnpm@8.15.0",
   "dependencies": {
+    "hanzi-writer": "^3.7.3",
     "onnxruntime-web": "^1.29.0",
     "ppu-paddle-ocr": "^6.5.1",
     "ts-fsrs": "^5.4.2"
