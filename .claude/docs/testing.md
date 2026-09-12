@@ -81,6 +81,8 @@ romanisation, definitions or ranks.
   `message-manager.ts`, `speech.ts`
 - `src/stats/ordering.ts` / `overview.ts` — sorting, band filtering, the summary
 - `src/flashcards/session.ts` — which card a word offers and in what order
+- `src/ocr/overlay.ts` — recognised box → placed span: axis scaling, and the
+  character-per-slot spacing the caret depends on
 - `build-tools/processors/cedict-parser.ts` — the CC-CEDICT/CC-Canto line format
 
 **DOM components** — tested under `// @vitest-environment happy-dom`:
@@ -95,11 +97,20 @@ romanisation, definitions or ranks.
 **Message handlers** — `src/popup/background-handler.ts` is tested with the
 dictionary module mocked via `vi.mock('../../dictionary/dictionary.js', …)`;
 `src/flashcards/background-handler.ts` is tested against the statistics store.
+`src/ocr/background-handler.ts` stubs `chrome.offscreen` and
+`chrome.runtime.getContexts` per test — the global mock in `setup.ts` covers
+only the module-level side effects, not these. `src/ocr/offscreen.ts` mocks the
+engine and calls `vi.resetModules()` per case, because it registers its handler
+and starts caching on import.
 
 **End-to-end** — content script ↔ service worker ↔ pages are exercised by the
-Playwright specs in `e2e/` (popup, stats, flashcards), which launch Chromium
-with the unpacked `dist/` loaded. The Playwright MCP server (`.mcp.json`) is
-available to drive the browser interactively while debugging.
+Playwright specs in `e2e/` (popup, stats, flashcards, ocr), which launch
+Chromium with the unpacked `dist/` loaded. `ocr.spec.ts` draws its own test
+image with `sharp` rather than checking a PNG in, so the text the image holds
+cannot drift from the text asserted; it reads the image through the badge, then
+hovers a character of the overlay and asserts the popup *and* the statistics
+entry — the claim the whole OCR design rests on. The Playwright MCP server
+(`.mcp.json`) is available to drive the browser interactively while debugging.
 
 ## Manual Verification
 
@@ -112,6 +123,8 @@ sanity check for UI-heavy changes:
 3. Navigate to a page with Chinese text
 4. Hover over Chinese characters — popup should appear with Mandarin and
    Cantonese definitions
-5. Open the Stats page via the extension popup to verify statistics tracking
+5. Hover an image holding Chinese — a badge appears in its corner; clicking it
+   should lay dotted underlines over the text, which then hovers like any other
+6. Open the Stats page via the extension popup to verify statistics tracking
 
 See @.claude/docs/dev-workflow.md for full build and loading instructions.

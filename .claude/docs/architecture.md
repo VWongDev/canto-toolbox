@@ -36,6 +36,14 @@ canto-toolbox/
 │   │   ├── session.ts         # Card selection across the review directions
 │   │   ├── background-handler.ts # update_flashcard / set_word_status
 │   │   └── flashcard-client.ts
+│   ├── ocr/                   # Reading Chinese out of images
+│   │   ├── image-controller.ts # Image hover, the badge, overlay lifecycle
+│   │   ├── overlay.ts         # Recognised box → positioned transparent text
+│   │   ├── engine.ts          # PaddleOCR over onnxruntime-web, models on disk
+│   │   ├── offscreen.html / offscreen.ts # Engine host; its cache and queue
+│   │   ├── background-handler.ts # ocr_image; owns the offscreen document
+│   │   ├── ocr-client.ts
+│   │   └── ocr.scss
 │   ├── dictionary/
 │   │   └── dictionary.ts      # Runtime dictionary load + lookup
 │   ├── shared/                # Cross-feature utilities and UI components
@@ -64,11 +72,13 @@ canto-toolbox/
 │   │   └── types.ts           # TypeScript type definitions
 │   └── vite-env.d.ts
 ├── public/
-│   └── data/                  # radicals.json (checked in);
-│                              # mandarin/cantonese/etymology/frequency.json
-│                              # (generated)
+│   ├── data/                  # radicals.json (checked in);
+│   │                          # mandarin/cantonese/etymology/frequency.json
+│   │                          # (generated)
+│   └── ocr/                   # PP-OCRv6 tiny + the ONNX runtime (generated)
 ├── build-tools/               # Build-time dictionary processing
 │   ├── build-dictionaries.ts  # Dictionary build entry
+│   ├── fetch-ocr-assets.ts    # Vendors the OCR models and ONNX runtime
 │   ├── benchmark.ts / generate-screenshots.ts
 │   └── processors/            # cedict-parser, mandarin/cantonese/etymology,
 │                              # frequency, utils (+ __tests__/)
@@ -91,6 +101,11 @@ canto-toolbox/
 
 ```mermaid
 flowchart TD
+    I[Image on the page] -->|badge click: ocr_image| C
+    C -->|ocr_run| O[Offscreen document]
+    O -->|PaddleOCR over onnxruntime-web| P[Packaged models]
+    O -->|lines and boxes| N[Transparent text overlay]
+    N -.->|becomes ordinary hoverable text| A
     A[Web Page] -->|mousemove / selection| B[Content Script]
     B -->|sendMessage lookup_word| C[Service Worker]
     C -->|registerHandlers| H1[popup background-handler]
@@ -169,6 +184,40 @@ flowchart TD
   `enrich` to the winner alone. `lookupEtymology` memoises into a capped cache,
   since the same characters recur as the cursor moves.
 
+### Image OCR (`src/ocr/`)
+
+- **Purpose**: make Chinese baked into an image readable by everything that
+  already reads Chinese on the page. It is a text *source*, not a second
+  lookup path: `overlay.ts` turns recognised boxes into transparent,
+  positioned text nodes, and from there the content script's own
+  `caretRangeFromPoint` handling finds them exactly as it finds text the page
+  wrote itself. `ChineseHoverPopupManager`, `dictionary/`, `stats/` and
+  `flashcards/` do not know images exist; the one wire between the two is
+  `content.ts` starting `imageOcrManager` alongside `popupManager`, since both
+  run in the content script and one entry point has to bootstrap the other.
+- **Trigger**: `image-controller.ts` shows a badge on hovering an image at
+  least `MIN_IMAGE_SIDE_PX` on both sides; clicking it reads that image. The
+  model loads on the first click, never on page load.
+- **Where it runs**: an offscreen document (`offscreen.html`). The service
+  worker has no DOM and is torn down on idle, which would discard the loaded
+  weights between one image and the next; `background-handler.ts` starts the
+  document and forwards. `offscreen.ts` serialises requests behind one queue —
+  a single inference session cannot usefully be contended for — and caches
+  results by image URL in a `BoundedMap`.
+- **Engine**: `engine.ts` runs PP-OCRv6 tiny through `ppu-paddle-ocr/web` over
+  `onnxruntime-web`. Models and the runtime are fetched from
+  `chrome.runtime.getURL('ocr/…')`, so no network access is involved. It must
+  *overwrite* `ort.env.wasm.wasmPaths` rather than fill it in, since the
+  library points it at a CDN from its own module body.
+- **Placement**: `overlay.ts` puts the *i*th character in the *i*th slot of its
+  box rather than reproducing the image's typography — that is what the caret
+  needs. For Chinese it is exact, since every glyph is full width. Overlays
+  live in the body and are positioned in page coordinates, so an ancestor's
+  `overflow` or stacking context cannot clip them, and they are re-laid from
+  the held result when a responsive page redraws the image at a new size.
+- The badge carries no text. A label legible enough to mean "read this" would
+  have to be Chinese, and Chinese on the page is something the popup looks up.
+
 ### Statistics Page (`src/stats/`)
 
 - **Key class**: `StatsManager` (`stats.ts`) — data loading and event wiring.
@@ -208,6 +257,10 @@ flowchart TD
 
 ## Data Flow
 
+0. **Image text (optional)** — clicking an image's badge sends `ocr_image`;
+   the offscreen document reads it and replies with lines and boxes, which the
+   content script lays over the image as transparent text. Every step below
+   then applies to it unchanged.
 1. **Hover/selection** — content script extracts the Chinese word and calls
    `sendMessage({ type: 'lookup_word', word })`.
 2. **Lookup** — popup `background-handler` awaits `initDictionaries()`, calls
@@ -238,6 +291,9 @@ flowchart TD
   history.
 - **Dictionaries**: generated JSON under `public/data/` (bundled as
   `web_accessible_resources`), fetched at runtime — never written.
+- **OCR assets**: the models and ONNX runtime under `public/ocr/`, fetched at
+  runtime by the offscreen document. Not `web_accessible_resources`: an
+  extension page reaches its own `chrome-extension://` files without them.
 
 ## Dependencies
 
@@ -248,10 +304,16 @@ flowchart TD
 - **ESLint / husky** — `eslint.config.js` (flat config, typescript-eslint); the
   `pre-commit` hook runs lint, typecheck and tests, and `commit-msg` enforces
   the commit format.
-- **ts-fsrs** — the FSRS review scheduler. The only runtime dependency; the
-  four ratings the review UI offers are its grade scale exactly.
+- **ts-fsrs** — the FSRS review scheduler; the four ratings the review UI
+  offers are its grade scale exactly.
+- **ppu-paddle-ocr / onnxruntime-web** — the image OCR engine. `vite.config.ts`
+  aliases `onnxruntime-web` to its extern-wasm entry, which both keeps Rollup
+  from emitting the 14 MB and 28 MB binaries alongside the copy already
+  vendored, and collapses the library and `engine.ts` onto one ORT instance so
+  `ort.env` settings apply to the instance that reads them.
 - **Chrome Extension APIs** — `chrome.storage.sync|local` (statistics),
-  `chrome.runtime` (message passing, `getURL`).
+  `chrome.runtime` (message passing, `getURL`, `getContexts`),
+  `chrome.offscreen` (the OCR engine's host document).
 - **Dictionary submodules** — `dictionaries/mandarin` (CC-CEDICT),
   `dictionaries/cantonese` (CC-Canto), `dictionaries/makemeahanzi` (etymology).
 - **build-tools/processors** — convert the raw submodule data into the unified
@@ -263,9 +325,17 @@ flowchart TD
 
 ## Extension Permissions
 
-- `storage` — statistics tracking. (This is the only requested permission. The
-  content script is declared statically in `manifest.json` with `<all_urls>`;
-  there is no `scripting` or `activeTab` permission.)
+- `storage` — statistics tracking.
+- `offscreen` — the document that hosts the OCR engine.
+- `host_permissions: ["<all_urls>"]` — lets the offscreen document fetch an
+  image's bytes. Reading them in the content script instead is not an option:
+  a cross-origin image taints a canvas. This adds no install warning the
+  extension did not already carry, since the content script is declared
+  statically with `<all_urls>` and asks for the same access.
+- The content script is declared statically in `manifest.json`; there is no
+  `scripting` or `activeTab` permission.
+- `content_security_policy.extension_pages` allows `'wasm-unsafe-eval'`, which
+  an extension page needs to instantiate the OCR runtime's WebAssembly.
 
 ## Dictionary Sources
 
@@ -282,6 +352,17 @@ flowchart TD
 Processed at build time into unified JSON under `public/data/`. Each generated
 dictionary is keyed by **both** the simplified and the traditional form, so a
 lookup finds a word whichever script the page is written in.
+
+## OCR Model
+
+- **PP-OCRv6 tiny** — one unified detection/recognition pair covering
+  Simplified and Traditional Chinese, ~6.4 MB, vendored by
+  `build-tools/fetch-ocr-assets.ts` with pinned SHA-256 digests. Its 6,174
+  character dictionary reads every one of the 5,000 commonest SUBTLEX-CH words
+  and 99.86% of the 20,000 the frequency data is capped at; the next tier up
+  costs 25 MB to gain only words the extension already bands as rare.
+- Tesseract is the obvious alternative and was rejected: it is tuned for
+  scanned documents, and this feature targets screenshots, panels and signage.
 
 ## Key Classes and Utilities
 
@@ -313,6 +394,11 @@ lookup finds a word whichever script the page is written in.
 - **`createBatchedDebounce`** (`src/shared/debounce.ts`) — accumulates keyed
   counts and flushes a batch.
 - **`createElement`** (`src/shared/dom-element.ts`) — DOM creation helper.
+- **`placeItem` / `placeResult` / `createOverlay`** (`src/ocr/overlay.ts`) — a
+  recognised box in the image's own pixels turned into a transparent text node
+  the caret can land in, at whatever size the page draws the image.
+- **`recognise`** (`src/ocr/engine.ts`) — image URL → text with boxes, over the
+  packaged PP-OCRv6 model.
 - **`dictionary.ts`** — `initDictionaries`, `lookupWord`, `lookupWordAt`,
   `lookupEtymology`, `lookupFrequency`.
 - **`bandForRank` / `BAND_LABELS`** (`src/shared/frequency.ts`) — a corpus rank

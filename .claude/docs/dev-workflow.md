@@ -22,10 +22,10 @@ git submodule update --init --recursive
 
 ## Build
 
-The build is a two-phase pipeline:
+The build is a three-phase pipeline:
 
 ```
-build:scripts → build:dict → vite build
+build:scripts → build:dict → build:ocr → vite build
 ```
 
 ### Full build
@@ -37,17 +37,24 @@ pnpm build
 This runs:
 1. `tsc -p build-tools/tsconfig.json` — compiles build-tool scripts to `build-tools/dist/`
 2. `node build-tools/dist/build-tools/build-dictionaries.js` — processes raw dictionary submodule data into `public/data/{mandarin,cantonese,etymology,frequency}.json`
-3. `vite build` — bundles the extension into `dist/` (requires `--max-old-space-size=8192` due to large dictionary imports)
+3. `node build-tools/dist/build-tools/fetch-ocr-assets.js` — downloads the pinned PP-OCRv6 tiny model and copies the ONNX runtime into `public/ocr/`
+4. `vite build` — bundles the extension into `dist/` (requires `--max-old-space-size=8192` due to large dictionary imports)
 
-Output goes to `dist/`. This directory is the unpacked Chrome extension.
+Output goes to `dist/`. This directory is the unpacked Chrome extension, about
+81 MB — 60 MB of dictionaries and 21 MB of OCR assets.
 
 ### Incremental builds
 
-If you only changed extension source (`src/`), skip dictionary processing:
+If you only changed extension source (`src/`), skip dictionary and OCR asset
+processing:
 
 ```sh
 NODE_OPTIONS=--max-old-space-size=8192 vite build
 ```
+
+The OCR assets only need re-fetching when `fetch-ocr-assets.ts` changes or
+`public/ocr/` has been cleaned — `pnpm build:ocr` re-verifies the digests of
+what is already there and downloads nothing otherwise.
 
 If you changed `build-tools/` but not dictionaries:
 
@@ -61,7 +68,8 @@ pnpm build:scripts && NODE_OPTIONS=--max-old-space-size=8192 vite build
 pnpm clean
 ```
 
-Removes `dist/`, the generated JSON in `public/data/`, and `build-tools/dist/`.
+Removes `dist/`, the generated JSON in `public/data/`, `public/ocr/`, and
+`build-tools/dist/`.
 
 ## Loading the Extension in Chrome
 
@@ -143,6 +151,8 @@ release workflow runs it under `xvfb` when cutting a version.
 ## Key Build Gotchas
 
 - **Dictionary submodules must be initialized** before `pnpm build:dict` will work. If `public/data/` holds only `radicals.json`, run `git submodule update --init --recursive`.
-- **Memory limit is required** for the Vite build step because dictionary JSON files are large. The `pnpm build` script sets this automatically; manual `vite build` calls need `NODE_OPTIONS=--max-old-space-size=8192`.
+- **A raised memory limit may be needed** for the Vite build step, because the dictionary JSON files are large. `pnpm build` does *not* set it — CI passes `NODE_OPTIONS=--max-old-space-size=8192` explicitly, and so should a local build that runs out of heap.
 - **`public/data/` is generated** — do not manually edit `mandarin.json`, `cantonese.json`, `etymology.json` or `frequency.json`. Changes belong in `build-tools/processors/`.
+- **`public/ocr/` is generated too** — the models come from Hugging Face with pinned SHA-256 digests, so `pnpm build:ocr` needs network access the first time and fails loudly if a file has changed upstream. To move to a different model, update the URLs *and* the digests in `build-tools/fetch-ocr-assets.ts`.
+- **`onnxruntime-web` is aliased in `vite.config.ts`** to its extern-wasm entry. Removing the alias makes Rollup emit two ORT binaries (14 MB and 28 MB) into `dist/assets/` alongside the copy in `public/ocr/`, and splits the runtime into two instances so `ort.env` settings stop reaching the one doing the work.
 - **`build-tools/dist/` is also generated** — if build tool scripts behave unexpectedly, run `pnpm clean` and rebuild from scratch.

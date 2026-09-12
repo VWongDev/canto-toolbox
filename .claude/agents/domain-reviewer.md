@@ -13,9 +13,16 @@ type):
   `src/shared/`. The generated JSON is not imported; it is `fetch`ed at runtime
   via `chrome.runtime.getURL('data/*.json')`.
 - `src/popup/` — content script, popup client/storage, and the `lookup_word` /
-  `track_word` background handler. May import from `src/dictionary/` and
-  `src/shared/`. It is the only domain allowed to reach the dictionary, since
-  the pages have no dictionary of their own.
+  `track_word` background handler. May import from `src/dictionary/`,
+  `src/shared/` and `src/ocr/image-controller.ts`. It is the only domain
+  allowed to reach the dictionary, since the pages have no dictionary of their
+  own.
+- `src/ocr/` — reading Chinese out of images: the image controller and overlay
+  that run in the content script, plus the offscreen engine and the `ocr_image`
+  background handler. May import from `src/shared/`. It produces hoverable text
+  and nothing else, so it must not import from `src/popup/`, `src/dictionary/`,
+  `src/stats/` or `src/flashcards/` — the popup finds its output through the
+  DOM, not through a call.
 - `src/stats/` — stats page (controller + view + client + storage, plus
   `ordering` and `overview`) and the `get_statistics` background handler. May
   import from `src/shared/`.
@@ -37,8 +44,12 @@ type):
 1. `src/shared/` must not import from `src/dictionary/`, `src/popup/`,
    `src/stats/`, or `src/flashcards/`.
 2. `src/dictionary/` must import only from `src/shared/`.
-3. The feature domains `src/popup/`, `src/stats/`, and `src/flashcards/` must
-   not import from one another.
+3. The feature domains `src/popup/`, `src/stats/`, `src/flashcards/` and
+   `src/ocr/` must not import from one another. The single exception is
+   `src/popup/content.ts` importing `src/ocr/image-controller.ts` to start it:
+   both run in the content script, and one entry point has to bootstrap the
+   other. That import is a bootstrap only — nothing else may cross, in either
+   direction.
 4. `src/service-worker.ts` is exempt from rule 3 (it is the composition root):
    it may import the feature `background-handler.ts` modules and nothing else
    from inside feature domains.

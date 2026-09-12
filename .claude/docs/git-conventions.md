@@ -40,6 +40,7 @@ The domain specifies the area of the codebase affected:
 - `popup`: Popup UI components
 - `stats`: Statistics page
 - `dict`: Dictionary-related functionality
+- `ocr`: Reading Chinese out of images (`src/ocr/`, its offscreen engine and overlay)
 - `api`: API integration
 - `agents`: Subagent definitions in `.claude/agents/`
 - `git`: Git configuration and conventions
