@@ -41,6 +41,51 @@ describe('mergeStatistics', () => {
     );
     expect(result['好']!.lastSeen).toBe(300);
   });
+
+  it('keeps the context sentence for a word present in both', () => {
+    const result = mergeStatistics(
+      { 好: { count: 1, firstSeen: 100, lastSeen: 300, context: '你好嗎' } },
+      { 好: { count: 1, firstSeen: 100, lastSeen: 100 } }
+    );
+    expect(result['好']!.context).toBe('你好嗎');
+  });
+
+  it('keeps the context from whichever area met the word first', () => {
+    const result = mergeStatistics(
+      { 好: { count: 1, firstSeen: 200, lastSeen: 300, context: '較晚' } },
+      { 好: { count: 1, firstSeen: 50, lastSeen: 100, context: '最早' } }
+    );
+    expect(result['好']!.context).toBe('最早');
+  });
+
+  it('keeps the corpus rank for a word present in both', () => {
+    const result = mergeStatistics(
+      { 好: { count: 1, firstSeen: 100, lastSeen: 300, rank: 42 } },
+      { 好: { count: 1, firstSeen: 100, lastSeen: 100 } }
+    );
+    expect(result['好']!.rank).toBe(42);
+  });
+
+  it('keeps a word retired in either area retired', () => {
+    const result = mergeStatistics(
+      { 好: { count: 1, firstSeen: 100, lastSeen: 300 } },
+      { 好: { count: 1, firstSeen: 100, lastSeen: 100, suppressed: true } }
+    );
+    expect(result['好']!.suppressed).toBe(true);
+  });
+
+  it('keeps the most recent progress of each direction independently', () => {
+    const early = { reviews: 1, consecutiveCorrect: 1, lastReviewed: 100 };
+    const late = { reviews: 4, consecutiveCorrect: 4, lastReviewed: 900 };
+
+    const result = mergeStatistics(
+      { 好: { count: 1, firstSeen: 1, lastSeen: 2, flashcard: late, production: early } },
+      { 好: { count: 1, firstSeen: 1, lastSeen: 2, flashcard: early, production: late } }
+    );
+
+    expect(result['好']!.flashcard).toEqual(late);
+    expect(result['好']!.production).toEqual(late);
+  });
 });
 
 describe('getFlashcardStage', () => {

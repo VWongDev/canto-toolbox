@@ -34,6 +34,13 @@ export type FlashcardRating = 'again' | 'hard' | 'good' | 'easy';
 export type FlashcardStage = 'new' | 'learning' | 'familiar' | 'mastered';
 
 /**
+ * What a card asks for. Recognition (word → meaning) is what reading trains on
+ * its own; production and components are the two things reading never tests,
+ * so each carries its own schedule rather than riding on the recognition card.
+ */
+export type ReviewDirection = 'recognition' | 'production' | 'components';
+
+/**
  * Compact projection of an FSRS card. Dates are epoch milliseconds and reals
  * are rounded, because every tracked word's progress shares one storage item.
  */
@@ -52,6 +59,8 @@ export interface SrsState {
 
 export interface FlashcardProgress {
   reviews: number;
+  /** Reviews answered Good or Easy, for the accuracy the stats page reports. */
+  correct?: number;
   consecutiveCorrect: number;
   lastRating?: FlashcardRating;
   lastReviewed?: number;
@@ -63,13 +72,26 @@ export interface WordStatistics {
   count: number;
   firstSeen: number;
   lastSeen: number;
+  /** Recognition progress. The original single-card key, kept for stored data. */
   flashcard?: FlashcardProgress;
+  /** Meaning → word. Unlocked once recognition leaves its learning steps. */
+  production?: FlashcardProgress;
+  /** Character → its parts. Only for single characters the etymology covers. */
+  components?: FlashcardProgress;
   /**
    * A snippet of the sentence the word was first met in. The strongest memory
    * hook available and free to capture, so it is kept for recall — one per
    * word, since every tracked word shares a single storage item.
    */
   context?: string;
+  /** SUBTLEX-CH rank recorded at track time, so study order can follow it. */
+  rank?: number;
+  /** True once the character has parts worth drilling, decided at track time. */
+  decomposable?: boolean;
+  /** Retired by the reader, or buried automatically as a leech. */
+  suppressed?: boolean;
+  /** Added deliberately, so it skips the exposure gate new words wait behind. */
+  pinned?: boolean;
 }
 
 export interface Statistics {
@@ -116,6 +138,16 @@ export interface TrackWordMessage {
   word: string;
   /** Sentence the word was met in, recorded the first time it is studied. */
   context?: string;
+  /** Set when the reader asked for the word outright rather than dwelling on it. */
+  pin?: boolean;
+}
+
+/** Retire a word from review, or put a retired one back. */
+export interface SetWordStatusMessage {
+  type: 'set_word_status';
+  word: string;
+  suppressed?: boolean;
+  pinned?: boolean;
 }
 
 export interface GetStatisticsMessage {
@@ -126,9 +158,16 @@ export interface UpdateFlashcardMessage {
   type: 'update_flashcard';
   word: string;
   rating: FlashcardRating;
+  /** Omitted by older callers, which only ever rated the recognition card. */
+  direction?: ReviewDirection;
 }
 
-export type BackgroundMessage = LookupMessage | TrackWordMessage | GetStatisticsMessage | UpdateFlashcardMessage;
+export type BackgroundMessage =
+  | LookupMessage
+  | TrackWordMessage
+  | GetStatisticsMessage
+  | UpdateFlashcardMessage
+  | SetWordStatusMessage;
 
 export interface LookupResponse {
   success: true;
@@ -158,7 +197,18 @@ export interface UpdateFlashcardResponse {
   type: 'update_flashcard';
 }
 
-export type BackgroundResponse = LookupResponse | ErrorResponse | StatisticsResponse | TrackWordResponse | UpdateFlashcardResponse;
+export interface SetWordStatusResponse {
+  success: true;
+  type: 'set_word_status';
+}
+
+export type BackgroundResponse =
+  | LookupResponse
+  | ErrorResponse
+  | StatisticsResponse
+  | TrackWordResponse
+  | UpdateFlashcardResponse
+  | SetWordStatusResponse;
 
 // Every non-error response carries a `type` that matches its request, so the
 // success response for a given message is derivable from the union — no
