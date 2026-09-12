@@ -11,7 +11,6 @@ import { createEtymologySection } from '../shared/etymology-section.js';
 import { createDefinitionSections } from '../shared/definition-section.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
-const THROTTLE_INTERVAL_MS = 16;
 
 /**
  * How long the popup must stay on a word before it counts as studied. The
@@ -64,7 +63,8 @@ export class ChineseHoverPopupManager {
   private isHoveringChinese = false;
   private lastHoveredElement: Node | null = null;
   private mousemoveThrottle: number | null = null;
-  private lastMouseMoveTime = 0;
+  /** The newest move seen since the frame was scheduled. */
+  private pendingMouseMove: MouseEvent | null = null;
   private readonly boundMouseMove: (e: MouseEvent) => void;
   private readonly boundMouseOut: (e: MouseEvent) => void;
   private readonly boundMouseUp: (e: MouseEvent) => void;
@@ -92,23 +92,31 @@ export class ChineseHoverPopupManager {
       cancelAnimationFrame(this.mousemoveThrottle);
       this.mousemoveThrottle = null;
     }
+    this.pendingMouseMove = null;
     this.hidePopup();
   }
 
+  /**
+   * Act on the move at once, then coalesce the rest of the frame into a single
+   * follow-up with the newest position. A frame is the finest resolution the
+   * popup can act on, so this costs one caret lookup per frame however fast
+   * the pointer moves — the previous pairing of a millisecond gate with a
+   * frame callback was two mechanisms doing that one job.
+   */
   private handleMouseMove(event: MouseEvent): void {
-    const now = Date.now();
-    if (now - this.lastMouseMoveTime < THROTTLE_INTERVAL_MS) {
-      if (!this.mousemoveThrottle) {
-        this.mousemoveThrottle = requestAnimationFrame(() => {
-          this.handleMouseMoveThrottled(event);
-          this.mousemoveThrottle = null;
-          this.lastMouseMoveTime = Date.now();
-        });
-      }
+    if (this.mousemoveThrottle !== null) {
+      this.pendingMouseMove = event;
       return;
     }
-    this.lastMouseMoveTime = now;
+
     this.handleMouseMoveThrottled(event);
+
+    this.mousemoveThrottle = requestAnimationFrame(() => {
+      this.mousemoveThrottle = null;
+      const pending = this.pendingMouseMove;
+      this.pendingMouseMove = null;
+      if (pending) this.handleMouseMove(pending);
+    });
   }
 
   private handleSelection(_event: MouseEvent): void {
