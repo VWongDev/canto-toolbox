@@ -25,6 +25,24 @@ export interface DictionaryEntry {
 
 export type Dictionary = Record<string, DictionaryEntry[]>;
 
+/**
+ * On-disk form of {@link Dictionary}. Each unique entry is stored once in
+ * `rows`; `index` maps both the simplified and traditional forms to the row
+ * (or rows) they share. A single hit is a number rather than a one-element
+ * array, which is the common case.
+ */
+export type CompactDictionaryEntry = [
+  traditional: string,
+  simplified: string,
+  romanisation: string,
+  definitions: string[],
+];
+
+export interface CompactDictionary {
+  rows: CompactDictionaryEntry[];
+  index: Record<string, number | number[]>;
+}
+
 /** Word → its rank in the SUBTLEX-CH corpus, 1 being the commonest. */
 export type FrequencyRanks = Record<string, number>;
 
@@ -168,6 +186,22 @@ export interface OcrRunMessage {
   src: string;
 }
 
+/**
+ * The service worker's hop to the offscreen document for a dictionary
+ * lookup. The parsed maps live there so a discarded worker does not throw
+ * them away; the worker only forwards.
+ */
+export interface DictLookupMessage {
+  type: 'dict_lookup';
+  word: string;
+  segment?: HoverSegment;
+  /**
+   * Return whatever the maps hold, even if empty, instead of throwing.
+   * Used when describing a tracked word: a missing rank is not a failed study.
+   */
+  allowMissing?: boolean;
+}
+
 export interface LookupMessage {
   type: 'lookup_word';
   word: string;
@@ -214,7 +248,8 @@ export type BackgroundMessage =
   | UpdateFlashcardMessage
   | SetWordStatusMessage
   | OcrImageMessage
-  | OcrRunMessage;
+  | OcrRunMessage
+  | DictLookupMessage;
 
 export interface LookupResponse {
   success: true;
@@ -261,6 +296,12 @@ export interface OcrRunResponse {
   result: OcrResult;
 }
 
+export interface DictLookupResponse {
+  success: true;
+  type: 'dict_lookup';
+  definition: DefinitionResult;
+}
+
 export type BackgroundResponse =
   | LookupResponse
   | ErrorResponse
@@ -269,7 +310,8 @@ export type BackgroundResponse =
   | UpdateFlashcardResponse
   | SetWordStatusResponse
   | OcrImageResponse
-  | OcrRunResponse;
+  | OcrRunResponse
+  | DictLookupResponse;
 
 // Every non-error response carries a `type` that matches its request, so the
 // success response for a given message is derivable from the union — no

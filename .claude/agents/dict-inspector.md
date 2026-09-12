@@ -69,19 +69,31 @@ for words off the official list.
 
 ## Generated JSON schema
 
-`mandarin.json` and `cantonese.json`:
+`mandarin.json` and `cantonese.json` are a compact `rows` + `index` form
+(`CompactDictionary` in `src/shared/types.ts`). Each unique
+traditional/simplified/romanisation triple is stored once as a tuple; both
+script forms point at that row. A single hit is a number rather than a
+one-element array:
+
 ```json
 {
-  "好": [
-    { "traditional": "好", "simplified": "好", "romanisation": "hao3", "definitions": ["good"] }
-  ]
+  "rows": [
+    ["漢字", "汉字", "han4 zi4", ["Chinese character"]],
+    ["好", "好", "hao3", ["good"]],
+    ["好", "好", "hao4", ["to be fond of"]]
+  ],
+  "index": {
+    "汉字": 0,
+    "漢字": 0,
+    "好": [1, 2]
+  }
 }
 ```
-Values are arrays of `DictionaryEntry`, one per pronunciation variant.
-**Keys are both forms**: `addDictionaryEntry` (`processors/utils.ts`) indexes
-each entry under its simplified form *and* under its traditional form when the
-two differ, so a lookup succeeds in either script. Duplicate
-traditional/simplified/romanisation triples are not re-added.
+
+`addDictionaryEntry` (`processors/utils.ts`) still indexes each entry under
+both forms while the processor runs; `compactDictionary` then collapses the
+duplicated objects before write. `dictionary.ts` looks a word up through
+`index` and reconstructs a `DictionaryEntry` from the row.
 
 `etymology.json`:
 ```json
@@ -107,6 +119,7 @@ bands the rank via `shared/frequency.ts`.
 ## Types
 
 All types are in `src/shared/types.ts`: `Dictionary`, `DictionaryEntry`,
+`CompactDictionary`, `CompactDictionaryEntry`,
 `EtymologyDictionary`, `CharacterEtymology`, `EtymologyType`, `FrequencyRanks`,
 `FrequencyBand`, `WordFrequency`, `DefinitionResult`.
 

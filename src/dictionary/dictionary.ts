@@ -1,5 +1,6 @@
 import type {
-  Dictionary,
+  CompactDictionary,
+  CompactDictionaryEntry,
   DictionaryEntry,
   DefinitionResult,
   EtymologyDictionary,
@@ -13,8 +14,10 @@ import { bandForRank } from '../shared/frequency.js';
 const CANTONESE_MARKER = '(cantonese)';
 const MAX_WORD_LENGTH = 4;
 
-let mandarinDict: Dictionary = {};
-let cantoneseDict: Dictionary = {};
+const EMPTY_DICT: CompactDictionary = { rows: [], index: {} };
+
+let mandarinDict: CompactDictionary = EMPTY_DICT;
+let cantoneseDict: CompactDictionary = EMPTY_DICT;
 let etymologyDict: EtymologyDictionary = {};
 let frequencyRanks: FrequencyRanks = {};
 
@@ -23,8 +26,8 @@ let dictionariesPromise: Promise<void> | null = null;
 export function initDictionaries(): Promise<void> {
   if (!dictionariesPromise) {
     dictionariesPromise = Promise.all([
-      fetch(chrome.runtime.getURL('data/mandarin.json')).then(r => r.json() as Promise<Dictionary>),
-      fetch(chrome.runtime.getURL('data/cantonese.json')).then(r => r.json() as Promise<Dictionary>),
+      fetch(chrome.runtime.getURL('data/mandarin.json')).then(r => r.json() as Promise<CompactDictionary>),
+      fetch(chrome.runtime.getURL('data/cantonese.json')).then(r => r.json() as Promise<CompactDictionary>),
       fetch(chrome.runtime.getURL('data/etymology.json')).then(r => r.json() as Promise<EtymologyDictionary>),
       fetch(chrome.runtime.getURL('data/frequency.json')).then(r => r.json() as Promise<FrequencyRanks>),
     ]).then(([mandarin, cantonese, etymology, frequency]) => {
@@ -57,12 +60,21 @@ export function lookupFrequency(word: string, entries: DictionaryEntry[]): WordF
   return rank === undefined ? undefined : { rank, band: bandForRank(rank) };
 }
 
-function lookupInDict(dict: Dictionary, word: string): DictionaryEntry[] {
-  const entries = dict[word];
-  if (!entries) {
-    return [];
-  }
-  return Array.isArray(entries) ? entries : [entries];
+function decodeEntry(row: CompactDictionaryEntry): DictionaryEntry {
+  return {
+    traditional: row[0],
+    simplified: row[1],
+    romanisation: row[2],
+    definitions: row[3],
+  };
+}
+
+function lookupInDict(dict: CompactDictionary, word: string): DictionaryEntry[] {
+  const ids = dict.index[word];
+  if (ids === undefined) return [];
+
+  const rows = typeof ids === 'number' ? [ids] : ids;
+  return rows.map(id => decodeEntry(dict.rows[id]!));
 }
 
 function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): DictionaryEntry[] {
@@ -85,7 +97,7 @@ function filterOutCantoneseDefinitions(mandarinEntries: DictionaryEntry[]): Dict
 }
 
 function processDictionaryLookup(
-  dict: Dictionary,
+  dict: CompactDictionary,
   word: string,
   filterCantonese: boolean
 ): DictionaryEntry[] {

@@ -10,36 +10,34 @@ import {
   lookupWordAt,
   lookupEtymology,
 } from '../dictionary.js';
-import type { DictionaryEntry, DefinitionResult } from '../../shared/types.js';
+import type { CompactDictionary, DictionaryEntry, DefinitionResult } from '../../shared/types.js';
 
-const mockMandarin = {
-  '好': [
-    { traditional: '好', simplified: '好', romanisation: 'hao3', definitions: ['good', 'well'] },
-    { traditional: '好', simplified: '好', romanisation: 'hao4', definitions: ['to be fond of'] },
+const mockMandarin: CompactDictionary = {
+  rows: [
+    ['好', '好', 'hao3', ['good', 'well']],
+    ['好', '好', 'hao4', ['to be fond of']],
+    ['字', '字', 'zi4', ['letter', 'symbol', 'character']],
+    ['好字', '好字', 'hao3 zi4', ['good handwriting']],
+    ['廣東話', '广东话', 'Guang3dong1 hua4', ['Cantonese (dialect)', '(Cantonese) Cantonese']],
   ],
-  '字': [
-    { traditional: '字', simplified: '字', romanisation: 'zi4', definitions: ['letter', 'symbol', 'character'] },
-  ],
-  '好字': [
-    { traditional: '好字', simplified: '好字', romanisation: 'hao3 zi4', definitions: ['good handwriting'] },
-  ],
-  '廣東話': [
-    {
-      traditional: '廣東話',
-      simplified: '广东话',
-      romanisation: 'Guang3dong1 hua4',
-      definitions: ['Cantonese (dialect)', '(Cantonese) Cantonese'],
-    },
-  ],
+  index: {
+    '好': [0, 1],
+    '字': 2,
+    '好字': 3,
+    '廣東話': 4,
+    '广东话': 4,
+  },
 };
 
-const mockCantonese = {
-  '好': [
-    { traditional: '好', simplified: '好', romanisation: 'hou2', definitions: ['good', 'well'] },
+const mockCantonese: CompactDictionary = {
+  rows: [
+    ['好', '好', 'hou2', ['good', 'well']],
+    ['字', '字', 'zi6', ['character', 'letter']],
   ],
-  '字': [
-    { traditional: '字', simplified: '字', romanisation: 'zi6', definitions: ['character', 'letter'] },
-  ],
+  index: {
+    '好': 0,
+    '字': 1,
+  },
 };
 
 const mockEtymology = {
@@ -258,6 +256,11 @@ describe('lookupFrequency', () => {
   it('finds a traditional word through its simplified counterpart', () => {
     // 廣東話 is not in the corpus under its traditional form; 广东话 is.
     expect(lookupWord('廣東話').frequency).toEqual({ rank: 18450, band: 'uncommon' });
+  });
+
+  it('finds the same entry under the simplified form', () => {
+    expect(lookupWord('广东话').word).toBe('广东话');
+    expect(lookupWord('广东话').mandarin.entries[0]!.traditional).toBe('廣東話');
   });
 
   it('omits frequency for a word rarer than the corpus cap', () => {

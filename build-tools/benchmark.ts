@@ -4,7 +4,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import type { Dictionary, DictionaryEntry } from '../src/shared/types.js';
+import type { CompactDictionary, Dictionary, DictionaryEntry } from '../src/shared/types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, __dirname.includes('dist') ? '../../..' : '../..');
@@ -21,6 +21,24 @@ function loadDict<T>(name: string): T {
     throw new Error(`Dictionary not found: ${path}. Run pnpm build:dict first.`);
   }
   return JSON.parse(readFileSync(path, 'utf-8')) as T;
+}
+
+function decodeEntry(row: CompactDictionary['rows'][number]): DictionaryEntry {
+  return {
+    traditional: row[0],
+    simplified: row[1],
+    romanisation: row[2],
+    definitions: row[3],
+  };
+}
+
+function expandCompact(compact: CompactDictionary): Dictionary {
+  const dict: Dictionary = {};
+  for (const [word, ids] of Object.entries(compact.index)) {
+    const rows = typeof ids === 'number' ? [ids] : ids;
+    dict[word] = rows.map(id => decodeEntry(compact.rows[id]!));
+  }
+  return dict;
 }
 
 function lookupInDict(dict: Dictionary, word: string): DictionaryEntry[] {
@@ -100,8 +118,8 @@ function ms(n: number): string {
 
 async function main(): Promise<void> {
   console.log('[Bench] Loading dictionaries...');
-  const mandarin = loadDict<Dictionary>('mandarin');
-  const cantonese = loadDict<Dictionary>('cantonese');
+  const mandarin = expandCompact(loadDict<CompactDictionary>('mandarin'));
+  const cantonese = expandCompact(loadDict<CompactDictionary>('cantonese'));
   console.log(`[Bench] Mandarin: ${Object.keys(mandarin).length} entries`);
   console.log(`[Bench] Cantonese: ${Object.keys(cantonese).length} entries`);
   console.log(`[Bench] ${ITERATIONS} iterations per word, ${TEST_WORDS.length} words\n`);

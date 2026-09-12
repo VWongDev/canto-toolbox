@@ -8,6 +8,7 @@ import { processMandarinDict } from './processors/mandarin-processor.js';
 import { processCantoneseDict } from './processors/cantonese-processor.js';
 import { processEtymologyDict } from './processors/etymology-processor.js';
 import { processFrequencyData } from './processors/frequency-processor.js';
+import { compactDictionary } from './processors/utils.js';
 import type { Dictionary, EtymologyDictionary, FrequencyRanks } from '../src/shared/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -44,17 +45,19 @@ async function buildDictionaries(): Promise<void> {
       try {
         const dict = await processor();
         const outputPath = join(outputDir, `${name}.json`);
-        // Serialise with sorted top-level keys so repeated builds are
-        // byte-identical (stable diffs, cacheable). Entry arrays already
-        // preserve deterministic source order.
-        const sorted: Record<string, unknown> = {};
-        // Default UTF-16 code-unit ordering (matches Array#sort) keeps output byte-identical.
-        const byKey = Object.entries(dict).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-        for (const [key, value] of byKey) {
-          sorted[key] = value;
-        }
-        writeFileSync(outputPath, JSON.stringify(sorted), 'utf-8');
-        console.log(`[Build] Wrote ${name.charAt(0).toUpperCase() + name.slice(1)} dictionary: ${outputPath} (${Object.keys(dict).length} entries)`);
+        // Mandarin/Cantonese collapse to rows+index so each unique entry is
+        // stored once. compactDictionary already walks keys in sorted order.
+        // Etymology and frequency stay keyed maps; sort those top-level keys
+        // so repeated builds stay byte-identical.
+        const output = name === 'mandarin' || name === 'cantonese'
+          ? compactDictionary(dict as Dictionary)
+          : Object.fromEntries(
+              Object.entries(dict as EtymologyDictionary | FrequencyRanks)
+                .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+            );
+        writeFileSync(outputPath, JSON.stringify(output), 'utf-8');
+        const count = 'rows' in output ? output.rows.length : Object.keys(output).length;
+        console.log(`[Build] Wrote ${name.charAt(0).toUpperCase() + name.slice(1)} dictionary: ${outputPath} (${count} entries)`);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`[Build] Failed to process ${name} dictionary:`, errorMessage);
