@@ -10,6 +10,8 @@ public/data/frequency.json
 build-tools/dist/
 scripts/dist/
 coverage/
+test-results/
+playwright-report/
 
 # Build artifacts
 *.tsbuildinfo
