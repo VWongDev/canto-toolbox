@@ -79,5 +79,50 @@ describe('PopupStorageClient', () => {
       const written = await flush(crowdedStatistics());
       expect(Object.keys(written)).toHaveLength(500);
     });
+
+    /** A deck that fills the cap on its own has to be ranked within itself. */
+    function reviewedDeck(size: number): Statistics {
+      const stats: Statistics = {};
+      for (let i = 0; i < size; i++) {
+        stats[`字${i}`] = {
+          count: 1,
+          firstSeen: 1,
+          lastSeen: 2,
+          flashcard: { reviews: 3, consecutiveCorrect: 1, lastReviewed: 1000 + i },
+        };
+      }
+      return stats;
+    }
+
+    it('keeps the most recently reviewed words when the deck alone fills the cap', async () => {
+      const written = await flush(reviewedDeck(600));
+
+      expect(Object.keys(written)).toHaveLength(500);
+      expect(written['字599']).toBeDefined();
+      expect(written['字0']).toBeUndefined();
+    });
+
+    it('ranks a word reviewed in any direction above an unreviewed one', async () => {
+      const stats = crowdedStatistics();
+      stats['造句'] = {
+        count: 1,
+        firstSeen: 1,
+        lastSeen: 2,
+        production: { reviews: 2, consecutiveCorrect: 1, lastReviewed: 5000 },
+      };
+
+      const written = await flush(stats);
+
+      expect(written['造句']).toBeDefined();
+    });
+
+    it('keeps a retired word ahead of words known only from hovering', async () => {
+      const stats = crowdedStatistics();
+      stats['退休'] = { count: 1, firstSeen: 1, lastSeen: 2, suppressed: true };
+
+      const written = await flush(stats);
+
+      expect(written['退休']).toBeDefined();
+    });
   });
 });

@@ -10,6 +10,13 @@ import { StorageManager } from './storage-manager.js';
  */
 export const STATISTICS_KEY = 'wordStatistics';
 
+/**
+ * How many words the record holds before the least valuable are evicted. Both
+ * the write path that enforces it and the stats page that warns about it read
+ * it from here, so the number the reader is shown is the one actually applied.
+ */
+export const MAX_TRACKED_WORDS = 500;
+
 export const statisticsStore = new RedundantStore(
   new StorageManager(chrome.storage.sync, chrome.storage.local)
 );

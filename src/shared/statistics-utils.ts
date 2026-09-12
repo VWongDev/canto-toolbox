@@ -13,6 +13,23 @@ export function getFlashcardStage(stat: WordStatistics, now: Date = new Date()):
   return isMastered(fc, now) ? 'mastered' : 'familiar';
 }
 
+/** Every schedule a word carries, in the order cards are introduced. */
+export const DIRECTION_KEYS = ['flashcard', 'production', 'components'] as const;
+
+/** When any of the word's cards was last answered, or undefined if none was. */
+export function lastReviewedAt(stat: WordStatistics): number | undefined {
+  let latest: number | undefined;
+
+  for (const key of DIRECTION_KEYS) {
+    const progress = stat[key];
+    if (!progress) continue;
+    const at = progress.lastReviewed ?? 0;
+    if (latest === undefined || at > latest) latest = at;
+  }
+
+  return latest;
+}
+
 function mergeFlashcardProgress(
   sync: FlashcardProgress | undefined,
   local: FlashcardProgress | undefined,
@@ -42,8 +59,7 @@ function mergeWord(sync: WordStatistics, local: WordStatistics): WordStatistics 
     lastSeen: Math.max(sync.lastSeen, local.lastSeen),
   };
 
-  const directions = ['flashcard', 'production', 'components'] as const;
-  for (const key of directions) {
+  for (const key of DIRECTION_KEYS) {
     const progress = mergeFlashcardProgress(sync[key], local[key]);
     if (progress) merged[key] = progress;
     else delete merged[key];
