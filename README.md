@@ -99,7 +99,7 @@ Screenshots are written to `screenshots/`. Chrome runs in headed mode because ex
 
 1. **Read**: hover Chinese text for a popup with both readings, definitions, frequency, and a per-character breakdown. Drag-select for a phrase. For Chinese inside an image, hover it and click the badge in its corner — the text it holds becomes hoverable in place. Pause a video and the same badge reads the frame; seeking to the next subtitle re-reads it on its own. Captions a site renders as real text (YouTube's own, for one) need no badge at all — just hover them.
 2. **Track**: pause on a word and it's saved. The extension icon opens your word list with the sentence each one came from.
-3. **Review**: open the flashcard page and rate each card Again, Hard, Good or Easy. The [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) scheduler decides when it comes back; when nothing is due, the page says when the next review lands.
+3. **Review**: open the flashcard page and rate each card Again, Hard, Good or Easy. Single characters also come back as a stroke-order card — trace the outline and the quiz grades itself on how many strokes went astray. The [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) scheduler decides when a card comes back; when nothing is due, the page says when the next review lands.
 
 ## Dictionary Resources
 
@@ -121,8 +121,14 @@ This extension uses high-quality, open-source dictionary data:
 ### Make Me a Hanzi (Etymology)
 - **Source**: [Make Me a Hanzi](https://www.skishore.me/makemeahanzi)
 - **Repository**: [skishore/makemeahanzi](https://github.com/skishore/makemeahanzi)
-- **License**: See [COPYING](https://github.com/skishore/makemeahanzi/blob/master/COPYING) in the repository
+- **License**: LGPL-3.0 — see [COPYING](https://github.com/skishore/makemeahanzi/blob/master/COPYING) in the repository
 - **Description**: Character etymology data (decomposition, radical, pictographic/pictophonetic hints) used in the extension’s etymology display.
+
+### Make Me a Hanzi (Stroke Order)
+- **Source**: [Make Me a Hanzi](https://www.skishore.me/makemeahanzi) — `graphics.txt`, derived from the Arphic PL KaitiM GB and Arphic PL UKai fonts
+- **License**: [Arphic Public License](https://github.com/skishore/makemeahanzi/blob/master/APL/english/ARPHICPL.TXT) — **not** the LGPL that covers the etymology data. The licence text is packaged with the extension at `strokes/ARPHICPL.TXT`.
+- **Description**: Per-stroke SVG paths and stroke medians for 9,574 characters, split one file per character at build time and used to quiz stroke order on the flashcard page.
+- **Renderer**: [hanzi-writer](https://github.com/chanind/hanzi-writer) (MIT) — draws the outline and grades the strokes the reader traces. It reads the packaged data through a custom loader, so nothing is fetched from a CDN.
 
 ### SUBTLEX-CH (Word Frequency)
 - **Source**: Cai, Q., & Brysbaert, M. (2010). [SUBTLEX-CH: Chinese Word and Character Frequencies Based on Film Subtitles](https://doi.org/10.1371/journal.pone.0010729). *PLoS ONE*, 5(6), e10729.
