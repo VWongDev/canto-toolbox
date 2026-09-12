@@ -9,7 +9,7 @@ Read Chinese on the web without leaving the page. Hover any word for Mandarin an
 - **Nothing to type or copy**: hover Chinese anywhere on any site and the word under your cursor comes up instantly
 - **Mandarin and Cantonese together**: both readings side by side, tone-coloured, each with a speaker button and its own definitions
 - **Reading becomes revision**: words you pause on are saved with the sentence you met them in, then come back as spaced-repetition flashcards
-- **Text inside images too**: screenshots, panels, menus and signage — click the badge on an image and its Chinese becomes hoverable like any other text, flashcards and all
+- **Text inside images and video too**: screenshots, panels, menus, signage — and the frame a video is paused on. Click the badge and its Chinese becomes hoverable like any other text, flashcards and all
 - **Instant, offline, private**: the dictionaries and the OCR model ship with the extension — no accounts, no API calls, no lookup ever leaves your browser
 
 ## Screenshots
@@ -97,7 +97,7 @@ Screenshots are written to `screenshots/`. Chrome runs in headed mode because ex
 
 ## Usage
 
-1. **Read**: hover Chinese text for a popup with both readings, definitions, frequency, and a per-character breakdown. Drag-select for a phrase. For Chinese inside an image, hover the image and click the badge in its corner — the text it holds becomes hoverable in place.
+1. **Read**: hover Chinese text for a popup with both readings, definitions, frequency, and a per-character breakdown. Drag-select for a phrase. For Chinese inside an image, hover it and click the badge in its corner — the text it holds becomes hoverable in place. Pause a video and the same badge reads the frame; seeking to the next subtitle re-reads it on its own. Captions a site renders as real text (YouTube's own, for one) need no badge at all — just hover them.
 2. **Track**: pause on a word and it's saved. The extension icon opens your word list with the sentence each one came from.
 3. **Review**: open the flashcard page and rate each card Again, Hard, Good or Easy. The [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) scheduler decides when it comes back; when nothing is due, the page says when the next review lands.
 
