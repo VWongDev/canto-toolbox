@@ -127,6 +127,47 @@ export interface HoverSegment {
   offset: number;
 }
 
+/** A rectangle in the source image's own (natural) pixel coordinates. */
+export interface OcrBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** One recognised run of text and where it sits in the image. */
+export interface OcrItem {
+  text: string;
+  box: OcrBox;
+}
+
+/**
+ * What an image turned out to say. The boxes are natural pixels, so the
+ * overlay can scale them to whatever size the page happens to render the
+ * image at without re-reading it.
+ */
+export interface OcrResult {
+  width: number;
+  height: number;
+  items: OcrItem[];
+}
+
+export interface OcrImageMessage {
+  type: 'ocr_image';
+  /** An http(s) URL to fetch, or a `data:` URL when the source is page-scoped. */
+  src: string;
+}
+
+/**
+ * The service worker's hop to the offscreen document. A worker cannot hold a
+ * WebAssembly model across its own teardown, so the engine lives in the
+ * offscreen document and the worker only forwards to it.
+ */
+export interface OcrRunMessage {
+  type: 'ocr_run';
+  src: string;
+}
+
 export interface LookupMessage {
   type: 'lookup_word';
   word: string;
@@ -171,7 +212,9 @@ export type BackgroundMessage =
   | TrackWordMessage
   | GetStatisticsMessage
   | UpdateFlashcardMessage
-  | SetWordStatusMessage;
+  | SetWordStatusMessage
+  | OcrImageMessage
+  | OcrRunMessage;
 
 export interface LookupResponse {
   success: true;
@@ -206,13 +249,27 @@ export interface SetWordStatusResponse {
   type: 'set_word_status';
 }
 
+export interface OcrImageResponse {
+  success: true;
+  type: 'ocr_image';
+  result: OcrResult;
+}
+
+export interface OcrRunResponse {
+  success: true;
+  type: 'ocr_run';
+  result: OcrResult;
+}
+
 export type BackgroundResponse =
   | LookupResponse
   | ErrorResponse
   | StatisticsResponse
   | TrackWordResponse
   | UpdateFlashcardResponse
-  | SetWordStatusResponse;
+  | SetWordStatusResponse
+  | OcrImageResponse
+  | OcrRunResponse;
 
 // Every non-error response carries a `type` that matches its request, so the
 // success response for a given message is derivable from the union — no

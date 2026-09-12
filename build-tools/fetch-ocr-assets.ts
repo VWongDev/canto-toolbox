@@ -40,13 +40,13 @@ const MODELS = [
 ];
 
 /**
- * The only ONNX runtime artefact that has to sit on disk. `onnxruntime-web`'s
- * bundled entry inlines its own JavaScript glue but still loads this
- * separately, and the plain SIMD build is the one to ship: the jsep and
- * asyncify variants cost 12-14 MB more for a WebGPU path an extension page
- * cannot reach without cross-origin isolation.
+ * The ONNX runtime artefacts that have to sit on disk. The build is aliased to
+ * onnxruntime-web's extern-wasm entry (see vite.config.ts), which loads both of
+ * these from `wasmPaths` at run time rather than having Rollup emit them. The
+ * plain SIMD binary is the one to ship: the jsep and asyncify variants cost
+ * 12-14 MB more for a WebGPU path this extension does not ask for.
  */
-const ORT_WASM = 'ort-wasm-simd-threaded.wasm';
+const ORT_RUNTIME = ['ort-wasm-simd-threaded.wasm', 'ort-wasm-simd-threaded.mjs'];
 
 function digest(bytes: Buffer): string {
   return createHash('sha256').update(bytes).digest('hex');
@@ -93,12 +93,14 @@ async function fetchOcrAssets(): Promise<void> {
     }),
   );
 
-  const wasmSource = join(rootDir, 'node_modules/onnxruntime-web/dist', ORT_WASM);
-  if (!existsSync(wasmSource)) {
-    throw new Error(`${ORT_WASM} is missing — run pnpm install first`);
+  for (const file of ORT_RUNTIME) {
+    const source = join(rootDir, 'node_modules/onnxruntime-web/dist', file);
+    if (!existsSync(source)) {
+      throw new Error(`${file} is missing — run pnpm install first`);
+    }
+    copyFileSync(source, join(runtimeDir, file));
+    console.log(`[OCR] Copied ${file}`);
   }
-  copyFileSync(wasmSource, join(runtimeDir, ORT_WASM));
-  console.log(`[OCR] Copied ${ORT_WASM}`);
 
   if (unpinned.length > 0) {
     console.warn(`[OCR] Unpinned downloads — add these digests to MODELS:\n${unpinned.join('\n')}`);
