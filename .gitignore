@@ -7,6 +7,7 @@ public/data/mandarin.json
 public/data/cantonese.json
 public/data/etymology.json
 public/data/frequency.json
+public/ocr/
 build-tools/dist/
 scripts/dist/
 coverage/
