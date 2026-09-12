@@ -13,7 +13,7 @@ import { createDefinitionElement } from '../shared/definition-section.js';
 import { createContextSentence } from '../shared/context-sentence.js';
 import { BAND_LABELS } from '../shared/frequency.js';
 import { MAX_TRACKED_WORDS } from '../shared/statistics-store.js';
-import { bandOf, sortWords, type SortKey } from './ordering.js';
+import { bandOf, sortWords, SORT_LABELS, type SortKey } from './ordering.js';
 import type { StudyOverview } from './overview.js';
 
 export const ELEMENT_IDS = {
@@ -103,6 +103,24 @@ export function getRequiredElements(document: Document): StatsElements | null {
     bandTabsEl,
     sortSelectEl,
   };
+}
+
+/**
+ * Fills the sort control from the comparators that back it, so a label can
+ * never name an order the list does not actually sort by.
+ */
+export function renderSortOptions(sortSelectEl: HTMLSelectElement): void {
+  sortSelectEl.replaceChildren();
+
+  for (const [key, label] of Object.entries(SORT_LABELS)) {
+    sortSelectEl.appendChild(
+      createElement<HTMLOptionElement>({
+        tag: 'option',
+        attributes: { value: key },
+        textContent: label,
+      })
+    );
+  }
 }
 
 /**

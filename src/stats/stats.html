@@ -61,12 +61,9 @@
 
       <label class="sort-control">
         Sort
-        <select id="sort-select">
-          <option value="studied">Most studied</option>
-          <option value="frequency">Commonest first</option>
-          <option value="due">Due soonest</option>
-          <option value="recent">Recently seen</option>
-        </select>
+        <!-- Options are filled from SORT_LABELS so the labels and the keys
+             that sort by them cannot drift apart. -->
+        <select id="sort-select"></select>
       </label>
     </div>
 

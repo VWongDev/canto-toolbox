@@ -18,6 +18,7 @@ import {
   renderDefinitionLoading,
   renderDefinition,
   renderOverview,
+  renderSortOptions,
   updateFilterCounts,
   updateFilterTabStates,
   type ListView,
@@ -118,6 +119,7 @@ export class StatsManager {
   }
 
   private setupListControls(elements: StatsElements): void {
+    renderSortOptions(elements.sortSelectEl);
     this.setupTabs<FlashcardStage>(elements, elements.filterTabsEl, 'stage', this.view.stages);
     this.setupTabs<FrequencyBand>(elements, elements.bandTabsEl, 'band', this.view.bands);
 

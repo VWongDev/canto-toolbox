@@ -4,6 +4,7 @@ import { readFileSync } from 'fs';
 import { StatsManager } from '../stats.js';
 import type { StatsClient } from '../stats-client.js';
 import type { StatsStorage } from '../stats-storage.js';
+import { SORT_LABELS } from '../ordering.js';
 import type { Statistics } from '../../shared/types.js';
 
 // The real page markup, minus the asset references happy-dom would try to fetch.
@@ -90,6 +91,13 @@ describe('StatsManager overview', () => {
 
   it('lists the words most studied first by default', () => {
     expect(listedWords()[0]).toBe('常見');
+  });
+
+  it('offers exactly the sorts the comparators implement', () => {
+    const select = document.getElementById('sort-select') as HTMLSelectElement;
+    const offered = Array.from(select.options, option => [option.value, option.text]);
+
+    expect(offered).toEqual(Object.entries(SORT_LABELS));
   });
 
   it('reorders the list when a different sort is chosen', () => {
