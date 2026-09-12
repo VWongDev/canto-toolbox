@@ -33,8 +33,18 @@ function enqueue<T>(work: () => Promise<T>): Promise<T> {
   return result;
 }
 
+/**
+ * A `data:` source carries its own bytes, so it is never worth caching: the
+ * key would be the whole image — megabytes of string per entry — and a hit
+ * would need the sender to have produced byte-identical pixels twice, which a
+ * video frame never does. Only addresses are cached.
+ */
+function isCacheable(src: string): boolean {
+  return !src.startsWith('data:');
+}
+
 async function read(src: string): Promise<OcrResult> {
-  const cached = cache.get(src);
+  const cached = isCacheable(src) ? cache.get(src) : undefined;
   if (cached) {
     cached.lastUsed = Date.now();
     return cached.result;
@@ -45,7 +55,7 @@ async function read(src: string): Promise<OcrResult> {
   // before anyone clicks a badge.
   const { recognise } = await import('./engine.js');
   const result = await recognise(src);
-  cache.set(src, { result, lastUsed: Date.now() });
+  if (isCacheable(src)) cache.set(src, { result, lastUsed: Date.now() });
   return result;
 }
 
