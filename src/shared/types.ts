@@ -16,6 +16,18 @@ export interface CharacterEtymology {
 
 export type EtymologyDictionary = Record<string, CharacterEtymology>;
 
+/**
+ * One character's stroke graphics, as `build-tools/build-strokes.ts` writes
+ * them. The shape is makemeahanzi's own and is what hanzi-writer expects, so
+ * the data passes through untouched.
+ */
+export interface CharacterStrokes {
+  /** SVG path data per stroke, in stroke order. */
+  strokes: string[];
+  /** The centre line of each stroke, used to grade what the reader drew. */
+  medians: number[][][];
+}
+
 export interface DictionaryEntry {
   traditional: string;
   simplified: string;
@@ -53,10 +65,10 @@ export type FlashcardStage = 'new' | 'learning' | 'familiar' | 'mastered';
 
 /**
  * What a card asks for. Recognition (word → meaning) is what reading trains on
- * its own; production and components are the two things reading never tests,
- * so each carries its own schedule rather than riding on the recognition card.
+ * its own; the other three are what reading never tests, so each carries its
+ * own schedule rather than riding on the recognition card.
  */
-export type ReviewDirection = 'recognition' | 'production' | 'components';
+export type ReviewDirection = 'recognition' | 'production' | 'components' | 'writing';
 
 /**
  * Compact projection of an FSRS card. Dates are epoch milliseconds and reals
@@ -96,6 +108,8 @@ export interface WordStatistics {
   production?: FlashcardProgress;
   /** Character → its parts. Only for single characters the etymology covers. */
   components?: FlashcardProgress;
+  /** Stroke order. Only for single characters the stroke data covers. */
+  writing?: FlashcardProgress;
   /**
    * A snippet of the sentence the word was first met in. The strongest memory
    * hook available and free to capture, so it is kept for recall — one per
@@ -106,6 +120,8 @@ export interface WordStatistics {
   rank?: number;
   /** True once the character has parts worth drilling, decided at track time. */
   decomposable?: boolean;
+  /** True once the character has packaged strokes, decided at track time. */
+  writable?: boolean;
   /** Retired by the reader, or buried automatically as a leech. */
   suppressed?: boolean;
   /** Added deliberately, so it skips the exposure gate new words wait behind. */

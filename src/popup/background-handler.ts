@@ -2,6 +2,7 @@ import { popupStorage, type WordDetails } from './popup-storage.js';
 import { registerHandlers } from '../shared/message-router.js';
 import { sendMessage } from '../shared/message-manager.js';
 import { ensureOffscreenDocument } from '../shared/offscreen-document.js';
+import { hasStrokes } from '../shared/strokes.js';
 import type { DefinitionResult, HoverSegment } from '../shared/types.js';
 
 /**
@@ -15,6 +16,16 @@ function isDecomposable(word: string, definition: DefinitionResult): boolean {
   if (!etymology) return false;
 
   return Object.keys(etymology.componentDefinitions ?? {}).length > 0;
+}
+
+/**
+ * Whether the word can carry a writing card: one character the packaged stroke
+ * data covers. Decomposability is not a stand-in — a character can have
+ * strokes without its etymology naming any parts it is built from.
+ */
+function isWritable(word: string): Promise<boolean> {
+  if ([...word].length !== 1) return Promise.resolve(false);
+  return hasStrokes(word);
 }
 
 function lookupInOffscreen(
@@ -61,6 +72,7 @@ export function register(): void {
         // of a compound word are its own characters, which the card back shows
         // anyway.
         ...(isDecomposable(word, definition) && { decomposable: true }),
+        ...((await isWritable(word)) && { writable: true }),
       };
     } catch (error) {
       console.error('[Background] Could not describe tracked word:', error);

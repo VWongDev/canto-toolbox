@@ -23,21 +23,32 @@ export function cardKey(card: ReviewCard): string {
 
 /**
  * The order a word's cards are introduced. Recognition comes first because it
- * is what reading already half-teaches; the other two ask for what reading
- * never tests, and neither is worth asking about a word the reader cannot yet
- * recognise.
+ * is what reading already half-teaches; the other three ask for what reading
+ * never tests, and none is worth asking about a word the reader cannot yet
+ * recognise. Writing comes last: it is the only card that asks the reader to
+ * produce the character stroke by stroke rather than just name or pick it.
  */
-const INTRODUCTION_ORDER: readonly ReviewDirection[] = ['recognition', 'production', 'components'];
+const INTRODUCTION_ORDER: readonly ReviewDirection[] = [
+  'recognition',
+  'production',
+  'components',
+  'writing',
+];
 
 function isUnlocked(stat: WordStatistics, direction: ReviewDirection): boolean {
   if (direction === 'recognition') return stat.pinned === true || stat.count >= MIN_COUNT;
 
-  // Producing a word, or taking it apart, tests nothing until it is recognised
-  // reliably — which is exactly what leaving the learning steps means.
+  // Producing a word, taking it apart, or writing it tests nothing until it is
+  // recognised reliably — which is exactly what leaving the learning steps
+  // means.
   const recognition = stat.flashcard;
   if (!recognition?.srs || isLearning(recognition)) return false;
 
-  return direction === 'production' || stat.decomposable === true;
+  // Dispatched rather than defaulted: a direction added later must state its
+  // own gate instead of silently inheriting the one above it.
+  if (direction === 'production') return true;
+  if (direction === 'components') return stat.decomposable === true;
+  return stat.writable === true;
 }
 
 function toCard(word: string, stat: WordStatistics, direction: ReviewDirection): ReviewCard {

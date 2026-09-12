@@ -28,10 +28,11 @@ export const DIRECTION_FIELD: Readonly<Record<ReviewDirection, keyof WordStatist
   recognition: 'flashcard',
   production: 'production',
   components: 'components',
+  writing: 'writing',
 };
 
 /** Every schedule a word carries, in the order cards are introduced. */
-export const DIRECTION_KEYS = ['flashcard', 'production', 'components'] as const;
+export const DIRECTION_KEYS = ['flashcard', 'production', 'components', 'writing'] as const;
 
 export function progressFor(
   stat: WordStatistics,

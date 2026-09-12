@@ -43,6 +43,7 @@ export interface WordDetails {
   context?: string;
   rank?: number;
   decomposable?: boolean;
+  writable?: boolean;
   /** The reader asked for this word outright rather than dwelling on it. */
   pinned?: boolean;
 }
@@ -79,6 +80,7 @@ export class PopupStorageClient implements PopupStorage {
         ...(context && { context: context.slice(0, MAX_CONTEXT_LENGTH) }),
         ...(details.rank !== undefined && { rank: details.rank }),
         ...(details.decomposable !== undefined && { decomposable: details.decomposable }),
+        ...(details.writable !== undefined && { writable: details.writable }),
         ...(details.pinned !== undefined && { pinned: details.pinned }),
       });
     }
@@ -113,10 +115,11 @@ export class PopupStorageClient implements PopupStorage {
         // sightings do not overwrite it.
         if (seen?.context && !entry.context) entry.context = seen.context;
 
-        // Neither fact changes, but writing them on every sighting backfills
+        // None of these change, but writing them on every sighting backfills
         // words tracked before they were recorded.
         if (seen?.rank !== undefined) entry.rank = seen.rank;
         if (seen?.decomposable !== undefined) entry.decomposable = seen.decomposable;
+        if (seen?.writable !== undefined) entry.writable = seen.writable;
 
         // Asking for a word is also a way of saying it is no longer retired.
         if (seen?.pinned) {
