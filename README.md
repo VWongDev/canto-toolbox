@@ -9,7 +9,8 @@ Read Chinese on the web without leaving the page. Hover any word for Mandarin an
 - **Nothing to type or copy**: hover Chinese anywhere on any site and the word under your cursor comes up instantly
 - **Mandarin and Cantonese together**: both readings side by side, tone-coloured, each with a speaker button and its own definitions
 - **Reading becomes revision**: words you pause on are saved with the sentence you met them in, then come back as spaced-repetition flashcards
-- **Instant, offline, private**: the dictionaries ship with the extension — no accounts, no API calls, no lookup ever leaves your browser
+- **Text inside images too**: screenshots, panels, menus and signage — click the badge on an image and its Chinese becomes hoverable like any other text, flashcards and all
+- **Instant, offline, private**: the dictionaries and the OCR model ship with the extension — no accounts, no API calls, no lookup ever leaves your browser
 
 ## Screenshots
 
@@ -66,8 +67,9 @@ Read Chinese on the web without leaving the page. Hover any word for Mandarin an
 
    This command will:
    - Pre-process dictionary files from the submodules
+   - Download the pinned OCR model and copy in the ONNX runtime (needs network access the first time)
    - Build the extension using Vite
-   - Output the extension to the `dist/` directory
+   - Output the extension to the `dist/` directory (about 81 MB)
 
 4. **Load the extension in Chrome**:
    - Open Chrome and navigate to `chrome://extensions/`
@@ -95,7 +97,7 @@ Screenshots are written to `screenshots/`. Chrome runs in headed mode because ex
 
 ## Usage
 
-1. **Read**: hover Chinese text for a popup with both readings, definitions, frequency, and a per-character breakdown. Drag-select for a phrase.
+1. **Read**: hover Chinese text for a popup with both readings, definitions, frequency, and a per-character breakdown. Drag-select for a phrase. For Chinese inside an image, hover the image and click the badge in its corner — the text it holds becomes hoverable in place.
 2. **Track**: pause on a word and it's saved. The extension icon opens your word list with the sentence each one came from.
 3. **Review**: open the flashcard page and rate each card Again, Hard, Good or Easy. The [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) scheduler decides when it comes back; when nothing is due, the page says when the next review lands.
 
@@ -127,6 +129,18 @@ This extension uses high-quality, open-source dictionary data:
 - **Package**: [chinese-lexicon](https://github.com/peterolson/chinese-lexicon) (build-time only)
 - **License**: ISC
 - **Description**: Word frequency ranks from a film-subtitle corpus, used to band each word by how common it is. Only the 20,000 commonest words are shipped — past that the distinction stops being actionable.
+
+## Image Text Recognition
+
+### PP-OCRv6 (Chinese OCR)
+- **Source**: [PaddleOCR](https://www.paddleocr.ai/)
+- **Models**: [snowfluke/ppu-paddle-ocr-models](https://huggingface.co/snowfluke/ppu-paddle-ocr-models) — the `tiny` detection/recognition pair, converted to ONNX
+- **License**: Apache 2.0
+- **Description**: One unified model covering Simplified and Traditional Chinese. Downloaded at build time with pinned SHA-256 digests and packaged with the extension, so reading an image works offline and sends nothing anywhere.
+
+### Runtime
+- **[ppu-paddle-ocr](https://github.com/PT-Perkasa-Pilar-Utama/ppu-paddle-ocr)** (MIT) — the PaddleOCR pipeline in TypeScript
+- **[onnxruntime-web](https://github.com/microsoft/onnxruntime)** (MIT) — WebAssembly inference
 
 ## Inspiration
 
