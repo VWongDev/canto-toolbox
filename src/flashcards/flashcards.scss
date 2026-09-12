@@ -2,6 +2,7 @@
 @use '../shared/styles/dark-mode' as *;
 @use '../shared/styles/etymology';
 @use '../shared/styles/definition';
+@use '../shared/styles/context';
 
 @mixin filled-btn($fill, $hover, $fill-dark, $hover-dark) {
   background: $fill;

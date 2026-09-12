@@ -96,6 +96,17 @@ export function selectSession(statistics: Statistics, now: number = Date.now()):
   return [...reviews, ...unseen.slice(0, room).map(entry => entry.word)];
 }
 
+function collectContexts(statistics: Statistics, words: string[]): Map<string, string> {
+  const contexts = new Map<string, string>();
+
+  for (const word of words) {
+    const context = statistics[word]?.context;
+    if (context) contexts.set(word, context);
+  }
+
+  return contexts;
+}
+
 /** Epoch ms of the soonest scheduled review, or undefined if the deck is empty. */
 function nextReviewAt(statistics: Statistics): number | undefined {
   const scheduled = Object.values(statistics)
@@ -130,6 +141,8 @@ export class FlashcardManager {
   private sessionWords: string[] = [];
   private correctCount = 0;
   private totalCount = 0;
+  /** Sentence each word was met in, kept from the statistics the session was built from. */
+  private contexts = new Map<string, string>();
   /**
    * Cards whose answer has already reached the scheduler this session. A
    * requeued "Again" and a "Review again" round are drills, not new evidence
@@ -163,6 +176,7 @@ export class FlashcardManager {
         return;
       }
 
+      this.contexts = collectContexts(response.statistics, session);
       this.sessionWords = session;
       this.reviewQueue = [...session];
       this.correctCount = 0;
@@ -203,7 +217,7 @@ export class FlashcardManager {
         renderBackError(this.document);
         return;
       }
-      renderBack(this.document, word, response.definition);
+      renderBack(this.document, word, response.definition, this.contexts.get(word));
     });
   }
 

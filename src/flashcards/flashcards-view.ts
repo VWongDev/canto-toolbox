@@ -1,6 +1,7 @@
 import type { DefinitionResult } from '../shared/types.js';
 import { createElement } from '../shared/dom-element.js';
 import { createDefinitionElement } from '../shared/definition-section.js';
+import { createContextSentence } from '../shared/context-sentence.js';
 
 export const ELEMENT_IDS = {
   progress: 'progress',
@@ -138,7 +139,12 @@ export function renderBackError(document: Document): void {
   if (ratingBtns) ratingBtns.style.display = '';
 }
 
-export function renderBack(document: Document, word: string, definition: DefinitionResult): void {
+export function renderBack(
+  document: Document,
+  word: string,
+  definition: DefinitionResult,
+  context?: string,
+): void {
   const cardBack = document.getElementById(ELEMENT_IDS.cardBack);
   const showAnswerContainer = document.getElementById(ELEMENT_IDS.showAnswerContainer);
   const ratingBtns = document.getElementById(ELEMENT_IDS.ratingBtns);
@@ -149,6 +155,9 @@ export function renderBack(document: Document, word: string, definition: Definit
     cardBack.appendChild(
       createDefinitionElement(word, definition, false)
     );
+    // The sentence the reader actually met the word in, under the dictionary
+    // senses: a gloss says what a word means, this says how it was used.
+    if (context) cardBack.appendChild(createContextSentence(word, context));
     cardBack.style.display = '';
   }
   if (showAnswerContainer) showAnswerContainer.style.display = 'none';

@@ -31,7 +31,7 @@ function createClient(overrides: Partial<FlashcardClient> = {}): FlashcardClient
         success: true,
         type: 'get_statistics',
         statistics: {
-          你好: { count: 5, firstSeen: 1, lastSeen: 2 },
+          你好: { count: 5, firstSeen: 1, lastSeen: 2, context: '你好嗎' },
           再见: { count: 3, firstSeen: 1, lastSeen: 2 }
         }
       })
@@ -141,6 +141,23 @@ describe('FlashcardManager keyboard shortcuts', () => {
     press('3');
     expect(isVisible('finished')).toBe(true);
     expect(document.getElementById('result-summary')!.textContent).toBe('2 / 2 correct');
+  });
+
+  it('shows the sentence the word was met in on the answer', () => {
+    start();
+    press(' ');
+
+    const context = document.getElementById('card-back')!.querySelector('.context');
+    expect(context?.querySelector('.context-sentence')?.textContent).toBe('你好嗎');
+  });
+
+  it('omits the sentence for a word that has none', () => {
+    start();
+    press(' ');
+    press('3');
+    press(' ');
+
+    expect(document.getElementById('card-back')!.querySelector('.context')).toBeNull();
   });
 
   it('sends a requeued card to the scheduler only on its first answer', () => {

@@ -2,6 +2,7 @@ import type { FlashcardStage, WordStatistics, LookupResponse, ErrorResponse, Sta
 import { getFlashcardStage } from '../shared/statistics-utils.js';
 import { createElement } from '../shared/dom-element.js';
 import { createDefinitionElement } from '../shared/definition-section.js';
+import { createContextSentence } from '../shared/context-sentence.js';
 
 export const ELEMENT_IDS = {
   loading: 'loading',
@@ -140,30 +141,6 @@ export function renderDefinitionLoading(container: HTMLElement): void {
   container.style.display = 'block';
 }
 
-/**
- * The sentence the word was met in, with the word itself marked. Recall is
- * anchored to where a word was seen, so it is shown above the definition.
- */
-function createContextElement(word: string, context: string): HTMLElement {
-  const parts = context.split(word);
-  const children: HTMLElement[] = [
-    createElement({ tag: 'span', className: 'stat-context-label', textContent: 'Seen in' }),
-  ];
-
-  const sentence = createElement({ tag: 'p', className: 'stat-context-sentence' });
-  parts.forEach((part, index) => {
-    if (index > 0) {
-      sentence.appendChild(
-        createElement({ tag: 'strong', className: 'stat-context-word', textContent: word })
-      );
-    }
-    if (part) sentence.appendChild(document.createTextNode(part));
-  });
-  children.push(sentence);
-
-  return createElement({ className: 'stat-context', children });
-}
-
 export function renderDefinition(
   container: HTMLElement,
   response: LookupResponse | ErrorResponse | undefined,
@@ -171,7 +148,7 @@ export function renderDefinition(
   context?: string
 ): void {
   container.replaceChildren();
-  if (context) container.appendChild(createContextElement(word, context));
+  if (context) container.appendChild(createContextSentence(word, context));
 
   if (!response || !response.success || !response.definition) {
     container.appendChild(createElement({
