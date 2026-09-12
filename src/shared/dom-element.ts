@@ -10,58 +10,6 @@ export interface CreateElementOptions {
   listeners?: Record<string, EventListener>;
 }
 
-function setElementId(element: HTMLElement, id: string): void {
-  element.id = id;
-}
-
-function setElementClassName(element: HTMLElement, className: string | string[]): void {
-  if (Array.isArray(className)) {
-    element.className = className.join(' ');
-  } else {
-    element.className = className;
-  }
-}
-
-function setElementTextContent(element: HTMLElement, textContent: string): void {
-  element.textContent = textContent;
-}
-
-function setElementDataset(element: HTMLElement, dataset: Record<string, string>): void {
-  for (const [key, value] of Object.entries(dataset)) {
-    element.dataset[key] = value;
-  }
-}
-
-function setElementAttributes(element: HTMLElement, attributes: Record<string, string>): void {
-  for (const [key, value] of Object.entries(attributes)) {
-    element.setAttribute(key, value);
-  }
-}
-
-function setElementStyle(element: HTMLElement, style: Partial<CSSStyleDeclaration> | string): void {
-  if (typeof style === 'string') {
-    element.style.cssText = style;
-  } else {
-    Object.assign(element.style, style);
-  }
-}
-
-function appendElementChildren(element: HTMLElement, children: (HTMLElement | Node | string)[]): void {
-  for (const child of children) {
-    if (typeof child === 'string') {
-      element.appendChild(document.createTextNode(child));
-    } else if (child instanceof Node) {
-      element.appendChild(child);
-    }
-  }
-}
-
-function attachElementListeners(element: HTMLElement, listeners: Record<string, EventListener>): void {
-  for (const [event, handler] of Object.entries(listeners)) {
-    element.addEventListener(event, handler);
-  }
-}
-
 export function createElement<T extends HTMLElement = HTMLElement>(
   options: CreateElementOptions = {}
 ): T {
@@ -79,36 +27,44 @@ export function createElement<T extends HTMLElement = HTMLElement>(
 
   const element = document.createElement(tag) as T;
 
-  if (id) {
-    setElementId(element, id);
-  }
+  if (id) element.id = id;
 
   if (className) {
-    setElementClassName(element, className);
+    element.className = Array.isArray(className) ? className.join(' ') : className;
   }
 
-  if (textContent !== undefined) {
-    setElementTextContent(element, textContent);
-  }
+  if (textContent !== undefined) element.textContent = textContent;
 
   if (dataset) {
-    setElementDataset(element, dataset);
+    for (const [key, value] of Object.entries(dataset)) {
+      element.dataset[key] = value;
+    }
   }
 
   if (attributes) {
-    setElementAttributes(element, attributes);
+    for (const [name, value] of Object.entries(attributes)) {
+      element.setAttribute(name, value);
+    }
   }
 
   if (style) {
-    setElementStyle(element, style);
+    if (typeof style === 'string') element.style.cssText = style;
+    else Object.assign(element.style, style);
   }
 
   if (children) {
-    appendElementChildren(element, children);
+    for (const child of children) {
+      // A string is content rather than an element, and anything that is
+      // neither is not appendable at all.
+      if (typeof child === 'string') element.appendChild(document.createTextNode(child));
+      else if (child instanceof Node) element.appendChild(child);
+    }
   }
 
   if (listeners) {
-    attachElementListeners(element, listeners);
+    for (const [event, handler] of Object.entries(listeners)) {
+      element.addEventListener(event, handler);
+    }
   }
 
   return element;
