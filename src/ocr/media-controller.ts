@@ -1,11 +1,12 @@
 import { createElement } from '../shared/dom-element.js';
 import { createOverlay } from './overlay.js';
+import { captureFrame, type MediaElement } from './capture.js';
 import { ocrClient, type OcrClient } from './ocr-client.js';
 import type { OcrResult } from '../shared/types.js';
 import ocrStyles from './ocr.scss?inline';
 
 /**
- * Below this an image cannot be holding text a reader wants looked up — it is
+ * Below this a picture cannot be holding text a reader wants looked up — it is
  * an icon, an avatar or a tracking pixel. Checking keeps the badge off the
  * furniture of every page.
  */
@@ -18,32 +19,43 @@ const MIN_MEDIA_SIDE_PX = 96;
  */
 const MAX_INLINED_BYTES = 8 * 1024 * 1024;
 
-const BADGE_TITLE = 'Read the Chinese in this image';
+const IMAGE_BADGE_TITLE = 'Read the Chinese in this image';
+const VIDEO_BADGE_TITLE = 'Read the Chinese in this frame';
 
 type BadgeState = 'idle' | 'reading' | 'failed';
 
 interface Attached {
   overlay: HTMLElement;
-  /** Kept so a resize can re-lay the text rather than re-read the image. */
+  /** Kept so a resize can re-lay the text rather than read the frame again. */
   result: OcrResult;
   width: number;
   height: number;
+  /** Which frame this was read from, so the same pause is not read twice. */
+  readAt?: number;
+  /** Torn down with the overlay, since they are bound to this element. */
+  detachListeners?: () => void;
+}
+
+function isVideo(media: MediaElement): media is HTMLVideoElement {
+  return media instanceof HTMLVideoElement;
 }
 
 /**
- * Adds image text to what the hover popup can read.
+ * Adds the text inside pictures to what the hover popup can read — an image, or
+ * the frame a video is paused on.
  *
- * Nothing here looks anything up. It turns an image into positioned, invisible
+ * Nothing here looks anything up. It turns a picture into positioned, invisible
  * text nodes and stops; from that point the popup's own hover handling finds
  * them exactly as it finds text the page wrote itself, which is why studying a
- * word off an image records the same statistics and builds the same flashcards.
+ * word off a subtitle records the same statistics and builds the same
+ * flashcards as one met in an article.
  */
 export class MediaOcrManager {
   private readonly document: Document;
   private readonly client: OcrClient;
-  private readonly attached = new Map<HTMLImageElement, Attached>();
+  private readonly attached = new Map<MediaElement, Attached>();
   private badge: HTMLElement | null = null;
-  private badgeTarget: HTMLImageElement | null = null;
+  private badgeTarget: MediaElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private repositionFrame: number | null = null;
   private readonly boundMouseOver: (e: MouseEvent) => void;
@@ -58,7 +70,7 @@ export class MediaOcrManager {
 
   /**
    * Scrolling fires far faster than the page repaints, and each reposition
-   * measures every overlaid image. A frame is the finest resolution any of
+   * measures every overlaid picture. A frame is the finest resolution any of
    * this can be seen at, so coalesce to one.
    */
   private scheduleReposition(): void {
@@ -89,22 +101,21 @@ export class MediaOcrManager {
       this.repositionFrame = null;
     }
 
-    for (const { overlay } of this.attached.values()) overlay.remove();
-    this.attached.clear();
+    for (const media of [...this.attached.keys()]) this.detach(media);
     this.hideBadge();
   }
 
   private handleMouseOver(event: MouseEvent): void {
     const target = event.target;
 
-    if (!(target instanceof HTMLImageElement)) {
+    if (!isMedia(target)) {
       // Moving onto the badge itself must not dismiss it.
       const overBadge = target instanceof Element && target.closest('.canto-ocr-badge');
       if (!overBadge) this.hideBadge();
       return;
     }
 
-    if (this.attached.has(target) || !isReadable(target)) {
+    if (!this.isOfferable(target)) {
       this.hideBadge();
       return;
     }
@@ -112,25 +123,39 @@ export class MediaOcrManager {
     this.showBadge(target);
   }
 
-  private showBadge(image: HTMLImageElement): void {
-    if (this.badgeTarget === image) return;
+  /**
+   * A video is only offered while it is paused. Reading a frame the reader is
+   * still watching is a frame they have already left, and the badge would be
+   * fighting the player's own controls for the same corner.
+   */
+  private isOfferable(media: MediaElement): boolean {
+    if (this.attached.has(media)) return false;
+    if (isVideo(media) && !media.paused) return false;
+
+    const rect = media.getBoundingClientRect();
+    return rect.width >= MIN_MEDIA_SIDE_PX && rect.height >= MIN_MEDIA_SIDE_PX;
+  }
+
+  private showBadge(media: MediaElement): void {
+    if (this.badgeTarget === media) return;
 
     this.hideBadge();
-    this.badgeTarget = image;
+    this.badgeTarget = media;
+    const title = isVideo(media) ? VIDEO_BADGE_TITLE : IMAGE_BADGE_TITLE;
     // The badge is drawn in CSS and carries no text of its own. A Chinese
     // label here would be Chinese on the page: the popup would find it with
-    // caretRangeFromPoint, look it up, and cover the image with a definition
+    // caretRangeFromPoint, look it up, and cover the picture with a definition
     // of the button that was offering to read it.
     this.badge = createElement({
       tag: 'button',
       className: 'canto-ocr-badge',
       dataset: { state: 'idle' },
-      attributes: { type: 'button', title: BADGE_TITLE, 'aria-label': BADGE_TITLE },
+      attributes: { type: 'button', title, 'aria-label': title },
       listeners: {
         click: (event: Event) => {
           event.preventDefault();
           event.stopPropagation();
-          void this.read(image);
+          void this.read(media);
         },
       },
     });
@@ -151,16 +176,44 @@ export class MediaOcrManager {
     this.badge.toggleAttribute('disabled', state === 'reading');
   }
 
-  private async read(image: HTMLImageElement): Promise<void> {
+  private async read(media: MediaElement): Promise<void> {
     this.setBadgeState('reading');
 
     try {
-      const result = await this.requestOcr(await resolveSource(image));
+      const source = isVideo(media)
+        ? (await captureFrame(media, () => this.requestTabCapture())).src
+        : await resolveImageSource(media);
+
+      const result = await this.requestOcr(source);
       this.hideBadge();
-      if (result.items.length > 0) this.attach(image, result);
+      if (result.items.length > 0) this.attach(media, result);
     } catch (error) {
-      console.error('[OCR] Could not read the image:', error);
+      console.error('[OCR] Could not read the media:', error);
       this.setBadgeState('failed');
+    }
+  }
+
+  /**
+   * Reads the frame again after the reader moves through the video, so
+   * stepping from one subtitle to the next does not mean clicking the badge
+   * each time. A pause on the frame already read is ignored.
+   */
+  private async reread(video: HTMLVideoElement): Promise<void> {
+    const entry = this.attached.get(video);
+    if (!entry || entry.readAt === video.currentTime) return;
+
+    try {
+      const { src } = await captureFrame(video, () => this.requestTabCapture());
+      const result = await this.requestOcr(src);
+
+      // The reader may have played on, or left, while the model was busy.
+      if (!this.attached.has(video) || !video.isConnected) return;
+
+      this.replaceOverlay(video, result);
+      const current = this.attached.get(video);
+      if (current) current.readAt = video.currentTime;
+    } catch (error) {
+      console.error('[OCR] Could not read the frame:', error);
     }
   }
 
@@ -173,44 +226,104 @@ export class MediaOcrManager {
     });
   }
 
-  private attach(image: HTMLImageElement, result: OcrResult): void {
-    const { width, height } = image.getBoundingClientRect();
+  private requestTabCapture(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.client.captureTab((response) => {
+        if (response.success) resolve(response.dataUrl);
+        else reject(new Error(response.error));
+      });
+    });
+  }
+
+  private attach(media: MediaElement, result: OcrResult): void {
+    const { width, height } = media.getBoundingClientRect();
     const overlay = createOverlay(result, { width, height });
 
     this.document.body.appendChild(overlay);
-    this.attached.set(image, { overlay, result, width, height });
-    this.resizeObserver?.observe(image);
-    this.position(image);
+    this.attached.set(media, {
+      overlay,
+      result,
+      width,
+      height,
+      ...(isVideo(media) && { readAt: media.currentTime }),
+    });
+    this.resizeObserver?.observe(media);
+    if (isVideo(media)) this.followPlayback(media);
+    this.position(media);
   }
 
   /**
-   * Overlays sit in the body rather than beside each image, so that an
+   * Text read off one frame is wrong for every later one, so playing clears it.
+   * Pausing and seeking read the new frame instead.
+   */
+  private followPlayback(video: HTMLVideoElement): void {
+    const onPlay = (): void => this.detach(video);
+    const onSettled = (): void => void this.reread(video);
+
+    video.addEventListener('play', onPlay);
+    video.addEventListener('seeked', onSettled);
+    video.addEventListener('pause', onSettled);
+
+    const entry = this.attached.get(video);
+    if (entry) {
+      entry.detachListeners = () => {
+        video.removeEventListener('play', onPlay);
+        video.removeEventListener('seeked', onSettled);
+        video.removeEventListener('pause', onSettled);
+      };
+    }
+  }
+
+  private detach(media: MediaElement): void {
+    const entry = this.attached.get(media);
+    if (!entry) return;
+
+    entry.detachListeners?.();
+    entry.overlay.remove();
+    this.attached.delete(media);
+    this.resizeObserver?.unobserve(media);
+  }
+
+  private replaceOverlay(media: MediaElement, result: OcrResult): void {
+    const entry = this.attached.get(media);
+    if (!entry) return;
+
+    const rect = media.getBoundingClientRect();
+    const replacement = createOverlay(result, { width: rect.width, height: rect.height });
+    entry.overlay.replaceWith(replacement);
+    entry.overlay = replacement;
+    entry.result = result;
+    entry.width = rect.width;
+    entry.height = rect.height;
+    this.position(media);
+  }
+
+  /**
+   * Overlays sit in the body rather than beside each picture, so that an
    * ancestor's `overflow: hidden` or stacking context cannot clip or bury
-   * them. The cost is that they have to be told where their image went.
+   * them. The cost is that they have to be told where their picture went.
    */
   private repositionAll(): void {
-    for (const [image, entry] of this.attached) {
-      if (!image.isConnected) {
-        entry.overlay.remove();
-        this.attached.delete(image);
-        this.resizeObserver?.unobserve(image);
+    for (const media of [...this.attached.keys()]) {
+      if (!media.isConnected) {
+        this.detach(media);
         continue;
       }
-      this.position(image);
+      this.position(media);
     }
     this.positionBadge();
   }
 
-  private position(image: HTMLImageElement): void {
-    const entry = this.attached.get(image);
+  private position(media: MediaElement): void {
+    const entry = this.attached.get(media);
     if (!entry) return;
 
-    const rect = image.getBoundingClientRect();
+    const rect = media.getBoundingClientRect();
 
-    // The boxes are in the image's own pixels, so what they are worth on screen
-    // changes whenever a responsive page redraws the image at a new size. Then
-    // and only then is the text laid out again — from the result already held,
-    // never by reading the image a second time.
+    // The boxes are in the frame's own pixels, so what they are worth on screen
+    // changes whenever a responsive page redraws it at a new size. Then and
+    // only then is the text laid out again — from the result already held,
+    // never by reading the picture a second time.
     if (rect.width !== entry.width || rect.height !== entry.height) {
       const replacement = createOverlay(entry.result, { width: rect.width, height: rect.height });
       entry.overlay.replaceWith(replacement);
@@ -247,16 +360,16 @@ export class MediaOcrManager {
   }
 }
 
-function isReadable(image: HTMLImageElement): boolean {
-  const rect = image.getBoundingClientRect();
-  return rect.width >= MIN_MEDIA_SIDE_PX && rect.height >= MIN_MEDIA_SIDE_PX;
+function isMedia(target: EventTarget | null): target is MediaElement {
+  return target instanceof HTMLImageElement || target instanceof HTMLVideoElement;
 }
 
 /**
- * What to hand the offscreen document. An ordinary URL it can fetch itself;
- * a `blob:` one belongs to this page alone, so those bytes travel inline.
+ * What to hand the offscreen document for an image. An ordinary URL it can
+ * fetch itself; a `blob:` one belongs to this page alone, so those bytes
+ * travel inline.
  */
-async function resolveSource(image: HTMLImageElement): Promise<string> {
+async function resolveImageSource(image: HTMLImageElement): Promise<string> {
   const src = image.currentSrc || image.src;
   if (!src.startsWith('blob:')) return src;
 

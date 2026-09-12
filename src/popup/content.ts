@@ -422,8 +422,8 @@ export const popupManager = new ChineseHoverPopupManager(document, popupClient);
 
 function start(): void {
   popupManager.init();
-  // Image text becomes ordinary hoverable text, which is why this starts
-  // alongside the popup rather than knowing anything about it.
+  // Text in images and video frames becomes ordinary hoverable text, which is
+  // why this starts alongside the popup rather than knowing anything about it.
   mediaOcrManager.init();
 }
 

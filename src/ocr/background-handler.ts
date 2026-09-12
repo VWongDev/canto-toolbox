@@ -27,5 +27,15 @@ export function register(): void {
       await ensureOffscreenDocument();
       return { success: true, type: 'ocr_image', result: await runInOffscreen(msg.src) };
     },
+
+    /**
+     * Only the worker can screenshot a tab, and only for a frame the content
+     * script was not allowed to draw itself. The visible tab is the right one
+     * by construction: this is answering a badge the reader just clicked.
+     */
+    capture_tab: async () => {
+      const dataUrl = await chrome.tabs.captureVisibleTab({ format: 'png' });
+      return { success: true, type: 'capture_tab', dataUrl };
+    },
   });
 }

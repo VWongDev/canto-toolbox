@@ -187,6 +187,15 @@ export interface OcrRunMessage {
 }
 
 /**
+ * Screenshot the visible tab. The last resort for a video frame the page will
+ * not let a canvas read: a screenshot sees what was composited, so it works
+ * for cross-origin media, but only at the size the frame is drawn on screen.
+ */
+export interface CaptureTabMessage {
+  type: 'capture_tab';
+}
+
+/**
  * The service worker's hop to the offscreen document for a dictionary
  * lookup. The parsed maps live there so a discarded worker does not throw
  * them away; the worker only forwards.
@@ -249,6 +258,7 @@ export type BackgroundMessage =
   | SetWordStatusMessage
   | OcrImageMessage
   | OcrRunMessage
+  | CaptureTabMessage
   | DictLookupMessage;
 
 export interface LookupResponse {
@@ -296,6 +306,13 @@ export interface OcrRunResponse {
   result: OcrResult;
 }
 
+export interface CaptureTabResponse {
+  success: true;
+  type: 'capture_tab';
+  /** PNG data URL of the whole visible viewport, in device pixels. */
+  dataUrl: string;
+}
+
 export interface DictLookupResponse {
   success: true;
   type: 'dict_lookup';
@@ -311,6 +328,7 @@ export type BackgroundResponse =
   | SetWordStatusResponse
   | OcrImageResponse
   | OcrRunResponse
+  | CaptureTabResponse
   | DictLookupResponse;
 
 // Every non-error response carries a `type` that matches its request, so the
