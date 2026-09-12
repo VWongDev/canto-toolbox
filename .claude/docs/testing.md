@@ -84,6 +84,9 @@ romanisation, definitions or ranks.
 - `src/ocr/overlay.ts` — recognised box → placed span: axis scaling, and the
   character-per-slot spacing the caret depends on
 - `build-tools/processors/cedict-parser.ts` — the CC-CEDICT/CC-Canto line format
+- `build-tools/fetch-ocr-assets.ts` — which HTTP statuses are retried and which
+  are not, driven through a stubbed `fetch` under fake timers. The script guards
+  its own entry point so importing it does not start a download.
 
 **DOM components** — tested under `// @vitest-environment happy-dom`:
 - `src/shared/dom-element.ts`
