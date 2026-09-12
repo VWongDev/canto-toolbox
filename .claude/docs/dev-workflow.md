@@ -41,7 +41,7 @@ This runs:
 4. `vite build` — bundles the extension into `dist/` (requires `--max-old-space-size=8192` due to large dictionary imports)
 
 Output goes to `dist/`. This directory is the unpacked Chrome extension, about
-81 MB — 60 MB of dictionaries and 21 MB of OCR assets.
+78 MB — 58 MB of dictionaries and 20 MB of OCR assets.
 
 ### Incremental builds
 

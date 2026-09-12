@@ -69,7 +69,7 @@ Read Chinese on the web without leaving the page. Hover any word for Mandarin an
    - Pre-process dictionary files from the submodules
    - Download the pinned OCR model and copy in the ONNX runtime (needs network access the first time)
    - Build the extension using Vite
-   - Output the extension to the `dist/` directory (about 81 MB)
+   - Output the extension to the `dist/` directory (about 78 MB)
 
 4. **Load the extension in Chrome**:
    - Open Chrome and navigate to `chrome://extensions/`
