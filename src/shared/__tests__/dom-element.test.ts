@@ -60,12 +60,6 @@ describe('createElement', () => {
     expect(el.firstChild).toBe(child);
   });
 
-  it('does not append children when appendChildren is false', () => {
-    const child = document.createElement('span');
-    const el = createElement({ children: [child], appendChildren: false });
-    expect(el.childNodes.length).toBe(0);
-  });
-
   it('attaches event listeners', () => {
     const handler = vi.fn();
     const el = createElement({ listeners: { click: handler } });

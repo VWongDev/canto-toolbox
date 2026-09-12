@@ -8,7 +8,6 @@ export interface CreateElementOptions {
   id?: string;
   children?: (HTMLElement | Node | string)[];
   listeners?: Record<string, EventListener>;
-  appendChildren?: boolean;
 }
 
 function setElementId(element: HTMLElement, id: string): void {
@@ -75,8 +74,7 @@ export function createElement<T extends HTMLElement = HTMLElement>(
     style,
     id,
     children,
-    listeners,
-    appendChildren = true
+    listeners
   } = options;
 
   const element = document.createElement(tag) as T;
@@ -105,7 +103,7 @@ export function createElement<T extends HTMLElement = HTMLElement>(
     setElementStyle(element, style);
   }
 
-  if (appendChildren && children) {
+  if (children) {
     appendElementChildren(element, children);
   }
 
