@@ -47,7 +47,6 @@ export class ChineseHoverPopupManager {
   private readonly document: Document;
   private readonly client: PopupClient;
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
-  private hideTimer: ReturnType<typeof setTimeout> | null = null;
   private selectionPopupTimer: ReturnType<typeof setTimeout> | null = null;
   private trackTimer: ReturnType<typeof setTimeout> | null = null;
   private lastHoveredWord: string | null = null;
@@ -137,8 +136,6 @@ export class ChineseHoverPopupManager {
   private handleMouseOut(event: MouseEvent): void {
     if (this.currentSelection) return;
 
-    this.clearTimer('hide');
-
     const relatedTarget = event.relatedTarget instanceof HTMLElement ? event.relatedTarget : null;
     if (relatedTarget?.closest('#chinese-hover-popup')) return;
 
@@ -159,7 +156,6 @@ export class ChineseHoverPopupManager {
 
     const element = target instanceof Element ? target : target instanceof Node ? target.parentElement : null;
     if (element?.closest('#chinese-hover-popup')) {
-      this.clearTimer('hide');
       this.isHoveringChinese = true;
       return;
     }
@@ -170,7 +166,6 @@ export class ChineseHoverPopupManager {
     if (!result) {
       if (this.isHoveringChinese || this.currentPopup) {
         this.resetHoverState();
-        this.clearTimer('hide');
         this.hidePopup();
       }
       return;
@@ -178,7 +173,6 @@ export class ChineseHoverPopupManager {
 
     const { run, runOffset, textNode, offset } = result;
     this.isHoveringChinese = true;
-    this.clearTimer('hide');
 
     const characterChanged = textNode !== this.lastHoveredElement ||
                             Math.abs(offset - this.lastHoveredOffset) >= 0.5;
@@ -315,7 +309,6 @@ export class ChineseHoverPopupManager {
     context?: string,
   ): void {
     this.hidePopup();
-    this.clearTimer('hide');
 
     const popup = createElement({
       tag: 'div',
@@ -324,7 +317,6 @@ export class ChineseHoverPopupManager {
       dataset: { word },
       listeners: {
         mouseenter: () => {
-          this.clearTimer('hide');
           this.isHoveringChinese = true;
         },
         mouseleave: () => {
@@ -367,9 +359,8 @@ export class ChineseHoverPopupManager {
     }
   }
 
-  private clearTimer(type: 'hide' | 'hover' | 'selection' | 'track'): void {
-    if (type === 'hide') { clearTimeout(this.hideTimer!); this.hideTimer = null; }
-    else if (type === 'hover') { clearTimeout(this.hoverTimer!); this.hoverTimer = null; }
+  private clearTimer(type: 'hover' | 'selection' | 'track'): void {
+    if (type === 'hover') { clearTimeout(this.hoverTimer!); this.hoverTimer = null; }
     else if (type === 'track') { clearTimeout(this.trackTimer!); this.trackTimer = null; }
     else { clearTimeout(this.selectionPopupTimer!); this.selectionPopupTimer = null; }
   }
