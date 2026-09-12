@@ -149,10 +149,17 @@ function createProductionFront(card: ReviewCard, definition: DefinitionResult | 
   return children;
 }
 
-export function renderFront(
+/**
+ * Put the card into one of its states: what the front holds, and whether the
+ * answer can be asked for. Every render of a front is this plus its content,
+ * so the element juggling lives in one place and the callers stay about the
+ * card rather than about which of four elements is showing.
+ */
+function showFront(
   document: Document,
   card: ReviewCard,
-  definition?: DefinitionResult,
+  content: HTMLElement[],
+  { revealable }: { revealable: boolean },
 ): void {
   const cardFront = document.getElementById(ELEMENT_IDS.cardFront);
   const cardBack = document.getElementById(ELEMENT_IDS.cardBack);
@@ -160,24 +167,14 @@ export function renderFront(
   const ratingBtns = document.getElementById(ELEMENT_IDS.ratingBtns);
 
   if (cardFront) {
-    cardFront.replaceChildren();
-    cardFront.appendChild(createPrompt(card.direction));
-
-    if (card.direction === 'production') {
-      createProductionFront(card, definition).forEach(child => cardFront.appendChild(child));
-    } else {
-      cardFront.appendChild(
-        createElement({ className: 'card-characters', textContent: card.word })
-      );
-    }
-
+    cardFront.replaceChildren(...content);
     cardFront.style.display = '';
   }
   if (cardBack) {
     cardBack.replaceChildren();
     cardBack.style.display = 'none';
   }
-  if (showAnswerContainer) showAnswerContainer.style.display = '';
+  if (showAnswerContainer) showAnswerContainer.style.display = revealable ? '' : 'none';
   if (ratingBtns) ratingBtns.style.display = 'none';
 
   const cardEl = document.getElementById(ELEMENT_IDS.card);
@@ -187,31 +184,27 @@ export function renderFront(
   }
 }
 
+export function renderFront(
+  document: Document,
+  card: ReviewCard,
+  definition?: DefinitionResult,
+): void {
+  const question = card.direction === 'production'
+    ? createProductionFront(card, definition)
+    : [createElement({ className: 'card-characters', textContent: card.word })];
+
+  showFront(document, card, [createPrompt(card.direction), ...question], { revealable: true });
+}
+
 /** Placeholder for the one front that cannot be drawn until a lookup returns. */
 export function renderFrontLoading(document: Document, card: ReviewCard): void {
-  const cardFront = document.getElementById(ELEMENT_IDS.cardFront);
-  const cardBack = document.getElementById(ELEMENT_IDS.cardBack);
-  const showAnswerContainer = document.getElementById(ELEMENT_IDS.showAnswerContainer);
-  const ratingBtns = document.getElementById(ELEMENT_IDS.ratingBtns);
-
-  if (cardFront) {
-    cardFront.replaceChildren();
-    cardFront.appendChild(createElement({ className: 'card-gloss', textContent: 'Loading...' }));
-    cardFront.style.display = '';
-  }
-  if (cardBack) {
-    cardBack.replaceChildren();
-    cardBack.style.display = 'none';
-  }
   // Nothing has been asked yet, so there is nothing to reveal.
-  if (showAnswerContainer) showAnswerContainer.style.display = 'none';
-  if (ratingBtns) ratingBtns.style.display = 'none';
-
-  const cardEl = document.getElementById(ELEMENT_IDS.card);
-  if (cardEl) {
-    cardEl.dataset.currentWord = card.word;
-    cardEl.dataset.currentDirection = card.direction;
-  }
+  showFront(
+    document,
+    card,
+    [createElement({ className: 'card-gloss', textContent: 'Loading...' })],
+    { revealable: false },
+  );
 }
 
 /** Loading placeholder shown on the card back while a lookup is in flight. */
