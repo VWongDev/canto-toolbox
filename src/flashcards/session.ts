@@ -1,5 +1,5 @@
 import { dueAt, isDue, isLearning } from '../shared/scheduler.js';
-import { progressFor } from '../shared/statistics-utils.js';
+import { nextDueAt, progressFor } from '../shared/statistics-utils.js';
 import type { ReviewDirection, Statistics, WordStatistics } from '../shared/types.js';
 
 export const MAX_CARDS = 20;
@@ -130,11 +130,9 @@ export function nextReviewAt(statistics: Statistics): number | undefined {
   for (const stat of Object.values(statistics)) {
     if (stat.suppressed) continue;
 
-    for (const direction of INTRODUCTION_ORDER) {
-      const due = progressFor(stat, direction)?.srs?.due;
-      if (due === undefined) continue;
-      if (soonest === undefined || due < soonest) soonest = due;
-    }
+    const due = nextDueAt(stat);
+    if (due === undefined) continue;
+    if (soonest === undefined || due < soonest) soonest = due;
   }
 
   return soonest;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getFlashcardStage, mergeStatistics } from '../statistics-utils.js';
+import { getFlashcardStage, lastReviewedAt, mergeStatistics, nextDueAt } from '../statistics-utils.js';
 import { reviewCard } from '../scheduler.js';
 import type { FlashcardProgress, WordStatistics } from '../types.js';
 
@@ -85,6 +85,51 @@ describe('mergeStatistics', () => {
 
     expect(result['好']!.flashcard).toEqual(late);
     expect(result['好']!.production).toEqual(late);
+  });
+});
+
+describe('lastReviewedAt and nextDueAt', () => {
+  function withSrs(due: number, lastReviewed: number): FlashcardProgress {
+    return {
+      reviews: 1,
+      consecutiveCorrect: 1,
+      lastReviewed,
+      srs: {
+        due,
+        stability: 1,
+        difficulty: 5,
+        scheduledDays: 1,
+        learningSteps: 0,
+        lapses: 0,
+        state: 2,
+      },
+    };
+  }
+
+  const base: WordStatistics = { count: 1, firstSeen: 1, lastSeen: 2 };
+
+  it('has neither for a word with no schedules', () => {
+    expect(lastReviewedAt(base)).toBeUndefined();
+    expect(nextDueAt(base)).toBeUndefined();
+  });
+
+  it('takes the latest review across directions', () => {
+    const stat = { ...base, flashcard: withSrs(50, 100), production: withSrs(900, 700) };
+    expect(lastReviewedAt(stat)).toBe(700);
+  });
+
+  it('takes the soonest due date across directions', () => {
+    const stat = { ...base, flashcard: withSrs(900, 100), production: withSrs(50, 700) };
+    expect(nextDueAt(stat)).toBe(50);
+  });
+
+  it('counts a schedule that has never been reviewed as reviewed at zero', () => {
+    expect(lastReviewedAt({ ...base, flashcard: { reviews: 0, consecutiveCorrect: 0 } })).toBe(0);
+  });
+
+  it('ignores a direction with progress but no schedule when taking the due date', () => {
+    const stat = { ...base, flashcard: { reviews: 1, consecutiveCorrect: 1 }, production: withSrs(50, 700) };
+    expect(nextDueAt(stat)).toBe(50);
   });
 });
 

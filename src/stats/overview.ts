@@ -1,5 +1,5 @@
-import { DIRECTION_KEYS } from '../shared/statistics-utils.js';
-import type { FlashcardProgress, Statistics, WordStatistics } from '../shared/types.js';
+import { schedulesOf } from '../shared/statistics-utils.js';
+import type { Statistics } from '../shared/types.js';
 
 /**
  * What a reader opening the page actually wants to know: how much is owed now,
@@ -20,13 +20,6 @@ export interface StudyOverview {
   reviews: number;
   /** Share of reviews answered Good or Easy, or undefined before any were. */
   accuracy: number | undefined;
-}
-
-function* schedules(stat: WordStatistics): Generator<FlashcardProgress> {
-  for (const key of DIRECTION_KEYS) {
-    const progress = stat[key];
-    if (progress) yield progress;
-  }
 }
 
 export function summarise(statistics: Statistics, now: number = Date.now()): StudyOverview {
@@ -50,7 +43,7 @@ export function summarise(statistics: Statistics, now: number = Date.now()): Stu
       continue;
     }
 
-    for (const progress of schedules(stat)) {
+    for (const progress of schedulesOf(stat)) {
       const due = progress.srs?.due;
       if (due !== undefined) {
         if (due <= now) overview.dueNow++;

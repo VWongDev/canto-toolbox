@@ -40,18 +40,44 @@ export function progressFor(
   return stat[DIRECTION_FIELD[direction]] as FlashcardProgress | undefined;
 }
 
-/** When any of the word's cards was last answered, or undefined if none was. */
-export function lastReviewedAt(stat: WordStatistics): number | undefined {
-  let latest: number | undefined;
-
+/**
+ * Every schedule the word actually carries. Four call sites used to walk the
+ * direction fields themselves to take a minimum or a maximum of one property;
+ * they differ only in which property and which way, so the walk lives here and
+ * they keep the part that is theirs.
+ */
+export function* schedulesOf(stat: WordStatistics): Generator<FlashcardProgress> {
   for (const key of DIRECTION_KEYS) {
     const progress = stat[key];
-    if (!progress) continue;
-    const at = progress.lastReviewed ?? 0;
-    if (latest === undefined || at > latest) latest = at;
+    if (progress) yield progress;
+  }
+}
+
+/** The extreme of one property across the word's schedules, or undefined if none has it. */
+export function acrossSchedules(
+  stat: WordStatistics,
+  value: (progress: FlashcardProgress) => number | undefined,
+  pick: (a: number, b: number) => number,
+): number | undefined {
+  let chosen: number | undefined;
+
+  for (const progress of schedulesOf(stat)) {
+    const candidate = value(progress);
+    if (candidate === undefined) continue;
+    chosen = chosen === undefined ? candidate : pick(chosen, candidate);
   }
 
-  return latest;
+  return chosen;
+}
+
+/** When any of the word's cards was last answered, or undefined if none was. */
+export function lastReviewedAt(stat: WordStatistics): number | undefined {
+  return acrossSchedules(stat, progress => progress.lastReviewed ?? 0, Math.max);
+}
+
+/** When the soonest of the word's cards is next due, or undefined if none is scheduled. */
+export function nextDueAt(stat: WordStatistics): number | undefined {
+  return acrossSchedules(stat, progress => progress.srs?.due, Math.min);
 }
 
 function mergeFlashcardProgress(

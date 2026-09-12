@@ -1,5 +1,5 @@
 import { bandForRank } from '../shared/frequency.js';
-import { DIRECTION_KEYS } from '../shared/statistics-utils.js';
+import { nextDueAt } from '../shared/statistics-utils.js';
 import type { FrequencyBand, Statistics, WordStatistics } from '../shared/types.js';
 
 /**
@@ -28,26 +28,13 @@ export function bandOf(stat: WordStatistics): FrequencyBand {
   return bandForRank(stat.rank);
 }
 
-/** The soonest any of the word's cards is due, or undefined when none is scheduled. */
-function soonestDue(stat: WordStatistics): number | undefined {
-  let soonest: number | undefined;
-
-  for (const key of DIRECTION_KEYS) {
-    const due = stat[key]?.srs?.due;
-    if (due === undefined) continue;
-    if (soonest === undefined || due < soonest) soonest = due;
-  }
-
-  return soonest;
-}
-
 const COMPARATORS: Readonly<Record<SortKey, (a: WordStatistics, b: WordStatistics) => number>> = {
   studied: (a, b) => b.count - a.count,
   // An unranked word is rarer than the corpus cap, so it sorts last rather
   // than first, which is where a missing rank would otherwise put it.
   frequency: (a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity),
   // A word with no schedule is not owed at all, so it follows every word that is.
-  due: (a, b) => (soonestDue(a) ?? Infinity) - (soonestDue(b) ?? Infinity),
+  due: (a, b) => (nextDueAt(a) ?? Infinity) - (nextDueAt(b) ?? Infinity),
   recent: (a, b) => b.lastSeen - a.lastSeen,
 };
 
