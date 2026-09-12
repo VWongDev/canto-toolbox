@@ -1,8 +1,20 @@
-import type { FlashcardStage, WordStatistics, LookupResponse, ErrorResponse, Statistics, WordStatus } from '../shared/types.js';
+import type {
+  FlashcardStage,
+  FrequencyBand,
+  WordStatistics,
+  LookupResponse,
+  ErrorResponse,
+  Statistics,
+  WordStatus,
+} from '../shared/types.js';
 import { getFlashcardStage } from '../shared/statistics-utils.js';
 import { createElement } from '../shared/dom-element.js';
 import { createDefinitionElement } from '../shared/definition-section.js';
 import { createContextSentence } from '../shared/context-sentence.js';
+import { BAND_LABELS } from '../shared/frequency.js';
+import { MAX_TRACKED_WORDS } from '../shared/statistics-store.js';
+import { bandOf, sortWords, type SortKey } from './ordering.js';
+import type { StudyOverview } from './overview.js';
 
 export const ELEMENT_IDS = {
   loading: 'loading',
@@ -12,6 +24,16 @@ export const ELEMENT_IDS = {
   clearBtn: 'clear-btn',
   flashcardBtn: 'flashcard-btn',
   filterTabs: 'filter-tabs',
+  bandTabs: 'band-tabs',
+  sortSelect: 'sort-select',
+} as const;
+
+const OVERVIEW_IDS = {
+  dueNow: 'overview-due-now',
+  dueToday: 'overview-due-today',
+  accuracy: 'overview-accuracy',
+  reviews: 'overview-reviews',
+  retired: 'overview-retired',
 } as const;
 
 /** Chevron drawn as SVG so it scales cleanly; rotation is handled in CSS. */
@@ -33,6 +55,15 @@ export interface StatsElements {
   statsListEl: HTMLElement;
   wordCountEl: HTMLElement;
   filterTabsEl: HTMLElement;
+  bandTabsEl: HTMLElement;
+  sortSelectEl: HTMLSelectElement;
+}
+
+/** Every way the list can be narrowed or ordered, as the page currently has it. */
+export interface ListView {
+  stages: Set<FlashcardStage>;
+  bands: Set<FrequencyBand>;
+  sort: SortKey;
 }
 
 /** Lazily loads and renders a word's definition into its expanded container. */
@@ -47,13 +78,51 @@ export function getRequiredElements(document: Document): StatsElements | null {
   const statsListEl = document.getElementById(ELEMENT_IDS.statsList);
   const wordCountEl = document.getElementById(ELEMENT_IDS.wordCount);
   const filterTabsEl = document.getElementById(ELEMENT_IDS.filterTabs);
+  const bandTabsEl = document.getElementById(ELEMENT_IDS.bandTabs);
+  const sortSelectEl = document.getElementById(ELEMENT_IDS.sortSelect);
 
-  if (!loadingEl || !emptyStateEl || !statsListEl || !wordCountEl || !filterTabsEl) {
+  if (
+    !loadingEl ||
+    !emptyStateEl ||
+    !statsListEl ||
+    !wordCountEl ||
+    !filterTabsEl ||
+    !bandTabsEl ||
+    !(sortSelectEl instanceof HTMLSelectElement)
+  ) {
     console.error('[Stats] Required DOM elements not found!');
     return null;
   }
 
-  return { loadingEl, emptyStateEl, statsListEl, wordCountEl, filterTabsEl };
+  return {
+    loadingEl,
+    emptyStateEl,
+    statsListEl,
+    wordCountEl,
+    filterTabsEl,
+    bandTabsEl,
+    sortSelectEl,
+  };
+}
+
+/**
+ * The numbers that say what to do next, rather than what has been read. Drawn
+ * from the whole record, so filtering the list below does not change them.
+ */
+export function renderOverview(document: Document, overview: StudyOverview): void {
+  const values: Record<string, string> = {
+    [OVERVIEW_IDS.dueNow]: String(overview.dueNow),
+    [OVERVIEW_IDS.dueToday]: String(overview.dueToday),
+    [OVERVIEW_IDS.accuracy]:
+      overview.accuracy === undefined ? '—' : `${Math.round(overview.accuracy * 100)}%`,
+    [OVERVIEW_IDS.reviews]: String(overview.reviews),
+    [OVERVIEW_IDS.retired]: String(overview.retired),
+  };
+
+  for (const [id, value] of Object.entries(values)) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
 }
 
 export function showError(loadingEl: HTMLElement, message: string): void {
@@ -62,37 +131,59 @@ export function showError(loadingEl: HTMLElement, message: string): void {
 }
 
 export function updateFilterCounts(elements: StatsElements, statistics: Statistics): void {
-  const counts = { new: 0, learning: 0, familiar: 0, mastered: 0 };
+  const stages: Record<FlashcardStage, number> = { new: 0, learning: 0, familiar: 0, mastered: 0 };
+  const bands: Record<FrequencyBand, number> =
+    { core: 0, common: 0, frequent: 0, uncommon: 0, rare: 0 };
 
   for (const stat of Object.values(statistics)) {
-    counts[getFlashcardStage(stat)]++;
+    stages[getFlashcardStage(stat)]++;
+    bands[bandOf(stat)]++;
   }
 
-  const entries: [string, number][] = [
-    ['new', counts.new],
-    ['learning', counts.learning],
-    ['familiar', counts.familiar],
-    ['mastered', counts.mastered],
-  ];
-
-  for (const [stage, count] of entries) {
+  for (const [stage, count] of Object.entries(stages)) {
     const el = elements.filterTabsEl.querySelector(`#count-${stage}`);
+    if (el) el.textContent = String(count);
+  }
+
+  for (const [band, count] of Object.entries(bands)) {
+    const el = elements.bandTabsEl.querySelector(`#count-${band}`);
     if (el) el.textContent = String(count);
   }
 }
 
-export function updateFilterTabStates(filterTabsEl: HTMLElement, activeFilters: Set<FlashcardStage>): void {
-  filterTabsEl.querySelectorAll('.filter-tab').forEach(tab => {
-    const stage = (tab as HTMLElement).dataset.stage as FlashcardStage | undefined;
-    tab.classList.toggle('active', stage !== undefined && activeFilters.has(stage));
+function updateTabStates(tabsEl: HTMLElement, key: string, active: ReadonlySet<string>): void {
+  tabsEl.querySelectorAll('.filter-tab').forEach(tab => {
+    const value = (tab as HTMLElement).dataset[key];
+    tab.classList.toggle('active', value !== undefined && active.has(value));
   });
+}
+
+export function updateFilterTabStates(elements: StatsElements, view: ListView): void {
+  updateTabStates(elements.filterTabsEl, 'stage', view.stages as ReadonlySet<string>);
+  updateTabStates(elements.bandTabsEl, 'band', view.bands as ReadonlySet<string>);
+  elements.sortSelectEl.value = view.sort;
+}
+
+function matchesView(stat: WordStatistics, view: ListView): boolean {
+  if (view.stages.size > 0 && !view.stages.has(getFlashcardStage(stat))) return false;
+  if (view.bands.size > 0 && !view.bands.has(bandOf(stat))) return false;
+  return true;
+}
+
+/**
+ * The tracked total, and the cap it is heading for. Words are evicted silently
+ * once the record is full, so the number is worth showing before it bites.
+ */
+function describeTotal(total: number): string {
+  const words = `${total} ${total === 1 ? 'word' : 'words'} tracked`;
+  return total >= MAX_TRACKED_WORDS * 0.8 ? `${words} of ${MAX_TRACKED_WORDS}` : words;
 }
 
 export function renderStatistics(
   statistics: Statistics,
   elements: StatsElements,
   loadDefinition: LoadDefinition,
-  activeFilters: Set<FlashcardStage>,
+  view: ListView,
   setStatus: SetWordStatus,
 ): void {
   const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
@@ -107,28 +198,28 @@ export function renderStatistics(
     return;
   }
 
-  const filtered = activeFilters.size === 0
-    ? allWords
-    : allWords.filter(w => {
-        const stat = statistics[w];
-        return stat && activeFilters.has(getFlashcardStage(stat));
-      });
+  const filtered = allWords.filter(word => {
+    const stat = statistics[word];
+    return stat !== undefined && matchesView(stat, view);
+  });
 
   emptyStateEl.style.display = filtered.length === 0 ? 'block' : 'none';
   statsListEl.style.display = filtered.length === 0 ? 'none' : 'flex';
-  wordCountEl.textContent = `${allWords.length} ${allWords.length === 1 ? 'word' : 'words'} tracked`;
+  wordCountEl.textContent = describeTotal(allWords.length);
 
   if (filtered.length === 0) {
-    const activeStageNames = [...activeFilters].map(s => STAGE_LABELS[s]).join(' or ');
+    const names = [
+      ...[...view.stages].map(stage => STAGE_LABELS[stage]),
+      ...[...view.bands].map(band => BAND_LABELS[band]),
+    ].join(' or ');
     const p = emptyStateEl.querySelector('p');
-    if (p) p.textContent = `No ${activeStageNames} words yet.`;
+    if (p) p.textContent = `No ${names} words yet.`;
     return;
   }
 
-  const sortedWords = sortWordsByCount(filtered, statistics);
   statsListEl.replaceChildren();
 
-  sortedWords.forEach(word => {
+  sortWords(filtered, statistics, view.sort).forEach(word => {
     const stat = statistics[word];
     if (!stat) return;
     statsListEl.appendChild(createStatItem(word, stat, loadDefinition, setStatus));
@@ -302,10 +393,3 @@ function toggleExpansion(
   }
 }
 
-function sortWordsByCount(words: string[], statistics: Record<string, WordStatistics>): string[] {
-  return words.sort((a, b) => {
-    const countA = statistics[a]?.count ?? 0;
-    const countB = statistics[b]?.count ?? 0;
-    return countB - countA;
-  });
-}

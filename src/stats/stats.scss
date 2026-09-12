@@ -132,11 +132,99 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+// What is owed and how the answers have been going. Read before the list, so
+// it sits above it and is never narrowed by the list's own filters.
+.overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: t.$space-5;
+  margin: 0 0 t.$space-4;
+  padding: t.$space-3 t.$space-4;
+  border: 1px solid t.$color-border-muted;
+  border-radius: t.$radius-sm;
+  background: t.$color-surface-alt;
+
+  @include dark {
+    border-color: t.$color-border-bold-dark;
+    background: t.$color-surface-alt-dark;
+  }
+}
+
+.overview-item {
+  dt {
+    color: t.$color-text-subtle;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+
+    @include dark {
+      color: t.$color-text-subtle-dark;
+    }
+  }
+
+  dd {
+    margin: 2px 0 0;
+    color: t.$color-text-strong;
+    font-size: 20px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+
+    @include dark {
+      color: t.$color-text-strong-dark;
+    }
+  }
+}
+
+.list-controls {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: t.$space-4;
+  flex-wrap: wrap;
+}
+
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: t.$space-2;
+  margin-bottom: 12px;
+  color: t.$color-text-subtle;
+  font-size: 12px;
+
+  select {
+    padding: 5px t.$space-2;
+    border: 1px solid t.$color-border-muted;
+    border-radius: t.$radius-sm;
+    background: t.$color-surface;
+    color: t.$color-text;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  @include dark {
+    color: t.$color-text-subtle-dark;
+
+    select {
+      border-color: t.$color-border-bold-dark;
+      background: t.$color-surface-dark;
+      color: t.$color-text-dark;
+    }
+  }
+}
+
 .filter-tabs {
   display: flex;
   gap: 6px;
   margin-bottom: 12px;
   flex-wrap: wrap;
+}
+
+// The band row is a secondary cut of the same list, so it reads quieter than
+// the stage row above it.
+.filter-tabs--band .filter-tab {
+  padding: 5px 11px;
+  font-size: 12px;
 }
 
 .filter-tab {

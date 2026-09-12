@@ -4,6 +4,7 @@ import type {
   ErrorResponse,
   Statistics,
   FlashcardStage,
+  FrequencyBand,
   WordStatistics,
   WordStatus,
 } from '../shared/types.js';
@@ -16,17 +17,21 @@ import {
   renderStatistics,
   renderDefinitionLoading,
   renderDefinition,
+  renderOverview,
   updateFilterCounts,
   updateFilterTabStates,
+  type ListView,
   type StatsElements
 } from './stats-view.js';
+import { summarise } from './overview.js';
+import { DEFAULT_SORT, isSortKey } from './ordering.js';
 
 export class StatsManager {
   private readonly document: Document;
   private readonly client: StatsClient;
   private readonly storage: StatsStorage;
   private cachedStatistics: Statistics | null = null;
-  private activeFilters: Set<FlashcardStage> = new Set();
+  private view: ListView = { stages: new Set(), bands: new Set(), sort: DEFAULT_SORT };
 
   constructor(document: Document, client: StatsClient, storage: StatsStorage) {
     this.document = document;
@@ -69,16 +74,21 @@ export class StatsManager {
 
     this.cachedStatistics = response.statistics;
     updateFilterCounts(elements, response.statistics);
-    this.setupFilterTabs(elements);
+    this.setupListControls(elements);
     this.render(elements, response.statistics);
   }
 
   private render(elements: StatsElements, statistics: Statistics): void {
+    // The overview reads the whole record on purpose: what is owed does not
+    // change because the list below is filtered to one stage.
+    renderOverview(this.document, summarise(statistics));
+    updateFilterCounts(elements, statistics);
+    updateFilterTabStates(elements, this.view);
     renderStatistics(
       statistics,
       elements,
       (word, container) => this.loadDefinition(word, container),
-      this.activeFilters,
+      this.view,
       (word, status) => this.setWordStatus(elements, word, status),
     );
   }
@@ -107,21 +117,34 @@ export class StatsManager {
     this.render(elements, this.cachedStatistics);
   }
 
-  private setupFilterTabs(elements: StatsElements): void {
-    elements.filterTabsEl.addEventListener('click', (e: Event) => {
+  private setupListControls(elements: StatsElements): void {
+    this.setupTabs<FlashcardStage>(elements, elements.filterTabsEl, 'stage', this.view.stages);
+    this.setupTabs<FrequencyBand>(elements, elements.bandTabsEl, 'band', this.view.bands);
+
+    elements.sortSelectEl.addEventListener('change', () => {
+      const chosen = elements.sortSelectEl.value;
+      if (!isSortKey(chosen)) return;
+
+      this.view = { ...this.view, sort: chosen };
+      if (this.cachedStatistics) this.render(elements, this.cachedStatistics);
+    });
+  }
+
+  /** Each tab toggles one value; an empty set means the filter is off entirely. */
+  private setupTabs<T extends string>(
+    elements: StatsElements,
+    tabsEl: HTMLElement,
+    key: 'stage' | 'band',
+    active: Set<T>,
+  ): void {
+    tabsEl.addEventListener('click', (e: Event) => {
       if (!(e.target instanceof HTMLElement)) return;
-      const tab = e.target.closest('[data-stage]') as HTMLElement | null;
-      if (!tab) return;
-      const stage = tab.dataset.stage as FlashcardStage | undefined;
-      if (!stage) return;
+      const tab = e.target.closest(`[data-${key}]`) as HTMLElement | null;
+      const value = tab?.dataset[key] as T | undefined;
+      if (!value) return;
 
-      if (this.activeFilters.has(stage)) {
-        this.activeFilters.delete(stage);
-      } else {
-        this.activeFilters.add(stage);
-      }
-
-      updateFilterTabStates(elements.filterTabsEl, this.activeFilters);
+      if (active.has(value)) active.delete(value);
+      else active.add(value);
 
       if (this.cachedStatistics) this.render(elements, this.cachedStatistics);
     });
@@ -138,7 +161,7 @@ export class StatsManager {
   private async clearStatistics(): Promise<void> {
     await this.storage.clearStatistics();
     this.cachedStatistics = null;
-    this.activeFilters = new Set();
+    this.view = { stages: new Set(), bands: new Set(), sort: DEFAULT_SORT };
     this.loadStatistics();
   }
 
