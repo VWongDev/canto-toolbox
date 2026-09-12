@@ -18,13 +18,17 @@ import {
   getCurrentDirection,
   renderFront,
   renderFrontLoading,
+  renderWritingFront,
+  renderWritingBack,
   renderBack,
   renderBackLoading,
   renderBackError,
   isScreenVisible,
   isAnswerVisible,
+  isWritingAnswerVisible,
   isAnswerRevealable
 } from './flashcards-view.js';
+import { ratingForMistakes, startQuiz, type WritingQuiz } from './writing.js';
 
 const NOTHING_TRACKED =
   'No words to review yet.\nHover over Chinese words at least twice to unlock flashcard review.';
@@ -84,6 +88,10 @@ export class FlashcardManager {
    * of roughly zero and rewrite a stability that was never really tested.
    */
   private readonly scheduled = new Set<string>();
+  /** The quiz on screen, so a card left behind stops listening for strokes. */
+  private quiz: WritingQuiz | undefined;
+  /** The grade a finished quiz measured, waiting on the reader to move on. */
+  private pendingRating: Rating | undefined;
 
   constructor(document: Document, client: FlashcardClient) {
     this.document = document;
@@ -93,6 +101,7 @@ export class FlashcardManager {
   init(): void {
     this.setupRatingButtons();
     this.setupShowAnswerButton();
+    this.setupWritingNextButton();
     this.setupReviewAgainButton();
     this.setupKnowButton();
     this.setupKeyboardShortcuts();
@@ -121,6 +130,8 @@ export class FlashcardManager {
   }
 
   showNextCard(): void {
+    this.endQuiz();
+
     const card = this.reviewQueue.shift();
     if (card === undefined) {
       renderFinished(this.document, this.correctCount, this.totalCount);
@@ -139,7 +150,45 @@ export class FlashcardManager {
       return;
     }
 
+    if (card.direction === 'writing') {
+      this.startWriting(card);
+      return;
+    }
+
     renderFront(this.document, card);
+  }
+
+  /**
+   * The writing card grades itself, so the quiz stands in for both the
+   * question and the rating: the reader draws, and the mistakes decide what
+   * FSRS hears. The definition is only fetched once the drawing is done —
+   * showing it beforehand would answer a different card's question.
+   */
+  private startWriting(card: ReviewCard): void {
+    const pane = renderWritingFront(this.document, card);
+    if (!pane) return;
+
+    const quiz = startQuiz(pane, card.word);
+    this.quiz = quiz;
+
+    void quiz.completed.then(mistakes => {
+      if (this.quiz !== quiz || !this.isCurrent(card)) return;
+
+      const rating = ratingForMistakes(mistakes);
+      this.pendingRating = rating;
+      renderBackLoading(this.document);
+
+      this.withDefinition(card, definition => {
+        renderWritingBack(this.document, card, definition, { mistakes, rating });
+      });
+    });
+  }
+
+  /** Stop a quiz whose card is no longer on screen. */
+  private endQuiz(): void {
+    this.quiz?.cancel();
+    this.quiz = undefined;
+    this.pendingRating = undefined;
   }
 
   /** Fetch the word's definition, or hand back the copy this session already has. */
@@ -202,6 +251,21 @@ export class FlashcardManager {
     return this.sessionCards.find(card => card.word === word && card.direction === direction);
   }
 
+  private setupWritingNextButton(): void {
+    const btn = this.document.getElementById(ELEMENT_IDS.writingNextBtn);
+    if (!btn) return;
+
+    btn.addEventListener('click', () => this.advanceWriting());
+  }
+
+  /** Submit the grade the quiz measured. The reader has no say in it. */
+  private advanceWriting(): void {
+    const rating = this.pendingRating;
+    if (!rating) return;
+
+    this.rate(rating);
+  }
+
   private setupRatingButtons(): void {
     const ratingBtns = this.document.getElementById(ELEMENT_IDS.ratingBtns);
     if (!ratingBtns) return;
@@ -235,6 +299,14 @@ export class FlashcardManager {
 
     if (key === 'k' || key === 'K') {
       this.retireCurrentWord();
+      return true;
+    }
+
+    // A finished writing quiz has already been graded, so the only key it
+    // takes is the one that moves on.
+    if (isWritingAnswerVisible(this.document)) {
+      if (!ADVANCE_KEYS.includes(key)) return false;
+      this.advanceWriting();
       return true;
     }
 

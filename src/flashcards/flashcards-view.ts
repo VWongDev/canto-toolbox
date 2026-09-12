@@ -1,4 +1,4 @@
-import type { DefinitionResult, ReviewDirection } from '../shared/types.js';
+import type { DefinitionResult, FlashcardRating, ReviewDirection } from '../shared/types.js';
 import { createElement } from '../shared/dom-element.js';
 import { createDefinitionElement } from '../shared/definition-section.js';
 import { createContextSentence } from '../shared/context-sentence.js';
@@ -14,6 +14,8 @@ export const ELEMENT_IDS = {
   ratingBtns: 'rating-btns',
   card: 'card',
   showAnswerBtn: 'show-answer-btn',
+  writingNext: 'writing-next',
+  writingNextBtn: 'writing-next-btn',
   reviewAgainBtn: 'review-again-btn',
   knowBtn: 'know-btn',
   resultSummary: 'result-summary'
@@ -96,6 +98,14 @@ export function isAnswerVisible(document: Document): boolean {
   return isVisible(document, ELEMENT_IDS.ratingBtns);
 }
 
+/**
+ * True once a writing quiz is done. Its rating is already decided by the
+ * mistake count, so the card offers one way on rather than four.
+ */
+export function isWritingAnswerVisible(document: Document): boolean {
+  return isVisible(document, ELEMENT_IDS.writingNext);
+}
+
 /** False while a lookup is in flight, so a reveal cannot be requested twice. */
 export function isAnswerRevealable(document: Document): boolean {
   return isVisible(document, ELEMENT_IDS.showAnswerContainer);
@@ -106,12 +116,14 @@ const PROMPTS: Readonly<Record<ReviewDirection, string>> = {
   recognition: 'What does it mean?',
   production: 'Which word is it?',
   components: 'What is it made of?',
+  writing: 'In what stroke order?',
 };
 
 const DIRECTION_LABELS: Readonly<Record<ReviewDirection, string>> = {
   recognition: 'Recognise',
   production: 'Produce',
   components: 'Parts',
+  writing: 'Write',
 };
 
 function createPrompt(direction: ReviewDirection): HTMLElement {
@@ -177,6 +189,9 @@ function showFront(
   if (showAnswerContainer) showAnswerContainer.style.display = revealable ? '' : 'none';
   if (ratingBtns) ratingBtns.style.display = 'none';
 
+  const writingNext = document.getElementById(ELEMENT_IDS.writingNext);
+  if (writingNext) writingNext.style.display = 'none';
+
   const cardEl = document.getElementById(ELEMENT_IDS.card);
   if (cardEl) {
     cardEl.dataset.currentWord = card.word;
@@ -194,6 +209,19 @@ export function renderFront(
     : [createElement({ className: 'card-characters', textContent: card.word })];
 
   showFront(document, card, [createPrompt(card.direction), ...question], { revealable: true });
+}
+
+/**
+ * The writing front: an empty grid for the quiz to draw into. There is nothing
+ * to reveal — the quiz *is* the question, and it ends itself — so the Show
+ * Answer row stays hidden and the caller gets the pane to mount into.
+ */
+export function renderWritingFront(document: Document, card: ReviewCard): HTMLElement | undefined {
+  const pane = createElement({ className: 'card-writing' });
+
+  showFront(document, card, [createPrompt(card.direction), pane], { revealable: false });
+
+  return pane;
 }
 
 /** Placeholder for the one front that cannot be drawn until a lookup returns. */
@@ -228,6 +256,55 @@ export function renderBackError(document: Document): void {
   }
   const ratingBtns = document.getElementById(ELEMENT_IDS.ratingBtns);
   if (ratingBtns) ratingBtns.style.display = '';
+}
+
+const RATING_LABELS: Readonly<Record<FlashcardRating, string>> = {
+  again: 'Again',
+  hard: 'Hard',
+  good: 'Good',
+  easy: 'Easy',
+};
+
+function countMistakes(mistakes: number): string {
+  if (mistakes === 0) return 'No mistakes';
+  return `${mistakes} ${mistakes === 1 ? 'mistake' : 'mistakes'}`;
+}
+
+/**
+ * The writing back: what the character means, under the tally the quiz
+ * produced. The tally is the whole explanation for the grade the reader never
+ * chose, so it says the grade out loud rather than only the mistake count.
+ */
+export function renderWritingBack(
+  document: Document,
+  card: ReviewCard,
+  definition: DefinitionResult | undefined,
+  { mistakes, rating }: { mistakes: number; rating: FlashcardRating },
+): void {
+  const cardBack = document.getElementById(ELEMENT_IDS.cardBack);
+  const showAnswerContainer = document.getElementById(ELEMENT_IDS.showAnswerContainer);
+  const writingNext = document.getElementById(ELEMENT_IDS.writingNext);
+
+  if (cardBack) {
+    cardBack.replaceChildren(
+      createElement({
+        className: `card-tally card-tally--${rating}`,
+        textContent: `${countMistakes(mistakes)} · ${RATING_LABELS[rating]}`,
+      }),
+    );
+
+    // The front was an outline the reader traced, so the answer names the
+    // character it turned out to be.
+    if (definition) cardBack.appendChild(createDefinitionElement(card.word, definition, true));
+    else cardBack.appendChild(
+      createElement({ className: 'flashcard-error', textContent: 'Definition not found' }),
+    );
+
+    cardBack.style.display = '';
+  }
+
+  if (showAnswerContainer) showAnswerContainer.style.display = 'none';
+  if (writingNext) writingNext.style.display = '';
 }
 
 export function renderBack(

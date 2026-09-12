@@ -150,7 +150,7 @@ body {
   text-align: center;
 }
 
-// Which of the word's cards this is. The three ask for different things, so
+// Which of the word's cards this is. The four ask for different things, so
 // the question is named rather than left to be inferred from the layout.
 .card-prompt {
   display: flex;
@@ -182,6 +182,56 @@ body {
     background: rgba(t.$color-primary-dark, 0.18);
     color: t.$color-primary-dark;
   }
+}
+
+.card-kind--writing {
+  background: rgba(t.$color-rating-good, 0.14);
+  color: t.$color-rating-good;
+
+  @include dark {
+    background: rgba(t.$color-rating-good-dark, 0.2);
+    color: t.$color-rating-good-dark;
+  }
+}
+
+// The grid the stroke quiz draws into. hanzi-writer sizes the SVG itself, so
+// this only has to centre it and rule off the writing area.
+.card-writing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid t.$color-border-muted;
+  border-radius: t.$radius-sm;
+  background: t.$color-surface-alt;
+
+  @include dark {
+    border-color: t.$color-border-bold-dark;
+    background: t.$color-surface-alt-dark;
+  }
+}
+
+// The writing card's grade is measured, not chosen, so the tally is the only
+// explanation the reader gets for it.
+.card-tally {
+  margin-bottom: t.$space-4;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.card-tally--good {
+  color: t.$color-rating-good;
+  @include dark { color: t.$color-rating-good-dark; }
+}
+
+.card-tally--hard {
+  color: t.$color-rating-hard;
+  @include dark { color: t.$color-rating-hard-dark; }
+}
+
+.card-tally--again {
+  color: t.$color-rating-again;
+  @include dark { color: t.$color-rating-again-dark; }
 }
 
 .card-ask {
@@ -288,6 +338,7 @@ body {
 // One action bar, ruled off and aligned to the card edges, so the buttons read
 // as a deliberate footer rather than floating in dead space.
 #show-answer-btn-container,
+.writing-next,
 .rating-btns {
   width: 100%;
   max-width: 640px;
@@ -308,6 +359,12 @@ body {
 
 .btn-primary {
   @include filled-btn(t.$color-primary, t.$color-primary-hover, t.$color-primary-fill-dark, t.$color-primary-fill-hover-dark);
+}
+
+.writing-next .btn {
+  width: 100%;
+  font-size: t.$text-md;
+  padding: t.$space-3;
 }
 
 .rating-btns {
