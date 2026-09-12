@@ -7,6 +7,14 @@ export default defineConfig({
     crx({ manifest })
   ],
   base: './', // Use relative paths for Chrome extension
+  css: {
+    preprocessorOptions: {
+      // Vite 5 still drives Sass through the legacy JS API, which Dart Sass
+      // deprecated and removes in 2.0. The modern compiler is already bundled;
+      // opting in now silences the warning and is what Vite 6 defaults to.
+      scss: { api: 'modern-compiler' },
+    },
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
