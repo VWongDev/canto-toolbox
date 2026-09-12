@@ -108,6 +108,13 @@ export class FlashcardManager {
   private sessionWords: string[] = [];
   private correctCount = 0;
   private totalCount = 0;
+  /**
+   * Cards whose answer has already reached the scheduler this session. A
+   * requeued "Again" and a "Review again" round are drills, not new evidence
+   * about memory: sending them would have FSRS reschedule against an interval
+   * of roughly zero and rewrite a stability that was never really tested.
+   */
+  private readonly scheduled = new Set<string>();
 
   constructor(document: Document, client: FlashcardClient) {
     this.document = document;
@@ -231,7 +238,11 @@ export class FlashcardManager {
       this.correctCount++;
     }
 
-    this.client.updateFlashcard(word, rating, () => {});
+    if (!this.scheduled.has(word)) {
+      this.scheduled.add(word);
+      this.client.updateFlashcard(word, rating, () => {});
+    }
+
     this.showNextCard();
   }
 

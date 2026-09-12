@@ -143,6 +143,38 @@ describe('FlashcardManager keyboard shortcuts', () => {
     expect(document.getElementById('result-summary')!.textContent).toBe('2 / 2 correct');
   });
 
+  it('sends a requeued card to the scheduler only on its first answer', () => {
+    start();
+    const first = currentWord();
+
+    press(' ');
+    press('1');
+    press(' ');
+    press('3');
+
+    const rated = (client.updateFlashcard as ReturnType<typeof vi.fn>).mock.calls
+      .filter(call => call[0] === first);
+    expect(rated).toHaveLength(1);
+    expect(rated[0]![1]).toBe('again');
+  });
+
+  it('does not re-rate the same cards when the session is restarted', () => {
+    start();
+    for (let i = 0; i < 2; i++) {
+      press(' ');
+      press('3');
+    }
+    expect(client.updateFlashcard).toHaveBeenCalledTimes(2);
+
+    press('Enter');
+    for (let i = 0; i < 2; i++) {
+      press(' ');
+      press('3');
+    }
+
+    expect(client.updateFlashcard).toHaveBeenCalledTimes(2);
+  });
+
   it('restarts the session on Enter from the finished screen', () => {
     start();
     for (let i = 0; i < 2; i++) {
