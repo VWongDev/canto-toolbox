@@ -14,15 +14,20 @@ type):
   via `chrome.runtime.getURL('data/*.json')`.
 - `src/popup/` — content script, popup client/storage, and the `lookup_word` /
   `track_word` background handler. May import from `src/dictionary/` and
-  `src/shared/`.
-- `src/stats/` — stats page (ts + view + client + storage) and the
-  `get_statistics` background handler. May import from `src/shared/`.
-- `src/flashcards/` — flashcard review page and client. May import from
-  `src/shared/`.
+  `src/shared/`. It is the only domain allowed to reach the dictionary, since
+  the pages have no dictionary of their own.
+- `src/stats/` — stats page (controller + view + client + storage, plus
+  `ordering` and `overview`) and the `get_statistics` background handler. May
+  import from `src/shared/`.
+- `src/flashcards/` — flashcard review page (controller + view + session +
+  client) and the `update_flashcard` / `set_word_status` handler. May import
+  from `src/shared/`.
 - `src/shared/` — utilities used by more than one domain: types, dom-element,
-  the `*-section` components, message-manager, message-router, storage-manager,
-  redundant-store, statistics-utils, bounded-map, debounce. No imports from any
-  feature domain.
+  the `*-section` components and `definition-list`, `frequency` /
+  `frequency-badge`, `decomposition`, `context-sentence`, `gloss`, `pinyin`,
+  `speech`, message-manager, message-router, storage-manager, redundant-store,
+  statistics-store, statistics-utils, scheduler, bounded-map, debounce. No
+  imports from any feature domain.
 - `src/service-worker.ts` — the MV3 composition root. It imports each feature's
   `background-handler.ts` and calls `register()`. This is the one place allowed
   to reach into multiple feature domains.
@@ -40,6 +45,14 @@ type):
 5. A utility used by only one domain belongs in that domain, not `src/shared/`.
 6. A utility used by two or more domains belongs in `src/shared/`, not in any
    single domain.
+
+## Shared state that is deliberately shared
+
+`src/shared/statistics-store.ts` holds the single statistics key, the
+`MAX_TRACKED_WORDS` cap and the `RedundantStore` instance. Popup (write), stats
+(read/clear) and flashcards (review progress) all address that one record, so
+importing it from three feature domains is correct, not a violation — each
+feature still owns its own access policy on top.
 
 ## Your job
 
