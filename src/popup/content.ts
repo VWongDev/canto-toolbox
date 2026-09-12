@@ -33,6 +33,9 @@ const POPUP_OFFSET_PX = 15;
 const SELECTION_PADDING_PX = 10;
 const VIEWPORT_MARGIN_PX = 10;
 
+/** What each pending timer is waiting to do. */
+type TimerName = 'selection' | 'track';
+
 interface CursorResult {
   /** The contiguous run of Chinese characters under the cursor. */
   run: string;
@@ -45,8 +48,15 @@ interface CursorResult {
 export class ChineseHoverPopupManager {
   private readonly document: Document;
   private readonly client: PopupClient;
-  private selectionPopupTimer: ReturnType<typeof setTimeout> | null = null;
-  private trackTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * The pending timers, keyed by what each one is waiting to do. One record
+   * rather than a field apiece, so setting and clearing a timer are the same
+   * two lines whichever timer it is.
+   */
+  private readonly timers: Record<TimerName, ReturnType<typeof setTimeout> | null> = {
+    selection: null,
+    track: null,
+  };
   private lastHoveredWord: string | null = null;
   private lastHoveredOffset = -1;
   private currentPopup: HTMLElement | null = null;
@@ -197,8 +207,7 @@ export class ChineseHoverPopupManager {
     const overPopup = popup && isMouseOverPopup(mouseX, mouseY, popup);
 
     if (!overSelection && !overPopup) {
-      this.clearTimer('selection');
-      this.selectionPopupTimer = setTimeout(() => {
+      this.setTimer('selection', () => {
         if (!hasActiveSelection()) {
           this.currentSelection = null;
           this.hidePopup();
@@ -244,9 +253,7 @@ export class ChineseHoverPopupManager {
    * stopping to read it.
    */
   private scheduleTracking(word: string, context?: string): void {
-    this.clearTimer('track');
-    this.trackTimer = setTimeout(() => {
-      this.trackTimer = null;
+    this.setTimer('track', () => {
       this.client.trackWord(
         word,
         (response) => {
@@ -348,9 +355,19 @@ export class ChineseHoverPopupManager {
     }
   }
 
-  private clearTimer(type: 'selection' | 'track'): void {
-    if (type === 'track') { clearTimeout(this.trackTimer!); this.trackTimer = null; }
-    else { clearTimeout(this.selectionPopupTimer!); this.selectionPopupTimer = null; }
+  private clearTimer(name: TimerName): void {
+    const pending = this.timers[name];
+    if (pending !== null) clearTimeout(pending);
+    this.timers[name] = null;
+  }
+
+  /** Replace whatever was pending for `name` with a fresh delay. */
+  private setTimer(name: TimerName, run: () => void, delayMs: number): void {
+    this.clearTimer(name);
+    this.timers[name] = setTimeout(() => {
+      this.timers[name] = null;
+      run();
+    }, delayMs);
   }
 
   private resetHoverState(): void {
@@ -360,8 +377,7 @@ export class ChineseHoverPopupManager {
   }
 
   private scheduleSelectionHide(): void {
-    this.clearTimer('selection');
-    this.selectionPopupTimer = setTimeout(() => {
+    this.setTimer('selection', () => {
       if (!this.currentSelection) this.hidePopup();
     }, SELECTION_HIDE_DELAY_MS);
   }
