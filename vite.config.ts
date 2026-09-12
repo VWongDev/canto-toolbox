@@ -44,7 +44,7 @@ export default defineConfig({
         'stats-script': 'src/stats/stats.ts',
         flashcards: 'src/flashcards/flashcards.html',
         'flashcards-script': 'src/flashcards/flashcards.ts',
-        offscreen: 'src/ocr/offscreen.html'
+        offscreen: 'src/offscreen/offscreen.html'
       },
     },
   },

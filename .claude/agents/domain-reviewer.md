@@ -9,20 +9,25 @@ You are a domain boundary reviewer for the canto-toolbox Chrome extension. The
 project uses a domain-based `src/` structure (organised by feature, not file
 type):
 
-- `src/dictionary/` — runtime dictionary load + lookup. May import only from
+- `src/dictionary/` — runtime dictionary load + lookup, and the `dict_lookup`
+  handler that runs in the offscreen document. May import only from
   `src/shared/`. The generated JSON is not imported; it is `fetch`ed at runtime
   via `chrome.runtime.getURL('data/*.json')`.
 - `src/popup/` — content script, popup client/storage, and the `lookup_word` /
-  `track_word` background handler. May import from `src/dictionary/`,
-  `src/shared/` and `src/ocr/image-controller.ts`. It is the only domain
-  allowed to reach the dictionary, since the pages have no dictionary of their
-  own.
+  `track_word` background handler. May import from `src/shared/` and
+  `src/ocr/image-controller.ts`. Lookups are forwarded to the offscreen
+  document rather than run in the worker; popup must not import
+  `src/dictionary/`.
 - `src/ocr/` — reading Chinese out of images: the image controller and overlay
-  that run in the content script, plus the offscreen engine and the `ocr_image`
-  background handler. May import from `src/shared/`. It produces hoverable text
-  and nothing else, so it must not import from `src/popup/`, `src/dictionary/`,
-  `src/stats/` or `src/flashcards/` — the popup finds its output through the
-  DOM, not through a call.
+  that run in the content script, plus the offscreen engine (cache/queue) and
+  the `ocr_image` background handler. May import from `src/shared/`. It
+  produces hoverable text and nothing else, so it must not import from
+  `src/popup/`, `src/dictionary/`, `src/stats/` or `src/flashcards/` — the
+  popup finds its output through the DOM, not through a call.
+- `src/offscreen/` — composition root for the offscreen document. It imports
+  `src/dictionary/offscreen-handler.ts` and `src/ocr/offscreen.ts` and calls
+  their `register()`. This is the one offscreen place allowed to reach into
+  multiple feature domains.
 - `src/stats/` — stats page (controller + view + client + storage, plus
   `ordering` and `overview`) and the `get_statistics` background handler. May
   import from `src/shared/`.
@@ -32,12 +37,13 @@ type):
 - `src/shared/` — utilities used by more than one domain: types, dom-element,
   the `*-section` components and `definition-list`, `frequency` /
   `frequency-badge`, `decomposition`, `context-sentence`, `gloss`, `pinyin`,
-  `speech`, message-manager, message-router, storage-manager, redundant-store,
+  `speech`, message-manager, message-router, offscreen-document, storage-manager, redundant-store,
   statistics-store, statistics-utils, scheduler, bounded-map, debounce. No
   imports from any feature domain.
 - `src/service-worker.ts` — the MV3 composition root. It imports each feature's
-  `background-handler.ts` and calls `register()`. This is the one place allowed
-  to reach into multiple feature domains.
+  `background-handler.ts` and calls `register()`. This is one of two places
+  allowed to reach into multiple feature domains; the other is
+  `src/offscreen/offscreen.ts`.
 
 ## Rules
 
@@ -49,10 +55,14 @@ type):
    `src/popup/content.ts` importing `src/ocr/image-controller.ts` to start it:
    both run in the content script, and one entry point has to bootstrap the
    other. That import is a bootstrap only — nothing else may cross, in either
-   direction.
-4. `src/service-worker.ts` is exempt from rule 3 (it is the composition root):
-   it may import the feature `background-handler.ts` modules and nothing else
-   from inside feature domains.
+   direction. `src/popup/` must not import `src/dictionary/`; lookups go
+   through `dict_lookup` messages.
+4. `src/service-worker.ts` and `src/offscreen/offscreen.ts` are composition
+   roots, exempt from rule 3:
+   - the service worker may import the feature `background-handler.ts` modules
+     and nothing else from inside feature domains.
+   - the offscreen page may import `src/dictionary/offscreen-handler.ts` and
+     `src/ocr/offscreen.ts` and nothing else from inside feature domains.
 5. A utility used by only one domain belongs in that domain, not `src/shared/`.
 6. A utility used by two or more domains belongs in `src/shared/`, not in any
    single domain.

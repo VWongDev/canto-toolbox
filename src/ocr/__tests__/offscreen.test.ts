@@ -34,7 +34,8 @@ describe('the offscreen OCR host', () => {
     // The module registers its handler on import, and holds a cache for the
     // life of the document — so each test needs its own instance of it.
     vi.resetModules();
-    await import('../offscreen.js');
+    const { register } = await import('../offscreen.js');
+    register();
 
     const calls = vi.mocked(chrome.runtime.onMessage.addListener).mock.calls;
     listener = calls[calls.length - 1]![0] as unknown as Listener;

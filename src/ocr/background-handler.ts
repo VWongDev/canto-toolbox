@@ -1,39 +1,7 @@
 import { registerHandlers } from '../shared/message-router.js';
 import { sendMessage } from '../shared/message-manager.js';
+import { ensureOffscreenDocument } from '../shared/offscreen-document.js';
 import type { OcrResult } from '../shared/types.js';
-
-const OFFSCREEN_PATH = 'src/ocr/offscreen.html';
-
-/**
- * Chrome allows one offscreen document per extension and rejects a second
- * `createDocument`, so creation is funnelled through a single promise rather
- * than raced by two images clicked at once.
- */
-let creating: Promise<void> | null = null;
-
-async function hasOffscreenDocument(): Promise<boolean> {
-  const contexts = await chrome.runtime.getContexts({
-    contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
-    documentUrls: [chrome.runtime.getURL(OFFSCREEN_PATH)],
-  });
-  return contexts.length > 0;
-}
-
-async function ensureOffscreenDocument(): Promise<void> {
-  if (await hasOffscreenDocument()) return;
-
-  creating ??= chrome.offscreen
-    .createDocument({
-      url: OFFSCREEN_PATH,
-      reasons: [chrome.offscreen.Reason.WORKERS],
-      justification: 'Runs the WebAssembly OCR model that reads Chinese text in images.',
-    })
-    .finally(() => {
-      creating = null;
-    });
-
-  await creating;
-}
 
 function runInOffscreen(src: string): Promise<OcrResult> {
   return new Promise((resolve, reject) => {

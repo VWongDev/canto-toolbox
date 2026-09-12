@@ -46,7 +46,9 @@ build, packaged from `public/data/`, and gitignored (so they do not exist when
 tests run).
 
 Tests therefore stub `globalThis.fetch` and branch on the requested URL, rather
-than `vi.mock`-ing a JSON module. See
+than `vi.mock`-ing a JSON module. Mandarin and Cantonese fixtures use the
+compact `rows`+`index` shape (`CompactDictionary`); etymology and frequency
+stay keyed maps. See
 `src/dictionary/__tests__/dictionary.test.ts` for the canonical pattern:
 
 ```typescript
@@ -97,14 +99,17 @@ romanisation, definitions or ranks.
 - `src/stats/stats-view.ts` and `src/flashcards/flashcards-view.ts`, driven
   through their page controllers
 
-**Message handlers** — `src/popup/background-handler.ts` is tested with the
-dictionary module mocked via `vi.mock('../../dictionary/dictionary.js', …)`;
+**Message handlers** — `src/popup/background-handler.ts` is tested by stubbing
+`chrome.offscreen` / `getContexts` and the `dict_lookup` hop through
+`sendMessage`; `src/dictionary/offscreen-handler.ts` is tested with the
+dictionary module mocked via `vi.mock('../dictionary.js', …)`;
 `src/flashcards/background-handler.ts` is tested against the statistics store.
 `src/ocr/background-handler.ts` stubs `chrome.offscreen` and
 `chrome.runtime.getContexts` per test — the global mock in `setup.ts` covers
 only the module-level side effects, not these. `src/ocr/offscreen.ts` mocks the
-engine and calls `vi.resetModules()` per case, because it registers its handler
-and starts caching on import.
+engine and calls `vi.resetModules()` per case, because the module holds a
+cache and queue for the life of the document; each test calls `register()`
+on a fresh instance.
 
 **End-to-end** — content script ↔ service worker ↔ pages are exercised by the
 Playwright specs in `e2e/` (popup, stats, flashcards, ocr), which launch

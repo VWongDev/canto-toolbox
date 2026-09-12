@@ -1,6 +1,5 @@
 import { registerHandlers } from '../shared/message-router.js';
 import { BoundedMap } from '../shared/bounded-map.js';
-import { recognise } from './engine.js';
 import type { OcrResult } from '../shared/types.js';
 
 /**
@@ -41,15 +40,21 @@ async function read(src: string): Promise<OcrResult> {
     return cached.result;
   }
 
+  // Loaded on the first image, never when the offscreen document starts —
+  // the document also hosts the dictionaries, which a hover needs long
+  // before anyone clicks a badge.
+  const { recognise } = await import('./engine.js');
   const result = await recognise(src);
   cache.set(src, { result, lastUsed: Date.now() });
   return result;
 }
 
-registerHandlers({
-  ocr_run: async (msg) => ({
-    success: true,
-    type: 'ocr_run',
-    result: await enqueue(() => read(msg.src)),
-  }),
-});
+export function register(): void {
+  registerHandlers({
+    ocr_run: async (msg) => ({
+      success: true,
+      type: 'ocr_run',
+      result: await enqueue(() => read(msg.src)),
+    }),
+  });
+}

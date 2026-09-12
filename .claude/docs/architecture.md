@@ -40,15 +40,20 @@ canto-toolbox/
 │   │   ├── image-controller.ts # Image hover, the badge, overlay lifecycle
 │   │   ├── overlay.ts         # Recognised box → positioned transparent text
 │   │   ├── engine.ts          # PaddleOCR over onnxruntime-web, models on disk
-│   │   ├── offscreen.html / offscreen.ts # Engine host; its cache and queue
-│   │   ├── background-handler.ts # ocr_image; owns the offscreen document
+│   │   ├── offscreen.ts       # Engine cache and queue; loaded lazily
+│   │   ├── background-handler.ts # ocr_image; forwards to the offscreen host
 │   │   ├── ocr-client.ts
 │   │   └── ocr.scss
 │   ├── dictionary/
-│   │   └── dictionary.ts      # Runtime dictionary load + lookup
+│   │   ├── dictionary.ts      # Runtime dictionary load + lookup
+│   │   └── offscreen-handler.ts # dict_lookup; the maps live in this document
+│   ├── offscreen/             # Offscreen composition root (dicts + OCR)
+│   │   ├── offscreen.html
+│   │   └── offscreen.ts       # register() of dictionary and OCR handlers
 │   ├── shared/                # Cross-feature utilities and UI components
 │   │   ├── message-manager.ts # sendMessage() typed message helper
 │   │   ├── message-router.ts  # registerHandlers() onMessage routing
+│   │   ├── offscreen-document.ts # ensureOffscreenDocument(); one host
 │   │   ├── storage-manager.ts # Thin chrome.storage wrapper
 │   │   ├── redundant-store.ts # sync→local reconciliation policy
 │   │   ├── statistics-store.ts# The shared statistics key, cap and store
@@ -109,10 +114,10 @@ flowchart TD
     A[Web Page] -->|mousemove / selection| B[Content Script]
     B -->|sendMessage lookup_word| C[Service Worker]
     C -->|registerHandlers| H1[popup background-handler]
-    H1 -->|lookupWord| D[dictionary.ts]
+    H1 -->|dict_lookup| O
+    O -->|dictionary.ts| D[Parsed maps]
     D -->|fetch chrome.runtime.getURL data/*.json| E[Packaged JSON]
-    E -->|parsed once into memory| D
-    D -->|DefinitionResult| H1
+    O -->|DefinitionResult| H1
     H1 -->|response| B
     H1 -->|updateStatistics| F[RedundantStore: sync→local]
     G[Stats / Flashcards Page] -->|get_statistics| C
@@ -130,8 +135,10 @@ flowchart TD
 - **Purpose**: Detect Chinese text under the cursor / in a selection and show a popup.
 - **Key class**: `ChineseHoverPopupManager` — popup display and selection logic.
 - **Responsibilities**: inject styles; listen for `mousemove`/`mouseout`/`mouseup`
-  (throttled on the animation frame alone, cancelled on `destroy()`); detect
-  Chinese with `[一-鿿]+`; take the whole run at the caret
+  (throttled on the animation frame alone, cancelled on `destroy()`); skip
+  hit-testing replaced elements that cannot hold a caret; ignore lookup
+  replies for a word the cursor has already left; detect Chinese with
+  `[一-鿿]+`; take the whole run at the caret
   (`document.caretRangeFromPoint`, with a realm-safe `nodeType` check so
   frames work) and send it with the hovered offset, leaving segmentation to
   the dictionary; request a lookup via `popup-client` (`sendMessage`); render
@@ -154,12 +161,12 @@ flowchart TD
   otherwise repeat: the async response channel (`return true`), passing an
   unrecognised message through (`return false`) so another feature's listener
   can answer it, and turning a thrown error into an `ErrorResponse`.
-- **popup**: handles `lookup_word` (kicks off `initDictionaries()`, then
-  `lookupWordAt` when the message carries a hovered segment, else `lookupWord`)
-  and `track_word` (the only path that writes new statistics). A tracked word
-  also records what the dictionary knows about it — its corpus rank, and whether
-  it is a single character with named parts — since the pages that build
-  sessions cannot look either up.
+- **popup**: handles `lookup_word` and `track_word` (the only path that writes
+  new statistics). Lookups are forwarded as `dict_lookup` to the offscreen
+  document that holds the parsed maps. A tracked word also records what the
+  dictionary knows about it — its corpus rank, and whether it is a single
+  character with named parts — since the pages that build sessions cannot look
+  either up.
 - **stats**: handles `get_statistics` (reads merged sync+local statistics).
 - **flashcards**: handles `update_flashcard` (advances one direction's FSRS
   state, and buries a word once its lapses reach `LEECH_LAPSES`) and
@@ -171,10 +178,19 @@ flowchart TD
 ### Dictionary (`src/dictionary/dictionary.ts`)
 
 - **Purpose**: Load and search the dictionaries.
+- **Where it runs**: the offscreen document (`src/offscreen/`), via
+  `offscreen-handler.ts`. The service worker is torn down on idle, which would
+  discard the parsed maps between one hover and the next; Chrome allows only
+  one offscreen document, so dictionaries share the host already used for OCR.
+  The worker's `lookup_word` handler starts that document (if needed) and
+  forwards. The OCR engine is imported only when an image is read, so a hover
+  does not pay for the model.
 - **Loading**: `initDictionaries()` lazily `fetch`es
   `chrome.runtime.getURL('data/{mandarin,cantonese,etymology,frequency}.json')`
   (the JSON is a packaged `web_accessible_resource`, **not** statically
-  imported/bundled) and parses it into in-memory maps **once**.
+  imported/bundled) and parses it **once**. Mandarin and Cantonese arrive as a
+  compact `rows`+`index` form so each unique entry is stored once; both script
+  forms share a row. Etymology and frequency stay keyed maps.
 - **Lookup**: after the one-time async load, `lookupWord` is synchronous —
   longest-match over up to `MAX_WORD_LENGTH`, Cantonese-marker filtering, and
   `lookupEtymology` for character breakdown.
@@ -198,12 +214,15 @@ flowchart TD
 - **Trigger**: `image-controller.ts` shows a badge on hovering an image at
   least `MIN_IMAGE_SIDE_PX` on both sides; clicking it reads that image. The
   model loads on the first click, never on page load.
-- **Where it runs**: an offscreen document (`offscreen.html`). The service
-  worker has no DOM and is torn down on idle, which would discard the loaded
-  weights between one image and the next; `background-handler.ts` starts the
-  document and forwards. `offscreen.ts` serialises requests behind one queue —
-  a single inference session cannot usefully be contended for — and caches
-  results by image URL in a `BoundedMap`.
+- **Where it runs**: the shared offscreen document (`src/offscreen/offscreen.html`).
+  The service worker has no DOM and is torn down on idle, which would discard
+  the loaded weights between one image and the next; `ensureOffscreenDocument()`
+  (`src/shared/offscreen-document.ts`) starts the document and the worker
+  forwards. `src/ocr/offscreen.ts` serialises requests behind one queue — a
+  single inference session cannot usefully be contended for — and caches
+  results by image URL in a `BoundedMap`. The engine module is dynamically
+  imported on the first `ocr_run`, so hosting dictionaries in the same
+  document does not load the model on hover.
 - **Engine**: `engine.ts` runs PP-OCRv6 tiny through `ppu-paddle-ocr/web` over
   `onnxruntime-web`. Models and the runtime are fetched from
   `chrome.runtime.getURL('ocr/…')`, so no network access is involved. It must
@@ -263,9 +282,10 @@ flowchart TD
    then applies to it unchanged.
 1. **Hover/selection** — content script extracts the Chinese word and calls
    `sendMessage({ type: 'lookup_word', word })`.
-2. **Lookup** — popup `background-handler` awaits `initDictionaries()`, calls
-   `lookupWord`, and replies with a `DefinitionResult` (the async response
-   channel is handled by `registerHandlers`).
+2. **Lookup** — popup `background-handler` forwards `dict_lookup` to the
+   offscreen document, which awaits `initDictionaries()`, calls `lookupWord`
+   (or `lookupWordAt` when a hovered segment is supplied), and replies with a
+   `DefinitionResult`. The worker maps that back onto `lookup_word`.
 3. **Display** — content script renders the popup near the cursor.
 4. **Statistics** — a `track_word` (sent after the reader dwells on a word, or
    at once when they press Study in the popup) increments its count through
@@ -313,7 +333,7 @@ flowchart TD
   `ort.env` settings apply to the instance that reads them.
 - **Chrome Extension APIs** — `chrome.storage.sync|local` (statistics),
   `chrome.runtime` (message passing, `getURL`, `getContexts`),
-  `chrome.offscreen` (the OCR engine's host document).
+  `chrome.offscreen` (the offscreen document that holds dictionaries and OCR).
 - **Dictionary submodules** — `dictionaries/mandarin` (CC-CEDICT),
   `dictionaries/cantonese` (CC-Canto), `dictionaries/makemeahanzi` (etymology).
 - **build-tools/processors** — convert the raw submodule data into the unified
@@ -326,7 +346,7 @@ flowchart TD
 ## Extension Permissions
 
 - `storage` — statistics tracking.
-- `offscreen` — the document that hosts the OCR engine.
+- `offscreen` — the document that holds the parsed dictionaries and the OCR engine.
 - `host_permissions: ["<all_urls>"]` — lets the offscreen document fetch an
   image's bytes. Reading them in the content script instead is not an option:
   a cross-origin image taints a canvas. This adds no install warning the
@@ -349,9 +369,10 @@ flowchart TD
   The package also exposes an HSK helper, but it *estimates* a level from
   character difficulty for words off the official list, so it is not used.
 
-Processed at build time into unified JSON under `public/data/`. Each generated
-dictionary is keyed by **both** the simplified and the traditional form, so a
-lookup finds a word whichever script the page is written in.
+Processed at build time into unified JSON under `public/data/`. Mandarin and
+Cantonese entries are stored once and indexed under **both** the simplified
+and the traditional form, so a lookup finds a word whichever script the page
+is written in.
 
 ## OCR Model
 
@@ -373,6 +394,8 @@ lookup finds a word whichever script the page is written in.
 - **`registerHandlers`** (`src/shared/message-router.ts`) — typed `onMessage`
   routing; owns the async response channel, the pass-through for messages a
   feature does not handle, and error→`ErrorResponse` conversion.
+- **`ensureOffscreenDocument`** (`src/shared/offscreen-document.ts`) — the one
+  offscreen host; popup and OCR both start it and forward.
 - **`RedundantStore`** (`src/shared/redundant-store.ts`) — sync→local
   read/write reconciliation policy over `StorageManager`.
 - **`statisticsStore` / `STATISTICS_KEY` / `MAX_TRACKED_WORDS`**

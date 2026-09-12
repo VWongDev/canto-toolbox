@@ -33,14 +33,16 @@ Merge commits and `fixup!` / `squash!` commits are passed through unchecked.
 The domain specifies the area of the codebase affected:
 - `manifest`: Extension manifest configuration
 - `icons`: Extension icons
-- `background`: Service worker and the feature background handlers
+- `background`: Service worker, feature background handlers, the offscreen
+  composition root (`src/offscreen/`), and `src/shared/offscreen-document.ts`
 - `build`: Build system and tooling (`build-tools/`, Vite, Nix, husky)
 - `content`: Content script
 - `flashcard`: Flashcard review page
 - `popup`: Popup UI components
 - `stats`: Statistics page
 - `dict`: Dictionary-related functionality
-- `ocr`: Reading Chinese out of images (`src/ocr/`, its offscreen engine and overlay)
+- `ocr`: Reading Chinese out of images (`src/ocr/`, its engine, overlay, and the
+  offscreen cache/queue)
 - `api`: API integration
 - `agents`: Subagent definitions in `.claude/agents/`
 - `git`: Git configuration and conventions

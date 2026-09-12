@@ -1,12 +1,8 @@
-import {
-  lookupWord,
-  lookupWordAt,
-  lookupWordInDictionaries,
-  initDictionaries,
-} from '../dictionary/dictionary.js';
 import { popupStorage, type WordDetails } from './popup-storage.js';
 import { registerHandlers } from '../shared/message-router.js';
-import type { DefinitionResult } from '../shared/types.js';
+import { sendMessage } from '../shared/message-manager.js';
+import { ensureOffscreenDocument } from '../shared/offscreen-document.js';
+import type { DefinitionResult, HoverSegment } from '../shared/types.js';
 
 /**
  * Whether the word can carry a components card: one character, and an
@@ -21,8 +17,33 @@ function isDecomposable(word: string, definition: DefinitionResult): boolean {
   return Object.keys(etymology.componentDefinitions ?? {}).length > 0;
 }
 
+function lookupInOffscreen(
+  word: string,
+  options: { segment?: HoverSegment; allowMissing?: boolean } = {},
+): Promise<DefinitionResult> {
+  return new Promise((resolve, reject) => {
+    sendMessage(
+      {
+        type: 'dict_lookup',
+        word,
+        ...(options.segment && { segment: options.segment }),
+        ...(options.allowMissing && { allowMissing: true }),
+      },
+      (response) => {
+        if (!response.success) {
+          reject(new Error(response.error));
+          return;
+        }
+        resolve(response.definition);
+      },
+    );
+  });
+}
+
 export function register(): void {
-  const dictionariesReady = initDictionaries();
+  // Start the host that holds the maps as soon as the worker boots, so a
+  // hover shortly after idle is not also paying for document creation.
+  void ensureOffscreenDocument();
 
   /**
    * What the dictionary knows about a word at the moment it is studied. The
@@ -31,8 +52,7 @@ export function register(): void {
    */
   async function describe(word: string): Promise<WordDetails> {
     try {
-      await dictionariesReady;
-      const definition = lookupWordInDictionaries(word);
+      const definition = await lookupInOffscreen(word, { allowMissing: true });
       const rank = definition.frequency?.rank;
 
       return {
@@ -55,17 +75,10 @@ export function register(): void {
      * only once the content script confirms the word was dwelled on.
      */
     lookup_word: async (msg) => {
-      try {
-        await dictionariesReady;
-      } catch (error) {
-        console.error('[Background] Dictionary init failed:', error);
-        throw new Error('Dictionary failed to load', { cause: error });
-      }
-
-      const definition = msg.segment
-        ? lookupWordAt(msg.segment.run, msg.segment.offset)
-        : lookupWord(msg.word);
-
+      await ensureOffscreenDocument();
+      const definition = await lookupInOffscreen(msg.word, {
+        ...(msg.segment && { segment: msg.segment }),
+      });
       return { success: true, type: 'lookup_word', definition };
     },
     track_word: async (msg) => {
