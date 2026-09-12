@@ -11,10 +11,10 @@ nix develop
 This drops you into a shell with the correct Node.js and pnpm versions already available. No manual version management needed.
 
 Without Nix, install manually:
-- Node.js >= 22 (the dev shell and CI both use 24)
+- Node.js >= 22 (`engines` floor); the dev shell pins `nodejs_24` and CI uses 24
 - pnpm >= 8 (use `pnpm@8.15.0` as specified in `packageManager`)
 
-Either way, initialize git submodules before building:
+Either way, initialize submodules before building:
 
 ```sh
 git submodule update --init --recursive
@@ -79,7 +79,9 @@ After code changes, rebuild and click the **reload** button on the extension car
 pnpm lint
 ```
 
-Runs ESLint with `typescript-eslint` across `src/` and `build-tools/`. Use `_`-prefixed parameter names to suppress unused-arg warnings (e.g. `_event`).
+Runs ESLint (flat config in `eslint.config.js`, `typescript-eslint`) across
+`src/` and `build-tools/`. Use `_`-prefixed parameter names to suppress
+unused-arg warnings (e.g. `_event`).
 
 ## Type Checking
 
@@ -106,6 +108,27 @@ in `e2e/`. CI runs both. Manual verification in Chrome is an optional sanity
 check for UI-heavy changes (load the unpacked `dist/`, hover Chinese text, open
 the Stats page).
 
+## Commit Hooks
+
+Husky installs two hooks (via the `prepare` script):
+
+- **`pre-commit`** — runs `pnpm lint && pnpm typecheck && pnpm test`. It first
+  checks that `pnpm` is on `PATH`, so committing from outside the Nix dev shell
+  fails with a pointer to `nix develop` rather than a confusing error.
+- **`commit-msg`** — validates the message against `type(domain): Description`.
+  See @.claude/docs/git-conventions.md.
+
+## Benchmarking
+
+```sh
+pnpm bench
+```
+
+Compiles the build tools and runs `build-tools/benchmark.ts` against the
+generated `public/data/*.json`, failing if p99 lookup time exceeds its
+threshold. CI runs this as a separate `perf` job, so an algorithmic regression
+in the lookup path is caught on every push.
+
 ### Screenshot generation
 
 Used for release assets, not for testing:
@@ -114,7 +137,8 @@ Used for release assets, not for testing:
 pnpm screenshots
 ```
 
-Requires a full build first and uses Puppeteer to capture the extension UI.
+Requires a full build first and uses Puppeteer to capture the extension UI. The
+release workflow runs it under `xvfb` when cutting a version.
 
 ## Key Build Gotchas
 

@@ -1,6 +1,8 @@
 # Git Conventions
 
-This repository follows semantic commit message conventions.
+This repository follows semantic commit message conventions, enforced by the
+husky `commit-msg` hook (`.husky/commit-msg`). A message that does not match
+`type(domain): Description` is rejected at commit time.
 
 ## Commit Message Format
 
@@ -12,6 +14,8 @@ type(domain): Description
 
 ### Commit Types
 
+The hook accepts exactly these types:
+
 - `feat`: New user-facing feature in the extension (changes extension behavior or UI)
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -20,15 +24,17 @@ type(domain): Description
 - `test`: Adding or updating tests
 - `chore`: Maintenance tasks, scripts, and tooling that do not affect extension behavior (e.g. adding a package.json script, updating deps)
 - `ci`: Continuous integration changes (CI/CD configuration, workflows, etc.)
-- `ai`: AI-related changes or documentation (use when modifying files in `.agents/` directory or AI-specific files)
+- `ai`: AI-related changes or documentation (use when modifying `CLAUDE.md`, `.claude/docs/` or `.claude/agents/`)
+
+Merge commits and `fixup!` / `squash!` commits are passed through unchecked.
 
 ### Domain
 
 The domain specifies the area of the codebase affected:
 - `manifest`: Extension manifest configuration
 - `icons`: Extension icons
-- `background`: Background service worker
-- `build`: Build system and tooling
+- `background`: Service worker and the feature background handlers
+- `build`: Build system and tooling (`build-tools/`, Vite, Nix, husky)
 - `content`: Content script
 - `flashcard`: Flashcard review page
 - `popup`: Popup UI components
@@ -80,3 +86,5 @@ ai(agents): Add doc-reviewer subagent
 4. Keep commits focused on one domain when possible
 5. Use multiple domains when a change affects multiple areas (e.g., `refactor(content, stats)`)
 6. Use `global` domain if more than 3 domains would be specified
+7. Commit from inside the Nix dev shell — the `pre-commit` hook runs `pnpm lint
+   && pnpm typecheck && pnpm test` and aborts if `pnpm` is not on `PATH`

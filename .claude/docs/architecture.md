@@ -10,7 +10,10 @@ canto-toolbox/
 ├── vite.config.ts             # Vite build configuration
 ├── vitest.config.ts           # Unit-test (vitest) configuration
 ├── playwright.config.ts       # E2E (Playwright) configuration
+├── eslint.config.js           # Flat ESLint config (typescript-eslint)
 ├── tsconfig.json              # TypeScript configuration
+├── flake.nix                  # Nix dev shell (Node 24 + pnpm)
+├── .husky/                    # pre-commit (lint/typecheck/test), commit-msg
 ├── src/
 │   ├── service-worker.ts      # MV3 service-worker entry; registers handlers
 │   ├── popup/                 # Hover-popup feature (content script)
@@ -21,6 +24,7 @@ canto-toolbox/
 │   │   └── popup.scss
 │   ├── stats/                 # Statistics page
 │   │   ├── stats.ts / stats.html / stats.scss
+│   │   ├── stats-view.ts      # DOM rendering; element ids live here
 │   │   ├── background-handler.ts # get_statistics handler
 │   │   ├── stats-client.ts
 │   │   ├── overview.ts        # Due/accuracy summary over the whole record
@@ -28,6 +32,7 @@ canto-toolbox/
 │   │   └── stats-storage.ts   # Statistics read path (sync+local merge)
 │   ├── flashcards/            # Flashcard review page
 │   │   ├── flashcards.ts / flashcards.html / flashcards.scss
+│   │   ├── flashcards-view.ts # Screens, card faces, element ids
 │   │   ├── session.ts         # Card selection across the review directions
 │   │   ├── background-handler.ts # update_flashcard / set_word_status
 │   │   └── flashcard-client.ts
@@ -35,19 +40,26 @@ canto-toolbox/
 │   │   └── dictionary.ts      # Runtime dictionary load + lookup
 │   ├── shared/                # Cross-feature utilities and UI components
 │   │   ├── message-manager.ts # sendMessage() typed message helper
+│   │   ├── message-router.ts  # registerHandlers() onMessage routing
 │   │   ├── storage-manager.ts # Thin chrome.storage wrapper
 │   │   ├── redundant-store.ts # sync→local reconciliation policy
+│   │   ├── statistics-store.ts# The shared statistics key, cap and store
 │   │   ├── statistics-utils.ts# mergeStatistics(), getFlashcardStage()
 │   │   ├── scheduler.ts       # FSRS review scheduling
 │   │   ├── bounded-map.ts     # Top-N-by-sort-key map
 │   │   ├── debounce.ts        # createBatchedDebounce()
 │   │   ├── dom-element.ts     # createElement()
+│   │   ├── frequency.ts       # Corpus rank → learner-facing band
+│   │   ├── frequency-badge.ts # The band/rank chip on a definition
+│   │   ├── decomposition.ts   # Component glyphs of an IDS decomposition
+│   │   ├── definition-list.ts # Collapsing sense list
 │   │   ├── pronunciation-section.ts # Pronunciation section component
 │   │   ├── speech.ts          # Browser TTS, per-reading voice matching
 │   │   ├── etymology-section.ts     # Etymology section component
 │   │   ├── definition-section.ts    # Shared definition-container component
 │   │   ├── context-sentence.ts      # Met-in sentence, plain or cloze-blanked
 │   │   ├── gloss.ts           # Short English gloss for a production prompt
+│   │   ├── pinyin.ts          # toSyllables() tone-tagged syllable split
 │   │   ├── styles/            # Shared SCSS partials (tokens, dark mode, …)
 │   │   └── types.ts           # TypeScript type definitions
 │   └── vite-env.d.ts
@@ -57,20 +69,22 @@ canto-toolbox/
 │                              # (generated)
 ├── build-tools/               # Build-time dictionary processing
 │   ├── build-dictionaries.ts  # Dictionary build entry
-│   ├── benchmark.ts / check-bundle-size.ts / generate-screenshots.ts
+│   ├── benchmark.ts / generate-screenshots.ts
 │   └── processors/            # cedict-parser, mandarin/cantonese/etymology,
-│                              # frequency, utils
-├── dictionaries/              # Source data (git submodules)
+│                              # frequency, utils (+ __tests__/)
+├── dictionaries/              # Source data (submodules)
 │   ├── mandarin/              # CC-CEDICT
 │   ├── cantonese/             # CC-Canto
 │   └── makemeahanzi/          # Character etymology
 ├── e2e/                       # Playwright specs
 ├── icons/
-└── .claude/docs/              # Project documentation (this file lives here)
-    ├── architecture.md
-    ├── dev-workflow.md
-    ├── git-conventions.md
-    └── testing.md
+└── .claude/
+    ├── agents/                # dict-inspector, doc-reviewer, domain-reviewer
+    └── docs/                  # Project documentation (this file lives here)
+        ├── architecture.md
+        ├── dev-workflow.md
+        ├── git-conventions.md
+        └── testing.md
 ```
 
 ## Architecture Flow
@@ -79,7 +93,7 @@ canto-toolbox/
 flowchart TD
     A[Web Page] -->|mousemove / selection| B[Content Script]
     B -->|sendMessage lookup_word| C[Service Worker]
-    C -->|register| H1[popup background-handler]
+    C -->|registerHandlers| H1[popup background-handler]
     H1 -->|lookupWord| D[dictionary.ts]
     D -->|fetch chrome.runtime.getURL data/*.json| E[Packaged JSON]
     E -->|parsed once into memory| D
@@ -101,15 +115,16 @@ flowchart TD
 - **Purpose**: Detect Chinese text under the cursor / in a selection and show a popup.
 - **Key class**: `ChineseHoverPopupManager` — popup display and selection logic.
 - **Responsibilities**: inject styles; listen for `mousemove`/`mouseout`/`mouseup`
-  (RAF-throttled, cancelled on `destroy()`); detect Chinese with
-  `[一-鿿]+`; take the whole run at the caret
+  (throttled on the animation frame alone, cancelled on `destroy()`); detect
+  Chinese with `[一-鿿]+`; take the whole run at the caret
   (`document.caretRangeFromPoint`, with a realm-safe `nodeType` check so
   frames work) and send it with the hovered offset, leaving segmentation to
   the dictionary; request a lookup via `popup-client` (`sendMessage`); render
   the popup with the shared section components.
 - **Study signal**: showing a popup is not studying. After `DWELL_MS` with the
   popup still on the same word, the script sends `track_word` — once per word,
-  along with `extractContext`'s snippet of the sentence it was met in.
+  along with `extractContext`'s snippet of the sentence it was met in. The
+  popup's **+ Study** button sends the same message at once, with `pin` set.
 
 ### Service Worker (`src/service-worker.ts`)
 
@@ -119,6 +134,11 @@ flowchart TD
 
 ### Background Handlers (`*/background-handler.ts`)
 
+- Each handler registers through `registerHandlers()`
+  (`src/shared/message-router.ts`), which owns the parts every listener would
+  otherwise repeat: the async response channel (`return true`), passing an
+  unrecognised message through (`return false`) so another feature's listener
+  can answer it, and turning a thrown error into an `ErrorResponse`.
 - **popup**: handles `lookup_word` (kicks off `initDictionaries()`, then
   `lookupWordAt` when the message carries a hovered segment, else `lookupWord`)
   and `track_word` (the only path that writes new statistics). A tracked word
@@ -129,7 +149,7 @@ flowchart TD
 - **flashcards**: handles `update_flashcard` (advances one direction's FSRS
   state, and buries a word once its lapses reach `LEECH_LAPSES`) and
   `set_word_status` (retire or pin a word, keeping its progress).
-- Message passing is plain functions, not a class. The typed helper is
+- Message passing is plain functions, not a class. The typed send helper is
   `sendMessage()` in `src/shared/message-manager.ts`; each feature has a thin
   `*-client.ts` wrapper around it.
 
@@ -143,17 +163,24 @@ flowchart TD
 - **Lookup**: after the one-time async load, `lookupWord` is synchronous —
   longest-match over up to `MAX_WORD_LENGTH`, Cantonese-marker filtering, and
   `lookupEtymology` for character breakdown.
+- **Enrichment**: the longest-match scan tries a candidate per length and start
+  offset and throws away all but one, so the parts not needed to judge a
+  candidate — the character breakdown and the corpus rank — are added by
+  `enrich` to the winner alone. `lookupEtymology` memoises into a capped cache,
+  since the same characters recur as the cursor moves.
 
 ### Statistics Page (`src/stats/`)
 
-- **Key class**: `StatsManager`. Loads merged statistics via `stats-client`,
-  renders the frequency list with lazily-expanded definitions (rendered by the
+- **Key class**: `StatsManager` (`stats.ts`) — data loading and event wiring.
+  All DOM construction lives in `stats-view.ts`, which also owns the element
+  ids the page's HTML and its tests share.
+- Renders the frequency list with lazily-expanded definitions (rendered by the
   shared `definition-section`), the sentence each word was met in, study
   counts, and a clear action.
 - Above the list, `overview.ts` summarises the whole record — cards due now,
   due today, review accuracy and retired count — deliberately unaffected by the
   list's own filters. `ordering.ts` supplies the frequency-band filter and the
-  sort (most studied, commonest, due soonest, recently seen).
+  sort (most studied, most common, due soonest, recently seen).
 - Each row can retire a word or pin it for study, through `set_word_status`.
 
 ### Flashcards Page (`src/flashcards/`)
@@ -164,6 +191,8 @@ flowchart TD
   and `components` (character → its parts). Production unlocks once recognition
   leaves its learning steps; components additionally needs `decomposable`,
   recorded at track time because this page has no dictionary.
+- `flashcards.ts` runs the session; `flashcards-view.ts` renders the screens and
+  card faces and owns the element ids.
 - `selectSession` (`session.ts`) takes the cards the scheduler says are due,
   most overdue first, then tops the session up with cards not yet introduced —
   ordered by corpus rank, so the commonest word met is taught first — capped at
@@ -182,8 +211,8 @@ flowchart TD
 1. **Hover/selection** — content script extracts the Chinese word and calls
    `sendMessage({ type: 'lookup_word', word })`.
 2. **Lookup** — popup `background-handler` awaits `initDictionaries()`, calls
-   `lookupWord`, and replies with a `DefinitionResult` (async response channel,
-   listener returns `true`).
+   `lookupWord`, and replies with a `DefinitionResult` (the async response
+   channel is handled by `registerHandlers`).
 3. **Display** — content script renders the popup near the cursor.
 4. **Statistics** — a `track_word` (sent after the reader dwells on a word, or
    at once when they press Study in the popup) increments its count through
@@ -195,18 +224,30 @@ flowchart TD
 
 ## Storage
 
-- **Statistics**: `RedundantStore` over `StorageManager(chrome.storage.sync,
-  chrome.storage.local)`. Writes prefer sync and fall back to local; reads
-  reconcile both areas via `mergeStatistics`. In-memory write batching uses
-  `createBatchedDebounce` and `BoundedMap` (top-N cap).
+- **Statistics**: one storage item, `STATISTICS_KEY`, held in a `RedundantStore`
+  over `StorageManager(chrome.storage.sync, chrome.storage.local)`. The key, the
+  store and the `MAX_TRACKED_WORDS` cap live in `src/shared/statistics-store.ts`
+  so the write path, the stats page's warning and the flashcard handler all
+  address the same record. Writes prefer sync and fall back to local; reads
+  reconcile both areas via `mergeStatistics`.
+- **Write batching**: `popup-storage.ts` accumulates counts with
+  `createBatchedDebounce` and writes them through a `BoundedMap` capped at
+  `MAX_TRACKED_WORDS`. Eviction is tiered rather than by study count alone —
+  reviewed words (tie-broken by last review) outrank pinned, which outrank
+  retired, which outrank the merely-seen — so pruning cannot throw away FSRS
+  history.
 - **Dictionaries**: generated JSON under `public/data/` (bundled as
   `web_accessible_resources`), fetched at runtime — never written.
 
 ## Dependencies
 
 - **TypeScript / Vite** — typed source, bundling (`vite build`, needs
-  `--max-old-space-size`).
+  `--max-old-space-size`). `@crxjs/vite-plugin` drives the build from
+  `manifest.json`.
 - **Vitest / Playwright** — unit and e2e tests.
+- **ESLint / husky** — `eslint.config.js` (flat config, typescript-eslint); the
+  `pre-commit` hook runs lint, typecheck and tests, and `commit-msg` enforces
+  the commit format.
 - **ts-fsrs** — the FSRS review scheduler. The only runtime dependency; the
   four ratings the review UI offers are its grade scale exactly.
 - **Chrome Extension APIs** — `chrome.storage.sync|local` (statistics),
@@ -238,38 +279,53 @@ flowchart TD
   The package also exposes an HSK helper, but it *estimates* a level from
   character difficulty for words off the official list, so it is not used.
 
-Processed at build time into unified JSON under `public/data/`.
+Processed at build time into unified JSON under `public/data/`. Each generated
+dictionary is keyed by **both** the simplified and the traditional form, so a
+lookup finds a word whichever script the page is written in.
 
 ## Key Classes and Utilities
 
 - **`ChineseHoverPopupManager`** (`src/popup/content.ts`) — popup/selection logic.
-- **`StatsManager`** (`src/stats/stats.ts`) — stats page UI and data loading.
+- **`StatsManager`** (`src/stats/stats.ts`) — stats page data loading and wiring.
 - **`sendMessage`** (`src/shared/message-manager.ts`) — typed message-passing
   helper with `chrome.runtime.lastError` / validation handling.
+- **`registerHandlers`** (`src/shared/message-router.ts`) — typed `onMessage`
+  routing; owns the async response channel, the pass-through for messages a
+  feature does not handle, and error→`ErrorResponse` conversion.
 - **`RedundantStore`** (`src/shared/redundant-store.ts`) — sync→local
   read/write reconciliation policy over `StorageManager`.
+- **`statisticsStore` / `STATISTICS_KEY` / `MAX_TRACKED_WORDS`**
+  (`src/shared/statistics-store.ts`) — the single record every feature addresses.
 - **`mergeStatistics`** (`src/shared/statistics-utils.ts`) — sums counts and
   reconciles first/last-seen across storage areas.
 - **`getFlashcardStage`** (`src/shared/statistics-utils.ts`) — new / learning /
   familiar / mastered, derived from the scheduler so `mastered` decays.
 - **`reviewCard` / `isDue` / `isLeech`** (`src/shared/scheduler.ts`) — FSRS
   scheduling, persisted as the compact `SrsState` on each direction's progress.
-- **`progressFor` / `DIRECTION_FIELD`** (`src/shared/statistics-utils.ts`) —
-  where each review direction's schedule lives on a word.
+- **`progressFor` / `DIRECTION_FIELD` / `schedulesOf`**
+  (`src/shared/statistics-utils.ts`) — where each review direction's schedule
+  lives on a word, and the shared walk over all three.
 - **`selectSession`** (`src/flashcards/session.ts`) — which card each word
   offers a session, and in what order.
 - **`BoundedMap`** (`src/shared/bounded-map.ts`) — top-N-by-sort-key map;
-  statistics rank reviewed words above unreviewed ones — and against each other
-  by last review — so pruning cannot discard review history.
+  `setAll` inserts a batch and prunes once, so a batch of new words is ranked
+  against the record one time rather than after each word in it.
 - **`createBatchedDebounce`** (`src/shared/debounce.ts`) — accumulates keyed
   counts and flushes a batch.
 - **`createElement`** (`src/shared/dom-element.ts`) — DOM creation helper.
-- **`dictionary.ts`** — `initDictionaries`, `lookupWord`, `lookupEtymology`.
+- **`dictionary.ts`** — `initDictionaries`, `lookupWord`, `lookupWordAt`,
+  `lookupEtymology`, `lookupFrequency`.
+- **`bandForRank` / `BAND_LABELS`** (`src/shared/frequency.ts`) — a corpus rank
+  banded into something a learner can act on (Core 1000 → Rare);
+  `frequency-badge.ts` draws it on the definition.
+- **`parseComponents`** (`src/shared/decomposition.ts`) — the component glyphs
+  of a makemeahanzi decomposition, Ideographic Description Characters dropped.
 - **`pronunciation-section.ts` / `etymology-section.ts` /
-  `definition-section.ts`** — shared UI components; `definition-section`
-  composes the other two and is reused by popup, stats and flashcards. Because
-  they are shared, the audio button, tone colours and script variant appear on
-  all three surfaces from one implementation.
+  `definition-section.ts` / `definition-list.ts`** — shared UI components;
+  `definition-section` composes the others and is reused by popup, stats and
+  flashcards. Because they are shared, the audio button, tone colours, script
+  variant and the collapsing sense list appear on all three surfaces from one
+  implementation.
 - **`toSyllables`** (`src/shared/pinyin.ts`) — splits a romanisation into
   tone-tagged syllables so each can be coloured; Pinyin gets tone marks,
   Jyutping keeps its digits.
