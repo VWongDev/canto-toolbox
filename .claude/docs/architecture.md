@@ -23,9 +23,13 @@ canto-toolbox/
 │   │   ├── stats.ts / stats.html / stats.scss
 │   │   ├── background-handler.ts # get_statistics handler
 │   │   ├── stats-client.ts
+│   │   ├── overview.ts        # Due/accuracy summary over the whole record
+│   │   ├── ordering.ts        # List sorting and frequency-band filtering
 │   │   └── stats-storage.ts   # Statistics read path (sync+local merge)
 │   ├── flashcards/            # Flashcard review page
 │   │   ├── flashcards.ts / flashcards.html / flashcards.scss
+│   │   ├── session.ts         # Card selection across the review directions
+│   │   ├── background-handler.ts # update_flashcard / set_word_status
 │   │   └── flashcard-client.ts
 │   ├── dictionary/
 │   │   └── dictionary.ts      # Runtime dictionary load + lookup
@@ -42,6 +46,8 @@ canto-toolbox/
 │   │   ├── speech.ts          # Browser TTS, per-reading voice matching
 │   │   ├── etymology-section.ts     # Etymology section component
 │   │   ├── definition-section.ts    # Shared definition-container component
+│   │   ├── context-sentence.ts      # Met-in sentence, plain or cloze-blanked
+│   │   ├── gloss.ts           # Short English gloss for a production prompt
 │   │   ├── styles/            # Shared SCSS partials (tokens, dark mode, …)
 │   │   └── types.ts           # TypeScript type definitions
 │   └── vite-env.d.ts
@@ -83,6 +89,9 @@ flowchart TD
     G[Stats / Flashcards Page] -->|get_statistics| C
     C -->|stats background-handler| F
     F -->|mergeStatistics| G
+    G -->|update_flashcard / set_word_status| C
+    C -->|flashcards background-handler| H2[reviewCard per direction]
+    H2 --> F
 ```
 
 ## Components
@@ -112,8 +121,14 @@ flowchart TD
 
 - **popup**: handles `lookup_word` (kicks off `initDictionaries()`, then
   `lookupWordAt` when the message carries a hovered segment, else `lookupWord`)
-  and `track_word` (the only path that writes statistics).
+  and `track_word` (the only path that writes new statistics). A tracked word
+  also records what the dictionary knows about it — its corpus rank, and whether
+  it is a single character with named parts — since the pages that build
+  sessions cannot look either up.
 - **stats**: handles `get_statistics` (reads merged sync+local statistics).
+- **flashcards**: handles `update_flashcard` (advances one direction's FSRS
+  state, and buries a word once its lapses reach `LEECH_LAPSES`) and
+  `set_word_status` (retire or pin a word, keeping its progress).
 - Message passing is plain functions, not a class. The typed helper is
   `sendMessage()` in `src/shared/message-manager.ts`; each feature has a thin
   `*-client.ts` wrapper around it.
@@ -135,17 +150,32 @@ flowchart TD
   renders the frequency list with lazily-expanded definitions (rendered by the
   shared `definition-section`), the sentence each word was met in, study
   counts, and a clear action.
+- Above the list, `overview.ts` summarises the whole record — cards due now,
+  due today, review accuracy and retired count — deliberately unaffected by the
+  list's own filters. `ordering.ts` supplies the frequency-band filter and the
+  sort (most studied, commonest, due soonest, recently seen).
+- Each row can retire a word or pin it for study, through `set_word_status`.
 
 ### Flashcards Page (`src/flashcards/`)
 
-- Spaced review driven by `src/shared/scheduler.ts` (FSRS). `selectSession`
-  takes the words the scheduler says are due, most overdue first, then tops the
-  session up with unseen words (count ≥ `MIN_COUNT`, capped at
-  `MAX_NEW_CARDS`) to `MAX_CARDS`. With nothing due, the empty screen reports
-  when the next review lands.
-- "Again" re-queues a card within the session; every rating is also sent to the
-  service worker, which advances the word's FSRS state. Definitions render via
-  the shared `definition-section`.
+- Spaced review driven by `src/shared/scheduler.ts` (FSRS). Each word carries a
+  schedule per **review direction**: `recognition` (word → meaning, stored under
+  the original `flashcard` key), `production` (meaning + cloze sentence → word)
+  and `components` (character → its parts). Production unlocks once recognition
+  leaves its learning steps; components additionally needs `decomposable`,
+  recorded at track time because this page has no dictionary.
+- `selectSession` (`session.ts`) takes the cards the scheduler says are due,
+  most overdue first, then tops the session up with cards not yet introduced —
+  ordered by corpus rank, so the commonest word met is taught first — capped at
+  `MAX_NEW_CARDS` within `MAX_CARDS`. A word offers **at most one card per
+  session**, and retired words are skipped. With nothing due, the empty screen
+  reports when the next review lands.
+- "Again" re-queues a card within the session, but the scheduler hears each card
+  **once per session**: a requeued answer or a "Review Again" round is a drill,
+  and rating it again would have FSRS recompute stability over an interval of
+  roughly zero. "I know this" (or `K`) retires the word outright.
+- Definitions render via the shared `definition-section`; only the production
+  front needs a lookup before the question can be posed.
 
 ## Data Flow
 
@@ -155,11 +185,13 @@ flowchart TD
    `lookupWord`, and replies with a `DefinitionResult` (async response channel,
    listener returns `true`).
 3. **Display** — content script renders the popup near the cursor.
-4. **Statistics** — a `track_word` (sent only after the reader dwells on a
-   word) increments its count through `RedundantStore` (write to sync, fall
-   back to local) and records the sentence it was first met in. The
-   stats/flashcards pages read both areas and reconcile with
-   `mergeStatistics`.
+4. **Statistics** — a `track_word` (sent after the reader dwells on a word, or
+   at once when they press Study in the popup) increments its count through
+   `RedundantStore` (write to sync, fall back to local) and records the sentence
+   it was first met in, its corpus rank and whether it can carry a components
+   card. The stats/flashcards pages read both areas and reconcile with
+   `mergeStatistics`, which preserves every field a word carries rather than
+   the handful the merge names.
 
 ## Storage
 
@@ -220,11 +252,15 @@ Processed at build time into unified JSON under `public/data/`.
   reconciles first/last-seen across storage areas.
 - **`getFlashcardStage`** (`src/shared/statistics-utils.ts`) — new / learning /
   familiar / mastered, derived from the scheduler so `mastered` decays.
-- **`reviewCard` / `isDue`** (`src/shared/scheduler.ts`) — FSRS scheduling,
-  persisted as the compact `SrsState` on each word's `flashcard` progress.
+- **`reviewCard` / `isDue` / `isLeech`** (`src/shared/scheduler.ts`) — FSRS
+  scheduling, persisted as the compact `SrsState` on each direction's progress.
+- **`progressFor` / `DIRECTION_FIELD`** (`src/shared/statistics-utils.ts`) —
+  where each review direction's schedule lives on a word.
+- **`selectSession`** (`src/flashcards/session.ts`) — which card each word
+  offers a session, and in what order.
 - **`BoundedMap`** (`src/shared/bounded-map.ts`) — top-N-by-sort-key map;
-  statistics rank reviewed words above unreviewed ones so pruning cannot
-  discard review history.
+  statistics rank reviewed words above unreviewed ones — and against each other
+  by last review — so pruning cannot discard review history.
 - **`createBatchedDebounce`** (`src/shared/debounce.ts`) — accumulates keyed
   counts and flushes a batch.
 - **`createElement`** (`src/shared/dom-element.ts`) — DOM creation helper.
