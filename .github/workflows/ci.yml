@@ -68,6 +68,9 @@ jobs:
       - name: Build dictionaries
         run: node build-tools/dist/build-tools/build-dictionaries.js
 
+      - name: Vendor OCR assets
+        run: node build-tools/dist/build-tools/fetch-ocr-assets.js
+
       - name: Build extension
         run: NODE_OPTIONS=--max-old-space-size=8192 pnpm exec vite build
 
