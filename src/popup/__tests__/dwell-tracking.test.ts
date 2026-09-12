@@ -100,4 +100,39 @@ describe('dwell tracking', () => {
 
     expect(vi.mocked(client.lookupWord).mock.calls[0]![2]).toEqual({ run: '我寫好字', offset: 3 });
   });
+
+  it('does not show a lookup that the cursor has already left', async () => {
+    vi.useRealTimers();
+    const pending: Array<(r: { success: true; type: 'lookup_word'; definition: DefinitionResult }) => void> = [];
+    vi.mocked(client.lookupWord).mockImplementation((_word, cb) => {
+      pending.push(cb);
+    });
+
+    const first: DefinitionResult = { ...DEFINITION, word: '我寫' };
+    const second: DefinitionResult = { ...DEFINITION, word: '好字' };
+
+    hoverAt(0);
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => resolve());
+    });
+    hoverAt(2);
+
+    expect(pending).toHaveLength(2);
+    pending[1]!({ success: true, type: 'lookup_word', definition: second });
+    pending[0]!({ success: true, type: 'lookup_word', definition: first });
+
+    expect(document.getElementById('chinese-hover-popup')?.dataset.word).toBe('好字');
+  });
+
+  it('does not hit-test images', () => {
+    const caret = vi.fn();
+    document.caretRangeFromPoint = caret as unknown as Document['caretRangeFromPoint'];
+
+    const img = document.createElement('img');
+    document.body.appendChild(img);
+    img.dispatchEvent(new MouseEvent('mousemove', { clientX: 10, clientY: 10, bubbles: true }));
+
+    expect(caret).not.toHaveBeenCalled();
+    expect(client.lookupWord).not.toHaveBeenCalled();
+  });
 });

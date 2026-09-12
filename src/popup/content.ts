@@ -66,6 +66,11 @@ export class ChineseHoverPopupManager {
   private mousemoveThrottle: number | null = null;
   /** The newest move seen since the frame was scheduled. */
   private pendingMouseMove: MouseEvent | null = null;
+  /**
+   * Bumped at the start of every lookup and when the popup is hidden, so a
+   * reply for a word the cursor has left cannot paint over the current one.
+   */
+  private lookupGeneration = 0;
   private readonly boundMouseMove: (e: MouseEvent) => void;
   private readonly boundMouseOut: (e: MouseEvent) => void;
   private readonly boundMouseUp: (e: MouseEvent) => void;
@@ -179,6 +184,14 @@ export class ChineseHoverPopupManager {
 
     if (hasActiveSelection()) return;
 
+    if (!canHoldText(target)) {
+      if (this.isHoveringChinese || this.currentPopup) {
+        this.resetHoverState();
+        this.hidePopup();
+      }
+      return;
+    }
+
     const result = getChineseWordAtCursor(this.document, event);
     if (!result) {
       if (this.isHoveringChinese || this.currentPopup) {
@@ -235,9 +248,11 @@ export class ChineseHoverPopupManager {
     y: number,
     { segment, context }: { segment?: HoverSegment; context?: string } = {},
   ): void {
+    const generation = ++this.lookupGeneration;
     this.client.lookupWord(
       word,
       (response: LookupResponse | ErrorResponse) => {
+        if (generation !== this.lookupGeneration) return;
         if (!response.success || !('definition' in response)) {
           console.error('[Content] Lookup failed:', response.error);
           return;
@@ -356,6 +371,7 @@ export class ChineseHoverPopupManager {
   private hidePopup(): void {
     // A word the reader moved off before the dwell elapsed was never studied.
     this.clearTimer('track');
+    this.lookupGeneration++;
 
     if (this.currentPopup) {
       this.currentPopup.remove();
@@ -415,6 +431,26 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', start);
 } else {
   start();
+}
+
+/**
+ * Replaced elements and void tags cannot hold a caret, so a hit test there is
+ * wasted layout work. Unknown targets (including Text and Document) still go
+ * through caretRangeFromPoint — only the elements that never contain Chinese
+ * are skipped.
+ */
+const SKIP_HIT_TEST_TAGS = new Set([
+  'IMG', 'VIDEO', 'AUDIO', 'CANVAS', 'IFRAME', 'EMBED', 'OBJECT',
+  'INPUT', 'TEXTAREA', 'SELECT', 'OPTION', 'HR', 'BR', 'SCRIPT', 'STYLE',
+  'NOSCRIPT', 'LINK', 'META', 'HEAD', 'HTML', 'COL', 'WBR', 'SOURCE',
+  'TRACK', 'AREA', 'MAP', 'PICTURE', 'PROGRESS', 'METER',
+]);
+
+export function canHoldText(target: EventTarget | null): boolean {
+  if (target instanceof Text) return true;
+  if (!(target instanceof Element)) return true;
+  if (target instanceof SVGElement) return false;
+  return !SKIP_HIT_TEST_TAGS.has(target.tagName);
 }
 
 /**

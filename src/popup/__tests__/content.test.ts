@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
-import { extractContext, findChineseRunAt } from '../content.js';
+import { extractContext, findChineseRunAt, canHoldText } from '../content.js';
 
 describe('findChineseRunAt', () => {
   it('returns the whole run and the position within it', () => {
@@ -21,6 +21,20 @@ describe('findChineseRunAt', () => {
 
   it('returns null for text with no Chinese at all', () => {
     expect(findChineseRunAt('hello world', 3)).toBeNull();
+  });
+});
+
+describe('canHoldText', () => {
+  it('skips replaced elements that cannot hold a caret', () => {
+    expect(canHoldText(document.createElement('img'))).toBe(false);
+    expect(canHoldText(document.createElement('video'))).toBe(false);
+    expect(canHoldText(document.createElement('canvas'))).toBe(false);
+  });
+
+  it('still hit-tests ordinary text containers', () => {
+    expect(canHoldText(document.createElement('p'))).toBe(true);
+    expect(canHoldText(document.createElement('span'))).toBe(true);
+    expect(canHoldText(document.createTextNode('好'))).toBe(true);
   });
 });
 
