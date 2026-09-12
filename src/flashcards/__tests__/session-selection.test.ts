@@ -68,6 +68,30 @@ describe('selectSession', () => {
     expect(selectSession(stats, NOW)[0]).toBe('舊字');
   });
 
+  it('introduces the commonest unseen words first', () => {
+    const stats: Statistics = {
+      罕見: { ...tracked(5), rank: 9000 },
+      常見: { ...tracked(5), rank: 50 },
+      中等: { ...tracked(5), rank: 1200 },
+    };
+
+    expect(selectSession(stats, NOW)).toEqual(['常見', '中等', '罕見']);
+  });
+
+  it('puts words the corpus never ranked behind ranked ones', () => {
+    const stats: Statistics = {
+      沒有排名: tracked(50),
+      有排名: { ...tracked(2), rank: 8000 },
+    };
+
+    expect(selectSession(stats, NOW)).toEqual(['有排名', '沒有排名']);
+  });
+
+  it('falls back to hover count when neither word is ranked', () => {
+    const stats: Statistics = { 很少: tracked(2), 很多: tracked(20) };
+    expect(selectSession(stats, NOW)).toEqual(['很多', '很少']);
+  });
+
   it('caps how many unseen words enter one session', () => {
     const stats: Statistics = {};
     for (let i = 0; i < 30; i++) stats[`字${i}`] = tracked(5);

@@ -4,13 +4,19 @@ vi.mock('../../dictionary/dictionary.js', () => ({
   initDictionaries: vi.fn(() => Promise.resolve()),
   lookupWord: vi.fn(),
   lookupWordAt: vi.fn(),
+  lookupWordInDictionaries: vi.fn(),
 }));
 vi.mock('../popup-storage.js', () => ({
   popupStorage: { updateStatistics: vi.fn() },
 }));
 
 import { register } from '../background-handler.js';
-import { initDictionaries, lookupWord, lookupWordAt } from '../../dictionary/dictionary.js';
+import {
+  initDictionaries,
+  lookupWord,
+  lookupWordAt,
+  lookupWordInDictionaries,
+} from '../../dictionary/dictionary.js';
 import { popupStorage } from '../popup-storage.js';
 import type { BackgroundMessage, BackgroundResponse, DefinitionResult } from '../../shared/types.js';
 
@@ -38,6 +44,8 @@ describe('popup background-handler register()', () => {
     vi.mocked(initDictionaries).mockResolvedValue(undefined);
     vi.mocked(lookupWord).mockReset();
     vi.mocked(lookupWordAt).mockReset();
+    vi.mocked(lookupWordInDictionaries).mockReset();
+    vi.mocked(lookupWordInDictionaries).mockReturnValue(DEFINITION);
     vi.mocked(popupStorage.updateStatistics).mockReset();
   });
 
@@ -109,8 +117,8 @@ describe('popup background-handler register()', () => {
     const keptOpen = listener({ type: 'track_word', word: '謝謝' }, {}, sendResponse);
 
     expect(keptOpen).toBe(true);
-    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', undefined);
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', {});
     expect(sendResponse).toHaveBeenCalledWith({ success: true, type: 'track_word' });
   });
 
@@ -120,8 +128,35 @@ describe('popup background-handler register()', () => {
 
     listener({ type: 'track_word', word: '謝謝', context: '真的很謝謝你' }, {}, sendResponse);
 
-    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', '真的很謝謝你');
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', { context: '真的很謝謝你' });
+  });
+
+  it('records the corpus rank alongside the sighting', async () => {
+    vi.mocked(lookupWordInDictionaries).mockReturnValue({
+      ...DEFINITION,
+      frequency: { rank: 312, band: 'common' },
+    });
+    const listener = registerAndGetListener();
+    const sendResponse = vi.fn();
+
+    listener({ type: 'track_word', word: '謝謝' }, {}, sendResponse);
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', { rank: 312 });
+  });
+
+  it('still tracks the word when the dictionary cannot rank it', async () => {
+    vi.mocked(lookupWordInDictionaries).mockImplementation(() => {
+      throw new Error('no data');
+    });
+    const listener = registerAndGetListener();
+    const sendResponse = vi.fn();
+
+    listener({ type: 'track_word', word: '謝謝', context: '謝謝你' }, {}, sendResponse);
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', { context: '謝謝你' });
   });
 
   it('ignores unknown message types', () => {

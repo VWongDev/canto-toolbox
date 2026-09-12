@@ -38,18 +38,24 @@ function evictionRank(entry: Statistics[string]): number {
   return entry.count;
 }
 
+/** What a sighting knows about the word beyond the fact that it happened. */
+export interface WordDetails {
+  context?: string;
+  rank?: number;
+}
+
 export interface PopupStorage {
-  updateStatistics(word: string, context?: string): void;
+  updateStatistics(word: string, details?: WordDetails): void;
 }
 
 export class PopupStorageClient implements PopupStorage {
   private readonly queueUpdate: (word: string) => void;
   /**
-   * Contexts ride alongside the debounced counts rather than through them: the
-   * batcher accumulates a count per key, and only the first context seen for a
-   * word in the batch is kept.
+   * Details ride alongside the debounced counts rather than through them: the
+   * batcher accumulates a count per key, and only the first details seen for a
+   * word in the batch are kept.
    */
-  private readonly pendingContexts = new Map<string, string>();
+  private readonly pendingDetails = new Map<string, WordDetails>();
 
   constructor(private readonly store: RedundantStore) {
     this.queueUpdate = createBatchedDebounce(
@@ -58,23 +64,26 @@ export class PopupStorageClient implements PopupStorage {
     );
   }
 
-  updateStatistics(word: string, context?: string): void {
+  updateStatistics(word: string, details: WordDetails = {}): void {
     if (!word?.trim()) {
       console.warn('[Background] Invalid word for statistics:', word);
       return;
     }
 
-    const trimmed = context?.trim();
-    if (trimmed && !this.pendingContexts.has(word)) {
-      this.pendingContexts.set(word, trimmed.slice(0, MAX_CONTEXT_LENGTH));
+    if (!this.pendingDetails.has(word)) {
+      const context = details.context?.trim();
+      this.pendingDetails.set(word, {
+        ...(context && { context: context.slice(0, MAX_CONTEXT_LENGTH) }),
+        ...(details.rank !== undefined && { rank: details.rank }),
+      });
     }
 
     this.queueUpdate(word);
   }
 
   private async flushUpdates(updates: Map<string, number>): Promise<void> {
-    const contexts = new Map(this.pendingContexts);
-    this.pendingContexts.clear();
+    const details = new Map(this.pendingDetails);
+    this.pendingDetails.clear();
 
     await this.store.mutate<Statistics>(STATISTICS_KEY, (existing) => {
       const now = Date.now();
@@ -89,10 +98,15 @@ export class PopupStorageClient implements PopupStorage {
         entry.count += count;
         entry.lastSeen = now;
 
+        const seen = details.get(word);
+
         // The sentence a word was first met in is the memory hook; later
         // sightings do not overwrite it.
-        const context = contexts.get(word);
-        if (context && !entry.context) entry.context = context;
+        if (seen?.context && !entry.context) entry.context = seen.context;
+
+        // Rank never changes, but writing it on every sighting backfills words
+        // tracked before it was recorded.
+        if (seen?.rank !== undefined) entry.rank = seen.rank;
 
         stats.set(word, entry);
       }

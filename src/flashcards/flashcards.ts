@@ -1,4 +1,10 @@
-import type { StatisticsResponse, LookupResponse, ErrorResponse, Statistics } from '../shared/types.js';
+import type {
+  StatisticsResponse,
+  LookupResponse,
+  ErrorResponse,
+  Statistics,
+  WordStatistics,
+} from '../shared/types.js';
 import { dueAt, isDue } from '../shared/scheduler.js';
 import { flashcardClient, type FlashcardClient } from './flashcard-client.js';
 import {
@@ -49,6 +55,20 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
 }
 
 /**
+ * Which unseen word is worth a session slot. The commonest word the reader has
+ * met pays back the most for the same effort, so new cards follow the corpus
+ * rank rather than arriving in whatever order a shuffle produced. A word the
+ * corpus never ranked is rarer than its cap and goes last; ties fall back to
+ * how often the reader has actually met it.
+ */
+function compareNewWords(a: WordStatistics, b: WordStatistics): number {
+  const rankA = a.rank ?? Infinity;
+  const rankB = b.rank ?? Infinity;
+  if (rankA !== rankB) return rankA - rankB;
+  return b.count - a.count;
+}
+
+/**
  * A session is the words the scheduler says are owed, most overdue first,
  * topped up with unseen words. Words already in the deck stay eligible however
  * rarely they are hovered; unseen ones still have to clear the exposure gate
@@ -56,22 +76,24 @@ function fisherYatesShuffle<T>(arr: T[]): T[] {
  */
 export function selectSession(statistics: Statistics, now: number = Date.now()): string[] {
   const due: Array<{ word: string; due: number }> = [];
-  const unseen: string[] = [];
+  const unseen: Array<{ word: string; stat: WordStatistics }> = [];
 
   for (const [word, stat] of Object.entries(statistics)) {
     const progress = stat.flashcard;
     if (progress?.srs) {
       if (isDue(progress, now)) due.push({ word, due: dueAt(progress) });
     } else if (stat.count >= MIN_COUNT) {
-      unseen.push(word);
+      unseen.push({ word, stat });
     }
   }
 
   due.sort((a, b) => a.due - b.due);
+  unseen.sort((a, b) => compareNewWords(a.stat, b.stat));
+
   const reviews = due.slice(0, MAX_CARDS).map(entry => entry.word);
   const room = Math.min(MAX_NEW_CARDS, MAX_CARDS - reviews.length);
 
-  return [...reviews, ...fisherYatesShuffle(unseen).slice(0, room)];
+  return [...reviews, ...unseen.slice(0, room).map(entry => entry.word)];
 }
 
 /** Epoch ms of the soonest scheduled review, or undefined if the deck is empty. */
