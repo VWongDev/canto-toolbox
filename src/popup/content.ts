@@ -12,7 +12,6 @@ import { createDefinitionSections } from '../shared/definition-section.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
 const THROTTLE_INTERVAL_MS = 16;
-const HOVER_DEBOUNCE_MS = 50;
 
 /**
  * How long the popup must stay on a word before it counts as studied. The
@@ -46,7 +45,6 @@ interface CursorResult {
 export class ChineseHoverPopupManager {
   private readonly document: Document;
   private readonly client: PopupClient;
-  private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   private selectionPopupTimer: ReturnType<typeof setTimeout> | null = null;
   private trackTimer: ReturnType<typeof setTimeout> | null = null;
   private lastHoveredWord: string | null = null;
@@ -182,20 +180,11 @@ export class ChineseHoverPopupManager {
     const key = `${run}@${runOffset}`;
     if (key !== this.lastHoveredWord || characterChanged) {
       this.lastHoveredWord = key;
-      this.clearTimer('hover');
 
-      const context = extractContext(textNode.textContent ?? '', offset);
-      const show = (): void =>
-        this.lookupAndShowWord(run, event.clientX, event.clientY, {
-          segment: { run, offset: runOffset },
-          context,
-        });
-
-      if (characterChanged) {
-        show();
-      } else {
-        this.hoverTimer = setTimeout(show, HOVER_DEBOUNCE_MS);
-      }
+      this.lookupAndShowWord(run, event.clientX, event.clientY, {
+        segment: { run, offset: runOffset },
+        context: extractContext(textNode.textContent ?? '', offset),
+      });
     }
   }
 
@@ -359,9 +348,8 @@ export class ChineseHoverPopupManager {
     }
   }
 
-  private clearTimer(type: 'hover' | 'selection' | 'track'): void {
-    if (type === 'hover') { clearTimeout(this.hoverTimer!); this.hoverTimer = null; }
-    else if (type === 'track') { clearTimeout(this.trackTimer!); this.trackTimer = null; }
+  private clearTimer(type: 'selection' | 'track'): void {
+    if (type === 'track') { clearTimeout(this.trackTimer!); this.trackTimer = null; }
     else { clearTimeout(this.selectionPopupTimer!); this.selectionPopupTimer = null; }
   }
 
