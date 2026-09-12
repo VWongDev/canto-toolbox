@@ -1,0 +1,1 @@
+Used to track word lookup statistics (core feature). Data is stored locally and synced only across the user's own Chrome instances.
