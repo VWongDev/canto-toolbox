@@ -13,7 +13,7 @@ export type SortKey = 'studied' | 'frequency' | 'due' | 'recent';
 
 export const SORT_LABELS: Readonly<Record<SortKey, string>> = {
   studied: 'Most studied',
-  frequency: 'Commonest first',
+  frequency: 'Most common',
   due: 'Due soonest',
   recent: 'Recently seen',
 };
