@@ -9,7 +9,7 @@ import ocrStyles from './ocr.scss?inline';
  * an icon, an avatar or a tracking pixel. Checking keeps the badge off the
  * furniture of every page.
  */
-const MIN_IMAGE_SIDE_PX = 96;
+const MIN_MEDIA_SIDE_PX = 96;
 
 /**
  * A page-scoped `blob:` URL has to be read here and forwarded as bytes, since
@@ -38,7 +38,7 @@ interface Attached {
  * them exactly as it finds text the page wrote itself, which is why studying a
  * word off an image records the same statistics and builds the same flashcards.
  */
-export class ImageOcrManager {
+export class MediaOcrManager {
   private readonly document: Document;
   private readonly client: OcrClient;
   private readonly attached = new Map<HTMLImageElement, Attached>();
@@ -249,7 +249,7 @@ export class ImageOcrManager {
 
 function isReadable(image: HTMLImageElement): boolean {
   const rect = image.getBoundingClientRect();
-  return rect.width >= MIN_IMAGE_SIDE_PX && rect.height >= MIN_IMAGE_SIDE_PX;
+  return rect.width >= MIN_MEDIA_SIDE_PX && rect.height >= MIN_MEDIA_SIDE_PX;
 }
 
 /**
@@ -273,4 +273,4 @@ async function resolveSource(image: HTMLImageElement): Promise<string> {
   });
 }
 
-export const imageOcrManager = new ImageOcrManager(document, ocrClient);
+export const mediaOcrManager = new MediaOcrManager(document, ocrClient);

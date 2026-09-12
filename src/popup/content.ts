@@ -9,7 +9,7 @@ import { popupClient, type PopupClient } from './popup-client.js';
 import popupStyles from './popup.scss?inline';
 import { createEtymologySection } from '../shared/etymology-section.js';
 import { createDefinitionSections } from '../shared/definition-section.js';
-import { imageOcrManager } from '../ocr/image-controller.js';
+import { mediaOcrManager } from '../ocr/media-controller.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
 
@@ -424,7 +424,7 @@ function start(): void {
   popupManager.init();
   // Image text becomes ordinary hoverable text, which is why this starts
   // alongside the popup rather than knowing anything about it.
-  imageOcrManager.init();
+  mediaOcrManager.init();
 }
 
 if (document.readyState === 'loading') {
