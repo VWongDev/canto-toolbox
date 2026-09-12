@@ -68,6 +68,16 @@ jobs:
       - name: Build dictionaries
         run: node build-tools/dist/build-tools/build-dictionaries.js
 
+      # The models are pinned by digest, so the digests are the cache key: a
+      # hit is byte-identical by construction, and changing a model changes the
+      # key. This keeps CI off Hugging Face, which rate-limits the shared
+      # runner addresses regardless of what this build is doing.
+      - name: Restore OCR models
+        uses: actions/cache@v6
+        with:
+          path: public/ocr/models
+          key: ocr-models-${{ hashFiles('build-tools/fetch-ocr-assets.ts') }}
+
       - name: Vendor OCR assets
         run: node build-tools/dist/build-tools/fetch-ocr-assets.js
 

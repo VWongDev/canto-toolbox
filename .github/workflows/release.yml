@@ -55,6 +55,14 @@ jobs:
           "
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
+      # Same digest-keyed cache as CI: a release must not fail because Hugging
+      # Face rate-limited the runner's shared address.
+      - name: Restore OCR models
+        uses: actions/cache@v6
+        with:
+          path: public/ocr/models
+          key: ocr-models-${{ hashFiles('build-tools/fetch-ocr-assets.ts') }}
+
       - name: Build extension
         run: pnpm build
 
