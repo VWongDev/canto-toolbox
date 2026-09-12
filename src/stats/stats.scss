@@ -215,23 +215,24 @@ h1 {
 
 .filter-tabs {
   display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
+  gap: t.$space-2;
+  margin-bottom: t.$space-3;
   flex-wrap: wrap;
 }
 
 // The band row is a secondary cut of the same list, so it reads quieter than
-// the stage row above it.
+// the stage row above it — through weight alone, so both rows keep the same
+// pill geometry.
 .filter-tabs--band .filter-tab {
-  padding: 5px 11px;
-  font-size: 12px;
+  font-weight: 400;
 }
 
 .filter-tab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
+  gap: t.$space-2;
+  padding: 6px 14px;
+  line-height: 1.4;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 20px;
   background: white;
@@ -258,16 +259,20 @@ h1 {
   }
 }
 
+// The count reads as a chip beside its label, so it is sized from the digits
+// it holds — a wider fixed box leaves a one-digit count floating inside it.
 .tab-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  padding: 1px 5px;
-  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: t.$radius-pill;
   background: rgba(0, 0, 0, 0.07);
   font-size: 11px;
   font-weight: 600;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
@@ -576,6 +581,13 @@ h1 {
       border-color: t.$color-primary-fill-dark;
       color: #fff;
     }
+  }
+
+  // Without this the chip keeps its light translucent black and vanishes into
+  // the dark pill, leaving the count adrift.
+  .tab-count {
+    background: rgba(255, 255, 255, 0.1);
+    color: t.$color-text-dark;
   }
 
   .stage-badge {
