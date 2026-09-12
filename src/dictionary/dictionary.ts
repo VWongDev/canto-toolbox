@@ -93,7 +93,24 @@ function processDictionaryLookup(
   return filterCantonese ? filterOutCantoneseDefinitions(entries) : entries;
 }
 
+/**
+ * Breakdowns already assembled, capped because the service worker outlives any
+ * one page and the keys come from whatever the reader hovers. Insertion order
+ * makes the Map its own queue: the oldest key is the first one it yields, so
+ * the least recently added entry is the one dropped.
+ */
+const ETYMOLOGY_CACHE_LIMIT = 2000;
 const etymologyCache = new Map<string, CharacterEtymology[]>();
+
+function cacheEtymology(word: string, result: CharacterEtymology[]): void {
+  etymologyCache.set(word, result);
+
+  while (etymologyCache.size > ETYMOLOGY_CACHE_LIMIT) {
+    const oldest = etymologyCache.keys().next();
+    if (oldest.done) break;
+    etymologyCache.delete(oldest.value);
+  }
+}
 
 export function lookupEtymology(word: string): CharacterEtymology[] {
   const cached = etymologyCache.get(word);
@@ -123,7 +140,7 @@ export function lookupEtymology(word: string): CharacterEtymology[] {
     })
     .filter((entry): entry is CharacterEtymology => entry !== undefined);
 
-  etymologyCache.set(word, result);
+  cacheEtymology(word, result);
   return result;
 }
 

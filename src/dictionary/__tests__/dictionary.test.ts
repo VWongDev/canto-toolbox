@@ -178,6 +178,15 @@ describe('lookupEtymology', () => {
     expect(result[0]!.character).toBe('好');
   });
 
+  it('still answers correctly once the cache has turned over', () => {
+    // The keys are whatever gets hovered, so the cache is capped; a word
+    // pushed out has to be rebuilt rather than come back wrong or empty.
+    for (let i = 0; i < 2100; i++) lookupEtymology(`好${i}`);
+
+    const result = lookupEtymology('好字');
+    expect(result.map(entry => entry.character)).toEqual(['好', '字']);
+  });
+
   it('returns empty array when no characters are found', () => {
     expect(lookupEtymology('囧')).toEqual([]);
   });
