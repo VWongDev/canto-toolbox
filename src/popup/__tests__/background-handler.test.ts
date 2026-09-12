@@ -20,6 +20,9 @@ const DEFINITION: DefinitionResult = {
   cantonese: { entries: [] },
 };
 
+/** Characters the packaged stroke data covers, for the writing-card gate. */
+const STROKE_INDEX = '好';
+
 let createDocument: ReturnType<typeof vi.fn>;
 let dictDefinition: DefinitionResult = DEFINITION;
 let dictError: string | null = null;
@@ -47,6 +50,13 @@ describe('popup background-handler register()', () => {
     Object.assign(chrome, {
       offscreen: { createDocument, Reason: { WORKERS: 'WORKERS' } },
     });
+
+    // The stroke index decides whether a word can carry a writing card. It is
+    // memoised for the life of the module, so every case in this file sees
+    // this one index.
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      json: () => Promise.resolve(STROKE_INDEX),
+    })));
 
     vi.mocked(chrome.runtime.sendMessage).mockImplementation(((
       _message: unknown,
@@ -188,7 +198,7 @@ describe('popup background-handler register()', () => {
     expect(popupStorage.updateStatistics).toHaveBeenCalledWith('謝謝', { pinned: true });
   });
 
-  it('marks a single character with named parts as decomposable', async () => {
+  it('marks a single character with named parts as decomposable and writable', async () => {
     dictDefinition = {
       ...DEFINITION,
       word: '好',
@@ -207,7 +217,21 @@ describe('popup background-handler register()', () => {
     listener({ type: 'track_word', word: '好' }, {}, sendResponse);
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
-    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('好', { decomposable: true });
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('好', {
+      decomposable: true,
+      writable: true,
+    });
+  });
+
+  it('leaves a character the stroke data does not cover without a writing card', async () => {
+    dictDefinition = { ...DEFINITION, word: '鿆' };
+    const listener = registerAndGetListener();
+    const sendResponse = vi.fn();
+
+    listener({ type: 'track_word', word: '鿆' }, {}, sendResponse);
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled());
+    expect(popupStorage.updateStatistics).toHaveBeenCalledWith('鿆', {});
   });
 
   it('leaves a compound word without a components card', async () => {

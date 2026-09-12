@@ -123,6 +123,15 @@ describe('lastReviewedAt and nextDueAt', () => {
     expect(nextDueAt(stat)).toBe(50);
   });
 
+  it('walks the writing schedule alongside the others', () => {
+    // DIRECTION_KEYS is a hand-written list, so a direction missing from it
+    // would be silently skipped by every aggregate rather than fail to build.
+    const stat = { ...base, flashcard: withSrs(900, 100), writing: withSrs(50, 700) };
+
+    expect(nextDueAt(stat)).toBe(50);
+    expect(lastReviewedAt(stat)).toBe(700);
+  });
+
   it('counts a schedule that has never been reviewed as reviewed at zero', () => {
     expect(lastReviewedAt({ ...base, flashcard: { reviews: 0, consecutiveCorrect: 0 } })).toBe(0);
   });

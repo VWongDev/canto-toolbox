@@ -1,6 +1,39 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
+
+/**
+ * The stroke quiz mounts an SVG and grades pointer paths, neither of which
+ * happy-dom does. The fake records what it was asked to quiz and hands the
+ * test the completion callback, so these cases are about the card's lifecycle
+ * rather than about stroke matching.
+ */
+const writer = vi.hoisted(() => {
+  const quizzes: Array<{
+    character: string;
+    onComplete: ((summary: { character: string; totalMistakes: number }) => void) | undefined;
+    cancelQuiz: () => void;
+  }> = [];
+
+  return { quizzes };
+});
+
+vi.mock('hanzi-writer', () => ({
+  default: {
+    create: (_target: HTMLElement, character: string) => {
+      const entry = { character, cancelQuiz: vi.fn() };
+      const instance = {
+        quiz: (options: { onComplete?: (s: { character: string; totalMistakes: number }) => void }) => {
+          writer.quizzes.push({ ...entry, onComplete: options.onComplete });
+          return Promise.resolve();
+        },
+        cancelQuiz: entry.cancelQuiz,
+      };
+      return instance;
+    },
+  },
+}));
+
 import { FlashcardManager } from '../flashcards.js';
 import type { FlashcardClient } from '../flashcard-client.js';
 import type { DefinitionResult, Statistics } from '../../shared/types.js';
@@ -357,5 +390,157 @@ describe('FlashcardManager production cards', () => {
     document.getElementById('show-answer-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
 
     expect(client.lookupWord).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('FlashcardManager writing cards', () => {
+  let document: Document;
+  let client: FlashcardClient;
+
+  function graduated(due: number) {
+    return {
+      reviews: 3,
+      consecutiveCorrect: 3,
+      lastReviewed: 1,
+      srs: {
+        due,
+        stability: 10,
+        difficulty: 5,
+        scheduledDays: 10,
+        learningSteps: 0,
+        lapses: 0,
+        state: 2,
+      },
+    };
+  }
+
+  /**
+   * A character whose recognition and production cards are both scheduled
+   * ahead, so writing is the only direction left to introduce.
+   */
+  const READY: Statistics = {
+    好: {
+      count: 5,
+      firstSeen: 1,
+      lastSeen: 2,
+      writable: true,
+      flashcard: graduated(Date.now() + 86_400_000),
+      production: graduated(Date.now() + 86_400_000),
+    },
+  };
+
+  const HAO: DefinitionResult = {
+    word: '好',
+    mandarin: {
+      entries: [
+        { traditional: '好', simplified: '好', romanisation: 'hao3', definitions: ['good'] },
+      ],
+    },
+    cantonese: {
+      entries: [
+        { traditional: '好', simplified: '好', romanisation: 'hou2', definitions: ['good'] },
+      ],
+    },
+  };
+
+  function start(): void {
+    client = createClient({
+      getStatistics: vi.fn(cb =>
+        cb({ success: true, type: 'get_statistics', statistics: READY })
+      ),
+      lookupWord: vi.fn((_word, cb) =>
+        cb({ success: true, type: 'lookup_word', definition: HAO })
+      ),
+    });
+    new FlashcardManager(document, client).init();
+  }
+
+  /** Finish the quiz on screen with the given mistake count. */
+  async function finishQuiz(mistakes: number): Promise<void> {
+    const quiz = writer.quizzes.at(-1)!;
+    quiz.onComplete?.({ character: quiz.character, totalMistakes: mistakes });
+    await vi.waitFor(() =>
+      expect(document.getElementById('writing-next')!.style.display).not.toBe('none')
+    );
+  }
+
+  beforeEach(() => {
+    writer.quizzes.length = 0;
+    document = new DOMParser().parseFromString(HTML, 'text/html');
+  });
+
+  it('quizzes the character it is asking about', () => {
+    start();
+
+    expect(document.getElementById('card')!.dataset.currentDirection).toBe('writing');
+    expect(writer.quizzes).toHaveLength(1);
+    expect(writer.quizzes[0]!.character).toBe('好');
+  });
+
+  it('offers nothing to reveal while the quiz is unanswered', () => {
+    start();
+
+    // The quiz is the question and ends itself, so there is no Show Answer.
+    expect(document.getElementById('show-answer-btn-container')!.style.display).toBe('none');
+    expect(document.getElementById('writing-next')!.style.display).toBe('none');
+  });
+
+  it('does not ask the reader to rate a quiz it already graded', async () => {
+    start();
+    await finishQuiz(0);
+
+    expect(document.getElementById('rating-btns')!.style.display).toBe('none');
+  });
+
+  it('shows what the quiz measured alongside the definition', async () => {
+    start();
+    await finishQuiz(2);
+
+    const back = document.getElementById('card-back')!;
+    expect(back.querySelector('.card-tally')?.textContent).toBe('2 mistakes · Hard');
+    expect(back.querySelector('.definition-word')?.textContent).toBe('好');
+  });
+
+  it('rates a clean quiz Good', async () => {
+    start();
+    await finishQuiz(0);
+    document.getElementById('writing-next-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
+
+    expect(client.updateFlashcard).toHaveBeenCalledWith(
+      '好',
+      'good',
+      'writing',
+      expect.any(Function)
+    );
+  });
+
+  it('rates a quiz with two mistakes Hard', async () => {
+    start();
+    await finishQuiz(2);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+
+    expect(client.updateFlashcard).toHaveBeenCalledWith(
+      '好',
+      'hard',
+      'writing',
+      expect.any(Function)
+    );
+  });
+
+  it('ignores the rating keys the other cards use', async () => {
+    start();
+    await finishQuiz(0);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '4', bubbles: true }));
+
+    expect(client.updateFlashcard).not.toHaveBeenCalled();
+  });
+
+  it('abandons the quiz when the word is retired', () => {
+    start();
+    const quiz = writer.quizzes[0]!;
+
+    document.getElementById('know-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
+
+    expect(quiz.cancelQuiz).toHaveBeenCalled();
   });
 });

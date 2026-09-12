@@ -157,6 +157,63 @@ describe('selectSession card directions', () => {
     expect(selectSession(withoutParts, NOW)).toEqual([]);
   });
 
+  it('introduces a writing card only for a character with stroke data', () => {
+    const base = { ...tracked(5), flashcard: srs(HOUR_MS), production: srs(HOUR_MS) };
+    const withStrokes: Statistics = { 好: { ...base, writable: true } };
+    const withoutStrokes: Statistics = { 好: { ...base } };
+
+    expect(selectSession(withStrokes, NOW)).toEqual([{ word: '好', direction: 'writing' }]);
+    expect(selectSession(withoutStrokes, NOW)).toEqual([]);
+  });
+
+  it('does not treat a decomposable character as writable', () => {
+    // Stroke data and named parts come from different files, and a character
+    // can have either without the other.
+    const stats: Statistics = {
+      好: { ...tracked(5), decomposable: true, flashcard: srs(HOUR_MS), production: srs(HOUR_MS) },
+    };
+
+    expect(selectSession(stats, NOW)).toEqual([{ word: '好', direction: 'components' }]);
+  });
+
+  it('introduces writing after the other three directions', () => {
+    const stats: Statistics = {
+      好: {
+        ...tracked(5),
+        decomposable: true,
+        writable: true,
+        flashcard: srs(HOUR_MS),
+        production: srs(HOUR_MS),
+        components: srs(HOUR_MS),
+      },
+    };
+
+    expect(selectSession(stats, NOW)).toEqual([{ word: '好', direction: 'writing' }]);
+  });
+
+  it('withholds writing while recognition is still being learned', () => {
+    const stats: Statistics = {
+      好: { ...tracked(5), writable: true, flashcard: srs(HOUR_MS, 1) },
+    };
+
+    expect(selectSession(stats, NOW)).toEqual([]);
+  });
+
+  it('answers a due writing card', () => {
+    const stats: Statistics = {
+      好: {
+        ...tracked(5),
+        writable: true,
+        flashcard: srs(HOUR_MS),
+        production: srs(HOUR_MS),
+        components: srs(HOUR_MS),
+        writing: srs(-HOUR_MS),
+      },
+    };
+
+    expect(selectSession(stats, NOW)).toEqual([{ word: '好', direction: 'writing' }]);
+  });
+
   it('offers a word only once per session, taking the most overdue card', () => {
     const stats: Statistics = {
       你好: {
