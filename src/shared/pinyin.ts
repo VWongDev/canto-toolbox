@@ -44,21 +44,6 @@ function convertSyllable(syllable: string, tone: number): string {
   return normalised.slice(0, index) + cased + normalised.slice(index + 1);
 }
 
-/**
- * Convert CC-CEDICT numbered pinyin ("ni3 hao3") into tone-marked pinyin
- * ("nǐ hǎo"). Tokens that are not numbered syllables are passed through, so
- * punctuation and already-converted text survive unchanged.
- */
-export function toToneMarks(pinyin: string): string {
-  return pinyin
-    .split(/(\s+)/)
-    .map(token => {
-      const match = SYLLABLE.exec(token);
-      return match ? convertSyllable(match[1]!, Number(match[2])) : token;
-    })
-    .join('');
-}
-
 export interface Syllable {
   text: string;
   /** 1-5 for Pinyin, 1-6 for Jyutping; undefined when the token has no tone. */
