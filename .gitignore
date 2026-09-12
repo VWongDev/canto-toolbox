@@ -8,6 +8,7 @@ public/data/cantonese.json
 public/data/etymology.json
 public/data/frequency.json
 public/ocr/
+public/strokes/
 build-tools/dist/
 scripts/dist/
 coverage/
