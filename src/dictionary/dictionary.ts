@@ -127,22 +127,28 @@ export function lookupEtymology(word: string): CharacterEtymology[] {
   return result;
 }
 
-export function lookupWordInDictionaries(word: string): DefinitionResult {
-  const result: DefinitionResult = {
-    word: word,
-    mandarin: { entries: [] },
-    cantonese: { entries: [] }
+/**
+ * Just the senses. The longest-match scan tries a candidate per length and
+ * start offset and throws away all but one, so the parts that are not needed
+ * to judge a candidate — the character breakdown and the corpus rank — are
+ * left to {@link enrich}, which the winner alone goes through.
+ */
+function lookupEntries(word: string): DefinitionResult {
+  return {
+    word,
+    mandarin: { entries: processDictionaryLookup(mandarinDict, word, true) },
+    cantonese: { entries: processDictionaryLookup(cantoneseDict, word, false) },
   };
+}
 
-  result.mandarin.entries = processDictionaryLookup(mandarinDict, word, true);
-  result.cantonese.entries = processDictionaryLookup(cantoneseDict, word, false);
-
-  const etymology = lookupEtymology(word);
+/** Add the character breakdown and corpus rank to a definition that was chosen. */
+function enrich(result: DefinitionResult): DefinitionResult {
+  const etymology = lookupEtymology(result.word);
   if (etymology.length > 0) {
     result.etymology = etymology;
   }
 
-  const frequency = lookupFrequency(word, [
+  const frequency = lookupFrequency(result.word, [
     ...result.mandarin.entries,
     ...result.cantonese.entries,
   ]);
@@ -151,6 +157,10 @@ export function lookupWordInDictionaries(word: string): DefinitionResult {
   }
 
   return result;
+}
+
+export function lookupWordInDictionaries(word: string): DefinitionResult {
+  return enrich(lookupEntries(word));
 }
 
 export function isDefinitionValid(entries: DictionaryEntry[]): boolean {
@@ -200,10 +210,9 @@ export function findWordCoveringOffset(
 
     for (let start = latest; start >= earliest; start--) {
       const candidate = characters.slice(start, start + length).join('');
-      const definition = lookupWordInDictionaries(candidate);
+      const definition = lookupEntries(candidate);
       if (hasValidDefinition(definition)) {
-        definition.word = candidate;
-        return { definition, matchedWord: candidate };
+        return { definition: enrich(definition), matchedWord: candidate };
       }
     }
   }

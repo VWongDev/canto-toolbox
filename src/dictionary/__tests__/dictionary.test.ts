@@ -286,6 +286,19 @@ describe('findWordCoveringOffset', () => {
   it('reports the matched word on the definition', () => {
     expect(findWordCoveringOffset('好字', 1)!.definition.word).toBe('好字');
   });
+
+  // Enrichment is skipped for the candidates the scan rejects, so the one it
+  // settles on has to be enriched on the way out.
+  it('carries the character breakdown on the candidate it settles on', () => {
+    expect(findWordCoveringOffset('囧好字囧', 2)!.definition.etymology).toBeDefined();
+  });
+
+  it('carries the corpus rank on the candidate it settles on', () => {
+    expect(findWordCoveringOffset('囧好囧', 1)!.definition.frequency).toEqual({
+      rank: 10,
+      band: 'core',
+    });
+  });
 });
 
 describe('lookupWordAt', () => {
