@@ -162,22 +162,18 @@ export function hasValidDefinition(definition: DefinitionResult): boolean {
   return isDefinitionValid(definition.mandarin.entries) || isDefinitionValid(definition.cantonese.entries);
 }
 
+/**
+ * The longest dictionary word starting at the beginning of `word`. This is the
+ * offset-aware scan anchored at the first character: candidates covering
+ * offset 0 can only start there, so the two searches are the same one.
+ */
 export function findLongestMatchingWord(word: string): { definition: DefinitionResult; matchedWord: string } | null {
-  for (let len = Math.min(word.length, MAX_WORD_LENGTH); len >= 1; len--) {
-    const substring = word.substring(0, len);
-    const definition = lookupWordInDictionaries(substring);
-    if (hasValidDefinition(definition)) {
-      return { definition, matchedWord: substring };
-    }
-  }
-
-  return null;
+  return findWordCoveringOffset(word, 0);
 }
 
 export function lookupWord(word: string): DefinitionResult {
   const matchResult = findLongestMatchingWord(word);
   if (matchResult) {
-    matchResult.definition.word = matchResult.matchedWord;
     return matchResult.definition;
   }
 

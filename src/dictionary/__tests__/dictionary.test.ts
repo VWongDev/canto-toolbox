@@ -206,6 +206,18 @@ describe('findLongestMatchingWord', () => {
     expect(result!.definition.word).toBe('字');
     expect(result!.definition.mandarin.entries.length).toBeGreaterThan(0);
   });
+
+  it('matches the same word the offset-aware scan finds at the start', () => {
+    const prefix = findLongestMatchingWord('好字囧');
+    const covering = findWordCoveringOffset('好字囧', 0);
+
+    expect(prefix!.matchedWord).toBe(covering!.matchedWord);
+  });
+
+  it('counts a leading astral character as one character', () => {
+    // Outside the BMP, so a UTF-16 scan would split it and match nothing.
+    expect(findLongestMatchingWord('𠮷好字')).toBeNull();
+  });
 });
 
 describe('lookupWord', () => {
