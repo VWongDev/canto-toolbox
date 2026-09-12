@@ -1,0 +1,1 @@
+Hosts the parsed dictionaries and the on-device OCR engine in a persistent DOM context. The MV3 service worker is torn down on idle - it would re-parse 58 MB of dictionary data on every hover - and has no DOM for the OCR runtime's WebAssembly and canvas. One offscreen document (workers) serves both. It makes no network requests; all data is packaged with the extension.
