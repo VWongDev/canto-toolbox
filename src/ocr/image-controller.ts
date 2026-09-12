@@ -45,6 +45,7 @@ export class ImageOcrManager {
   private badge: HTMLElement | null = null;
   private badgeTarget: HTMLImageElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private repositionFrame: number | null = null;
   private readonly boundMouseOver: (e: MouseEvent) => void;
   private readonly boundReposition: () => void;
 
@@ -52,7 +53,21 @@ export class ImageOcrManager {
     this.document = document;
     this.client = client;
     this.boundMouseOver = (e) => this.handleMouseOver(e);
-    this.boundReposition = () => this.repositionAll();
+    this.boundReposition = () => this.scheduleReposition();
+  }
+
+  /**
+   * Scrolling fires far faster than the page repaints, and each reposition
+   * measures every overlaid image. A frame is the finest resolution any of
+   * this can be seen at, so coalesce to one.
+   */
+  private scheduleReposition(): void {
+    if (this.repositionFrame !== null) return;
+
+    this.repositionFrame = requestAnimationFrame(() => {
+      this.repositionFrame = null;
+      this.repositionAll();
+    });
   }
 
   init(): void {
@@ -60,7 +75,7 @@ export class ImageOcrManager {
     this.document.addEventListener('mouseover', this.boundMouseOver, true);
     window.addEventListener('scroll', this.boundReposition, true);
     window.addEventListener('resize', this.boundReposition);
-    this.resizeObserver = new ResizeObserver(() => this.repositionAll());
+    this.resizeObserver = new ResizeObserver(() => this.scheduleReposition());
   }
 
   destroy(): void {
@@ -69,6 +84,10 @@ export class ImageOcrManager {
     window.removeEventListener('resize', this.boundReposition);
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
+    if (this.repositionFrame !== null) {
+      cancelAnimationFrame(this.repositionFrame);
+      this.repositionFrame = null;
+    }
 
     for (const { overlay } of this.attached.values()) overlay.remove();
     this.attached.clear();
