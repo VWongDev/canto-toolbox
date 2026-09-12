@@ -34,6 +34,7 @@ canto-toolbox/
 │   │   ├── flashcards.ts / flashcards.html / flashcards.scss
 │   │   ├── flashcards-view.ts # Screens, card faces, element ids
 │   │   ├── session.ts         # Card selection across the review directions
+│   │   ├── writing.ts         # Stroke-order quiz and the grade it measures
 │   │   ├── background-handler.ts # update_flashcard / set_word_status
 │   │   └── flashcard-client.ts
 │   ├── ocr/                   # Reading Chinese out of images and video frames
@@ -63,6 +64,7 @@ canto-toolbox/
 │   │   ├── bounded-map.ts     # Top-N-by-sort-key map
 │   │   ├── debounce.ts        # createBatchedDebounce()
 │   │   ├── dom-element.ts     # createElement()
+│   │   ├── strokes.ts         # Packaged stroke graphics, one file per character
 │   │   ├── frequency.ts       # Corpus rank → learner-facing band
 │   │   ├── frequency-badge.ts # The band/rank chip on a definition
 │   │   ├── decomposition.ts   # Component glyphs of an IDS decomposition
@@ -81,9 +83,11 @@ canto-toolbox/
 │   ├── data/                  # radicals.json (checked in);
 │   │                          # mandarin/cantonese/etymology/frequency.json
 │   │                          # (generated)
+│   ├── strokes/               # One file per character + index.json (generated)
 │   └── ocr/                   # PP-OCRv6 tiny + the ONNX runtime (generated)
 ├── build-tools/               # Build-time dictionary processing
 │   ├── build-dictionaries.ts  # Dictionary build entry
+│   ├── build-strokes.ts       # Splits graphics.txt into per-character files
 │   ├── fetch-ocr-assets.ts    # Vendors the OCR models and ONNX runtime
 │   ├── benchmark.ts / generate-screenshots.ts
 │   └── processors/            # cedict-parser, mandarin/cantonese/etymology,
@@ -122,6 +126,8 @@ flowchart TD
     H1 -->|response| B
     H1 -->|updateStatistics| F[RedundantStore: sync→local]
     G[Stats / Flashcards Page] -->|get_statistics| C
+    G -->|flashcards only: fetch strokes/<char>.json| S[Packaged stroke graphics]
+    H1 -->|hasStrokes: strokes/index.json| S
     C -->|stats background-handler| F
     F -->|mergeStatistics| G
     G -->|update_flashcard / set_word_status| C
@@ -165,9 +171,11 @@ flowchart TD
 - **popup**: handles `lookup_word` and `track_word` (the only path that writes
   new statistics). Lookups are forwarded as `dict_lookup` to the offscreen
   document that holds the parsed maps. A tracked word also records what the
-  dictionary knows about it — its corpus rank, and whether it is a single
-  character with named parts — since the pages that build sessions cannot look
-  either up.
+  dictionary knows about it — its corpus rank, whether it is a single character
+  with named parts, and whether the stroke data covers it — since the pages
+  that build sessions cannot look any of them up. Stroke coverage and
+  decomposability are asked separately: a character can have strokes without
+  its etymology naming any parts.
 - **stats**: handles `get_statistics` (reads merged sync+local statistics).
 - **flashcards**: handles `update_flashcard` (advances one direction's FSRS
   state, and buries a word once its lapses reach `LEECH_LAPSES`) and
@@ -281,10 +289,11 @@ flowchart TD
 
 - Spaced review driven by `src/shared/scheduler.ts` (FSRS). Each word carries a
   schedule per **review direction**: `recognition` (word → meaning, stored under
-  the original `flashcard` key), `production` (meaning + cloze sentence → word)
-  and `components` (character → its parts). Production unlocks once recognition
-  leaves its learning steps; components additionally needs `decomposable`,
-  recorded at track time because this page has no dictionary.
+  the original `flashcard` key), `production` (meaning + cloze sentence → word),
+  `components` (character → its parts) and `writing` (character → its stroke
+  order). Production unlocks once recognition leaves its learning steps;
+  components additionally needs `decomposable` and writing needs `writable`,
+  both recorded at track time because this page has no dictionary.
 - `flashcards.ts` runs the session; `flashcards-view.ts` renders the screens and
   card faces and owns the element ids.
 - `selectSession` (`session.ts`) takes the cards the scheduler says are due,
@@ -293,6 +302,16 @@ flowchart TD
   `MAX_NEW_CARDS` within `MAX_CARDS`. A word offers **at most one card per
   session**, and retired words are skipped. With nothing due, the empty screen
   reports when the next review lands.
+- The **writing card grades itself** (`writing.ts`): hanzi-writer draws the
+  character's outline and counts how many strokes went in the wrong place, and
+  that count picks the grade — none is Good, one or two is Hard, three or more
+  is Again. It is the one card with no rating buttons, so the quiz has to be
+  able to end on its own: a stroke missed five times is marked correct and the
+  quiz moves on, or the reader would have nothing to press past. "Easy" is never
+  awarded, since the reader has no way to disagree with a measured grade. The
+  outline is deliberately shown — this card tests the *order* of the strokes,
+  and withholding the character would make it a recall card the deck has two of
+  already.
 - "Again" re-queues a card within the session, but the scheduler hears each card
   **once per session**: a requeued answer or a "Review Again" round is a drill,
   and rating it again would have FSRS recompute stability over an interval of
@@ -316,8 +335,8 @@ flowchart TD
 4. **Statistics** — a `track_word` (sent after the reader dwells on a word, or
    at once when they press Study in the popup) increments its count through
    `RedundantStore` (write to sync, fall back to local) and records the sentence
-   it was first met in, its corpus rank and whether it can carry a components
-   card. The stats/flashcards pages read both areas and reconcile with
+   it was first met in, its corpus rank, and whether it can carry a components
+   or a writing card. The stats/flashcards pages read both areas and reconcile with
    `mergeStatistics`, which preserves every field a word carries rather than
    the handful the merge names.
 
@@ -337,6 +356,13 @@ flowchart TD
   history.
 - **Dictionaries**: generated JSON under `public/data/` (bundled as
   `web_accessible_resources`), fetched at runtime — never written.
+- **Stroke graphics**: generated JSON under `public/strokes/`, one file per
+  character plus an `index.json` of the characters covered. Split rather than
+  kept in one map because a review session reads one character: the card in
+  front of the reader costs ~3 KB, where a single 30 MB map would have to be
+  parsed and held the way the dictionaries are. Not
+  `web_accessible_resources` — only the worker and the flashcards page read
+  them, and an extension page reaches its own files without them.
 - **OCR assets**: the models and ONNX runtime under `public/ocr/`, fetched at
   runtime by the offscreen document. Not `web_accessible_resources`: an
   extension page reaches its own `chrome-extension://` files without them.
@@ -352,6 +378,10 @@ flowchart TD
   the commit format.
 - **ts-fsrs** — the FSRS review scheduler; the four ratings the review UI
   offers are its grade scale exactly.
+- **hanzi-writer** — the stroke-order quiz on the flashcard page. It is given a
+  `charDataLoader` that reads `public/strokes/`, so its own CDN loader is never
+  reached for; its character JSON is makemeahanzi's shape already, which is why
+  the packaged data passes through untouched.
 - **ppu-paddle-ocr / onnxruntime-web** — the image OCR engine. `vite.config.ts`
   aliases `onnxruntime-web` to its extern-wasm entry, which both keeps Rollup
   from emitting the 14 MB and 28 MB binaries alongside the copy already
@@ -438,6 +468,11 @@ is written in.
   lives on a word, and the shared walk over all three.
 - **`selectSession`** (`src/flashcards/session.ts`) — which card each word
   offers a session, and in what order.
+- **`ratingForMistakes` / `startQuiz`** (`src/flashcards/writing.ts`) — the
+  stroke-order quiz, and the grade its mistake count measures.
+- **`hasStrokes` / `loadStrokes`** (`src/shared/strokes.ts`) — whether a
+  character has packaged stroke graphics, and fetching the one file that holds
+  them.
 - **`BoundedMap`** (`src/shared/bounded-map.ts`) — top-N-by-sort-key map;
   `setAll` inserts a batch and prunes once, so a batch of new words is ranked
   against the record one time rather than after each word in it.

@@ -82,7 +82,11 @@ romanisation, definitions or ranks.
 - `src/shared/gloss.ts`, `redundant-store.ts`, `storage-manager.ts`,
   `message-manager.ts`, `speech.ts`
 - `src/stats/ordering.ts` / `overview.ts` — sorting, band filtering, the summary
-- `src/flashcards/session.ts` — which card a word offers and in what order
+- `src/flashcards/session.ts` — which card a word offers and in what order,
+  including the gate each direction gets — `components` on `decomposable`,
+  `writing` on `writable`, and neither before recognition graduates
+- `src/flashcards/writing.ts` — mistakes → the grade the writing card submits.
+  The quiz itself is not under test there; `hanzi-writer` is mocked away
 - `src/ocr/capture.ts` — the capture-size cap, and which failure falls back to
   a tab screenshot. happy-dom has no canvas, so the tests stub it and assert
   the sizes asked for — including that the crop scales by the ratio the
@@ -90,6 +94,9 @@ romanisation, definitions or ranks.
 - `src/ocr/overlay.ts` — recognised box → placed span: axis scaling, and the
   character-per-slot spacing the caret depends on
 - `build-tools/processors/cedict-parser.ts` — the CC-CEDICT/CC-Canto line format
+- `build-tools/build-strokes.ts` — one `graphics.txt` line, including the pairs
+  it rejects (a stroke with no median cannot be graded). The script guards its
+  own entry point, so importing it does not rewrite 30 MB of output
 - `build-tools/fetch-ocr-assets.ts` — which HTTP statuses are retried and which
   are not, driven through a stubbed `fetch` under fake timers. The script guards
   its own entry point so importing it does not start a download.
@@ -105,11 +112,15 @@ romanisation, definitions or ranks.
   never read twice. `capture.js` is mocked, so these are about the lifecycle
   rather than pixels
 - `src/stats/stats-view.ts` and `src/flashcards/flashcards-view.ts`, driven
-  through their page controllers
+  through their page controllers. The writing card's lifecycle is covered there
+  with `hanzi-writer` mocked — happy-dom neither renders SVG nor grades pointer
+  paths, so the fake records what it was asked to quiz and hands the test the
+  completion callback
 
 **Message handlers** — `src/popup/background-handler.ts` is tested by stubbing
-`chrome.offscreen` / `getContexts` and the `dict_lookup` hop through
-`sendMessage`; `src/dictionary/offscreen-handler.ts` is tested with the
+`chrome.offscreen` / `getContexts`, the `dict_lookup` hop through
+`sendMessage`, and the stroke index `fetch` behind the writing-card gate (the
+index is memoised for the life of the module, so one stub serves the file); `src/dictionary/offscreen-handler.ts` is tested with the
 dictionary module mocked via `vi.mock('../dictionary.js', …)`;
 `src/flashcards/background-handler.ts` is tested against the statistics store.
 `src/ocr/background-handler.ts` stubs `chrome.offscreen` and

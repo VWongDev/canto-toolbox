@@ -33,14 +33,14 @@ type):
   `ordering` and `overview`) and the `get_statistics` background handler. May
   import from `src/shared/`.
 - `src/flashcards/` — flashcard review page (controller + view + session +
-  client) and the `update_flashcard` / `set_word_status` handler. May import
-  from `src/shared/`.
+  client + the `writing` stroke-order quiz) and the `update_flashcard` /
+  `set_word_status` handler. May import from `src/shared/`.
 - `src/shared/` — utilities used by more than one domain: types, dom-element,
   the `*-section` components and `definition-list`, `frequency` /
   `frequency-badge`, `decomposition`, `context-sentence`, `gloss`, `pinyin`,
-  `speech`, message-manager, message-router, offscreen-document, storage-manager, redundant-store,
-  statistics-store, statistics-utils, scheduler, bounded-map, debounce. No
-  imports from any feature domain.
+  `speech`, `strokes`, message-manager, message-router, offscreen-document, storage-manager,
+  redundant-store, statistics-store, statistics-utils, scheduler, bounded-map,
+  debounce. No imports from any feature domain.
 - `src/service-worker.ts` — the MV3 composition root. It imports each feature's
   `background-handler.ts` and calls `register()`. This is one of two places
   allowed to reach into multiple feature domains; the other is
