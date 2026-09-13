@@ -286,6 +286,12 @@ flowchart TD
   list's own filters. `ordering.ts` supplies the frequency-band filter and the
   sort (most studied, most common, due soonest, recently seen).
 - Each row can retire a word or pin it for study, through `set_word_status`.
+- **Retired words are left out of the list** unless the **Show retired** pill is
+  pressed — the one filter that is on by default, since a retired word was taken
+  out of the deck deliberately. The stage and band counts follow it, so a pill
+  never promises rows the list will not show; the retired pill's own count
+  always reports the whole retired set, because it says what pressing it would
+  reveal.
 - The **Candidates** stage pill is where words enter the deck by hand: it holds
   every word seen too rarely to have enrolled itself, ranked by the default
   "most studied" sort, so the ones nearest the threshold are the ones offered
