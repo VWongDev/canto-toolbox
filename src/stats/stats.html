@@ -14,58 +14,62 @@
       <p class="subtitle">The Chinese words you have met, and what is due for review</p>
     </header>
 
-    <div class="controls">
-      <button id="flashcard-btn" class="btn btn-primary">Review Flashcards</button>
-      <span class="word-count" id="word-count" aria-live="polite">0 words tracked</span>
-      <button id="clear-btn" class="btn btn-subtle">Clear Statistics</button>
-    </div>
-
-    <dl class="overview" id="overview">
-      <div class="overview-item">
-        <dt>Due now</dt>
-        <dd id="overview-due-now">0</dd>
-      </div>
-      <div class="overview-item">
-        <dt>Due today</dt>
-        <dd id="overview-due-today">0</dd>
-      </div>
-      <div class="overview-item">
-        <dt>Accuracy</dt>
-        <dd id="overview-accuracy">—</dd>
-      </div>
-      <div class="overview-item">
-        <dt>Reviews</dt>
-        <dd id="overview-reviews">0</dd>
-      </div>
-      <div class="overview-item">
-        <dt>Retired</dt>
-        <dd id="overview-retired">0</dd>
-      </div>
-    </dl>
-
-    <div class="filter-tabs" id="filter-tabs">
-      <button class="filter-tab" type="button" aria-pressed="false" data-stage="new">New <span class="tab-count" id="count-new">0</span></button>
-      <button class="filter-tab" type="button" aria-pressed="false" data-stage="learning">Learning <span class="tab-count" id="count-learning">0</span></button>
-      <button class="filter-tab" type="button" aria-pressed="false" data-stage="familiar">Familiar <span class="tab-count" id="count-familiar">0</span></button>
-      <button class="filter-tab" type="button" aria-pressed="false" data-stage="mastered">Mastered <span class="tab-count" id="count-mastered">0</span></button>
-    </div>
-
-    <div class="list-controls">
-      <div class="filter-tabs filter-tabs--band" id="band-tabs">
-        <button class="filter-tab" type="button" aria-pressed="false" data-band="core">Core 1000 <span class="tab-count" id="count-core">0</span></button>
-        <button class="filter-tab" type="button" aria-pressed="false" data-band="common">Common <span class="tab-count" id="count-common">0</span></button>
-        <button class="filter-tab" type="button" aria-pressed="false" data-band="frequent">Frequent <span class="tab-count" id="count-frequent">0</span></button>
-        <button class="filter-tab" type="button" aria-pressed="false" data-band="uncommon">Uncommon <span class="tab-count" id="count-uncommon">0</span></button>
-        <button class="filter-tab" type="button" aria-pressed="false" data-band="rare">Rare <span class="tab-count" id="count-rare">0</span></button>
+    <section class="dashboard">
+      <div class="controls">
+        <button id="flashcard-btn" class="btn btn-primary">Review Flashcards</button>
+        <span class="word-count" id="word-count" aria-live="polite">0 words tracked</span>
+        <button id="clear-btn" class="btn btn-subtle">Clear Statistics</button>
       </div>
 
-      <label class="sort-control">
-        Sort
-        <!-- Options are filled from SORT_LABELS so the labels and the keys
-             that sort by them cannot drift apart. -->
-        <select id="sort-select"></select>
-      </label>
-    </div>
+      <dl class="overview" id="overview">
+        <div class="overview-item">
+          <dt>Due now</dt>
+          <dd id="overview-due-now">0</dd>
+        </div>
+        <div class="overview-item">
+          <dt>Due today</dt>
+          <dd id="overview-due-today">0</dd>
+        </div>
+        <div class="overview-item">
+          <dt>Accuracy</dt>
+          <dd id="overview-accuracy">—</dd>
+        </div>
+        <div class="overview-item">
+          <dt>Reviews</dt>
+          <dd id="overview-reviews">0</dd>
+        </div>
+        <div class="overview-item">
+          <dt>Retired</dt>
+          <dd id="overview-retired">0</dd>
+        </div>
+      </dl>
+
+      <div class="filters">
+        <div class="filter-toolbar">
+          <div class="filter-tabs" id="filter-tabs">
+            <button class="filter-tab" type="button" aria-pressed="false" data-stage="new">New <span class="tab-count" id="count-new">0</span></button>
+            <button class="filter-tab" type="button" aria-pressed="false" data-stage="learning">Learning <span class="tab-count" id="count-learning">0</span></button>
+            <button class="filter-tab" type="button" aria-pressed="false" data-stage="familiar">Familiar <span class="tab-count" id="count-familiar">0</span></button>
+            <button class="filter-tab" type="button" aria-pressed="false" data-stage="mastered">Mastered <span class="tab-count" id="count-mastered">0</span></button>
+          </div>
+
+          <label class="sort-control">
+            Sort
+            <!-- Options are filled from SORT_LABELS so the labels and the keys
+                 that sort by them cannot drift apart. -->
+            <select id="sort-select"></select>
+          </label>
+        </div>
+
+        <div class="filter-tabs filter-tabs--band" id="band-tabs">
+          <button class="filter-tab" type="button" aria-pressed="false" data-band="core">Core 1000 <span class="tab-count" id="count-core">0</span></button>
+          <button class="filter-tab" type="button" aria-pressed="false" data-band="common">Common <span class="tab-count" id="count-common">0</span></button>
+          <button class="filter-tab" type="button" aria-pressed="false" data-band="frequent">Frequent <span class="tab-count" id="count-frequent">0</span></button>
+          <button class="filter-tab" type="button" aria-pressed="false" data-band="uncommon">Uncommon <span class="tab-count" id="count-uncommon">0</span></button>
+          <button class="filter-tab" type="button" aria-pressed="false" data-band="rare">Rare <span class="tab-count" id="count-rare">0</span></button>
+        </div>
+      </div>
+    </section>
 
     <div class="stats-container">
       <div id="loading" class="loading" role="status">Loading statistics...</div>

@@ -32,7 +32,7 @@ body {
 }
 
 header {
-  margin-bottom: 32px;
+  margin-bottom: t.$space-5;
   text-align: center;
 }
 
@@ -56,19 +56,27 @@ h1 {
   font-size: t.$text-base;
 }
 
+// Actions, the study snapshot and the list filters share one surface, so they
+// stop reading as three stacked cards with their own padding and gaps.
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: t.$space-5;
+  background: t.$color-surface;
+  border-radius: t.$radius-lg;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid t.$color-border;
+  overflow: hidden;
+}
+
 // Primary action and its context group on the left; the destructive action is
 // pushed away from them and carries no fill.
 .controls {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: t.$space-4;
-  margin-bottom: t.$space-5;
+  gap: t.$space-3 t.$space-4;
   padding: t.$space-3 t.$space-4;
-  background: t.$color-surface;
-  border-radius: t.$radius-lg;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  border: 1px solid t.$color-border;
 }
 
 #clear-btn {
@@ -76,11 +84,12 @@ h1 {
 }
 
 .btn {
-  padding: t.$space-2 t.$space-4;
+  padding: 6px t.$space-4;
   border: 1px solid transparent;
   border-radius: t.$radius-md;
   font-size: t.$text-base;
   font-weight: 500;
+  line-height: 1.25;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
@@ -145,24 +154,30 @@ h1 {
 }
 
 // What is owed and how the answers have been going. Read before the list, so
-// it sits above it and is never narrowed by the list's own filters.
+// it sits above it and is never narrowed by the list's own filters. Spread
+// across the bar so the figures use the width rather than bunching on the left.
 .overview {
   display: flex;
-  flex-wrap: wrap;
-  gap: t.$space-5;
-  margin: 0 0 t.$space-4;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: t.$space-3 t.$space-4;
+  margin: 0;
   padding: t.$space-3 t.$space-4;
-  border: 1px solid t.$color-border-muted;
-  border-radius: t.$radius-sm;
+  border: none;
+  border-block: 1px solid t.$color-border-muted;
   background: t.$color-surface-alt;
 }
 
 .overview-item {
+  min-width: 0;
+
   dt {
     color: t.$color-text-subtle;
     font-size: t.$text-xs;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    white-space: nowrap;
   }
 
   dd {
@@ -170,15 +185,25 @@ h1 {
     color: t.$color-text-strong;
     font-size: t.$text-figure;
     font-weight: 600;
+    line-height: 1.2;
     font-variant-numeric: tabular-nums;
   }
 }
 
-.list-controls {
+.filters {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: t.$space-2;
+  padding: t.$space-3 t.$space-4;
+}
+
+// Sort shares the stage row, so the five frequency pills can keep a single
+// line at the popup's 560px floor instead of orphaning Rare.
+.filter-toolbar {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: t.$space-4;
+  gap: t.$space-3;
   flex-wrap: wrap;
 }
 
@@ -186,12 +211,12 @@ h1 {
   display: flex;
   align-items: center;
   gap: t.$space-2;
-  margin-bottom: t.$space-3;
+  flex-shrink: 0;
   color: t.$color-text-subtle;
   font-size: t.$text-sm;
 
   select {
-    padding: 5px t.$space-2;
+    padding: 4px t.$space-2;
     border: 1px solid t.$color-border-muted;
     border-radius: t.$radius-sm;
     background: t.$color-surface;
@@ -207,7 +232,6 @@ h1 {
 .filter-tabs {
   display: flex;
   gap: t.$space-2;
-  margin-bottom: t.$space-3;
   flex-wrap: wrap;
 }
 
@@ -221,15 +245,16 @@ h1 {
 .filter-tab {
   display: flex;
   align-items: center;
-  gap: t.$space-2;
-  padding: 6px 14px;
-  line-height: 1.4;
+  gap: 6px;
+  padding: 5px 12px;
+  line-height: 1.25;
   border: 1px solid t.$color-border-bold;
   border-radius: t.$radius-pill;
-  background: t.$color-surface;
+  background: transparent;
   font-size: t.$text-base;
   font-weight: 500;
   color: t.$color-text-subtle;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.15s;
 
@@ -515,7 +540,7 @@ h1 {
 // What is left once the palette carries the theme: the surfaces whose role
 // changes on a dark canvas rather than just their value.
 @include dark {
-  .controls,
+  .dashboard,
   .stats-container {
     box-shadow: none;
   }
@@ -554,11 +579,9 @@ h1 {
   }
 }
 
-// Opened as the action popup, the page gets at most 600px of height. The hero,
-// the summary and two rows of pills spent roughly three quarters of that
-// before the first word, so at that height the chrome gives way to the list:
-// the header becomes one line, the summary tightens, and the padding halves.
-// A tab is taller than this and keeps the full layout.
+// Opened as the action popup, the page gets at most 600px of height. The hero
+// collapses to one line and the dashboard padding halves, so the list is what
+// the window is for. A tab is taller than this and keeps the full layout.
 @media (max-height: 640px) {
   .container {
     padding: t.$space-3 t.$space-4;
@@ -586,14 +609,16 @@ h1 {
     display: none;
   }
 
-  .controls {
+  .dashboard {
     margin-bottom: t.$space-3;
+  }
+
+  .controls,
+  .filters {
     padding: t.$space-2 t.$space-3;
   }
 
   .overview {
-    gap: t.$space-4;
-    margin-bottom: t.$space-3;
     padding: t.$space-2 t.$space-3;
   }
 
@@ -603,11 +628,11 @@ h1 {
 
   .filter-tabs {
     gap: t.$space-1;
-    margin-bottom: t.$space-2;
   }
 
   .filter-tab {
-    padding: 3px t.$space-3;
+    padding: 3px t.$space-2;
+    gap: t.$space-1;
     font-size: t.$text-sm;
   }
 
