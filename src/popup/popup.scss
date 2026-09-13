@@ -16,11 +16,14 @@
   border-radius: 10px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.10);
   padding: 14px 16px;
-  min-width: 500px;
-  max-width: 1200px;
+  // The popup is read *over* the page it covers, so it is sized to hold two
+  // readings side by side and no wider. At 500-1200px it took two thirds of a
+  // laptop viewport to answer a question about one word.
+  min-width: 360px;
+  max-width: 560px;
   width: auto;
   height: auto;
-  max-height: 80vh;
+  max-height: 70vh;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
@@ -98,10 +101,18 @@
 // shared definition styles need wrapping and overflow containment that the
 // full-width stats and flashcard pages do not.
 .chinese-hover-popup {
+  // Side by side is the point — Mandarin against Cantonese — but below the
+  // width two readings need, stacked beats two unreadable columns.
   .definition-sections {
     align-items: flex-start;
+    flex-wrap: wrap;
+    gap: t.$space-3 t.$space-5;
     min-width: 0;
     width: 100%;
+  }
+
+  .definition-section {
+    min-width: 200px;
   }
 
   .definition-section,
