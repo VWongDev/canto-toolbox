@@ -39,7 +39,8 @@ export class StatsManager {
   private readonly storage: StatsStorage;
   private cachedStatistics: Statistics | null = null;
   private controlsReady = false;
-  private view: ListView = { stages: new Set(), bands: new Set(), sort: DEFAULT_SORT };
+  private view: ListView =
+    { stages: new Set(), bands: new Set(), showRetired: false, sort: DEFAULT_SORT };
 
   constructor(document: Document, client: StatsClient, storage: StatsStorage) {
     this.document = document;
@@ -81,7 +82,7 @@ export class StatsManager {
     }
 
     this.cachedStatistics = response.statistics;
-    updateFilterCounts(elements, response.statistics);
+    updateFilterCounts(elements, response.statistics, this.view);
     this.setupListControls(elements);
     this.render(elements, response.statistics);
   }
@@ -90,7 +91,7 @@ export class StatsManager {
     // The overview reads the whole record on purpose: what is owed does not
     // change because the list below is filtered to one stage.
     renderOverview(this.document, summarise(statistics));
-    updateFilterCounts(elements, statistics);
+    updateFilterCounts(elements, statistics, this.view);
     updateFilterTabStates(elements, this.view);
     renderStatistics(
       statistics,
@@ -102,9 +103,11 @@ export class StatsManager {
     );
   }
 
+  /** The way out is offered as "Show all words", so it has to mean all of them. */
   private clearFilters(elements: StatsElements): void {
     this.view.stages.clear();
     this.view.bands.clear();
+    this.view.showRetired = true;
     if (this.cachedStatistics) this.render(elements, this.cachedStatistics);
   }
 
@@ -125,7 +128,7 @@ export class StatsManager {
     this.client.setWordStatus(word, status, () => {});
 
     renderOverview(this.document, summarise(this.cachedStatistics));
-    updateFilterCounts(elements, this.cachedStatistics);
+    updateFilterCounts(elements, this.cachedStatistics, this.view);
 
     if (!refreshStatRow(elements, word, updated, this.view)) {
       this.render(elements, this.cachedStatistics);
@@ -144,6 +147,16 @@ export class StatsManager {
     renderSortOptions(elements.sortSelectEl);
     this.setupTabs(elements, elements.filterTabsEl, 'stage');
     this.setupTabs(elements, elements.bandTabsEl, 'band');
+
+    // Its own listener rather than a third `setupTabs` row: the stage and band
+    // pills toggle membership of a set, and this one toggles a flag.
+    elements.statusTabsEl.addEventListener('click', (e: Event) => {
+      if (!(e.target instanceof HTMLElement)) return;
+      if (!e.target.closest('[data-status="retired"]')) return;
+
+      this.view.showRetired = !this.view.showRetired;
+      if (this.cachedStatistics) this.render(elements, this.cachedStatistics);
+    });
 
     elements.sortSelectEl.addEventListener('change', () => {
       const chosen = elements.sortSelectEl.value;
@@ -191,6 +204,7 @@ export class StatsManager {
     this.cachedStatistics = null;
     this.view.stages.clear();
     this.view.bands.clear();
+    this.view.showRetired = false;
     this.view.sort = DEFAULT_SORT;
     this.loadStatistics();
   }

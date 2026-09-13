@@ -25,6 +25,7 @@ export const ELEMENT_IDS = {
   flashcardBtn: 'flashcard-btn',
   filterTabs: 'filter-tabs',
   bandTabs: 'band-tabs',
+  statusTabs: 'status-tabs',
   sortSelect: 'sort-select',
 } as const;
 
@@ -60,6 +61,7 @@ export interface StatsElements {
   wordCountEl: HTMLElement;
   filterTabsEl: HTMLElement;
   bandTabsEl: HTMLElement;
+  statusTabsEl: HTMLElement;
   sortSelectEl: HTMLSelectElement;
 }
 
@@ -67,6 +69,12 @@ export interface StatsElements {
 export interface ListView {
   stages: Set<FlashcardStage>;
   bands: Set<FrequencyBand>;
+  /**
+   * The one filter that is on by default. A retired word was removed from the
+   * deck on purpose, so leaving it in the list pads the very list the reader
+   * uses to decide what to study next.
+   */
+  showRetired: boolean;
   sort: SortKey;
 }
 
@@ -83,6 +91,7 @@ export function getRequiredElements(document: Document): StatsElements | null {
   const wordCountEl = document.getElementById(ELEMENT_IDS.wordCount);
   const filterTabsEl = document.getElementById(ELEMENT_IDS.filterTabs);
   const bandTabsEl = document.getElementById(ELEMENT_IDS.bandTabs);
+  const statusTabsEl = document.getElementById(ELEMENT_IDS.statusTabs);
   const sortSelectEl = document.getElementById(ELEMENT_IDS.sortSelect);
 
   if (
@@ -92,6 +101,7 @@ export function getRequiredElements(document: Document): StatsElements | null {
     !wordCountEl ||
     !filterTabsEl ||
     !bandTabsEl ||
+    !statusTabsEl ||
     !(sortSelectEl instanceof HTMLSelectElement)
   ) {
     console.error('[Stats] Required DOM elements not found!');
@@ -105,6 +115,7 @@ export function getRequiredElements(document: Document): StatsElements | null {
     wordCountEl,
     filterTabsEl,
     bandTabsEl,
+    statusTabsEl,
     sortSelectEl,
   };
 }
@@ -154,13 +165,28 @@ export function showError(loadingEl: HTMLElement, message: string): void {
   loadingEl.classList.add('is-error');
 }
 
-export function updateFilterCounts(elements: StatsElements, statistics: Statistics): void {
+/**
+ * Stage and band counts are tallied over the words the retired filter lets
+ * through, so a pill never promises rows the list will not show. The retired
+ * count is the exception: it says what pressing it would reveal.
+ */
+export function updateFilterCounts(
+  elements: StatsElements,
+  statistics: Statistics,
+  view: ListView,
+): void {
   const stages: Record<FlashcardStage, number> =
     { candidate: 0, new: 0, learning: 0, familiar: 0, mastered: 0 };
   const bands: Record<FrequencyBand, number> =
     { core: 0, common: 0, frequent: 0, uncommon: 0, rare: 0 };
+  let retired = 0;
 
   for (const stat of Object.values(statistics)) {
+    if (stat.suppressed) {
+      retired++;
+      if (!view.showRetired) continue;
+    }
+
     stages[getFlashcardStage(stat)]++;
     bands[bandOf(stat)]++;
   }
@@ -172,6 +198,8 @@ export function updateFilterCounts(elements: StatsElements, statistics: Statisti
   for (const [band, count] of Object.entries(bands)) {
     setTabCount(elements.bandTabsEl, band, count);
   }
+
+  setTabCount(elements.statusTabsEl, 'retired', retired);
 }
 
 /**
@@ -201,6 +229,7 @@ function updateTabStates(tabsEl: HTMLElement, key: string, active: ReadonlySet<s
 export function updateFilterTabStates(elements: StatsElements, view: ListView): void {
   updateTabStates(elements.filterTabsEl, 'stage', view.stages as ReadonlySet<string>);
   updateTabStates(elements.bandTabsEl, 'band', view.bands as ReadonlySet<string>);
+  updateTabStates(elements.statusTabsEl, 'status', new Set(view.showRetired ? ['retired'] : []));
   elements.sortSelectEl.value = view.sort;
 }
 
@@ -227,6 +256,7 @@ function setFilterReset(emptyStateEl: HTMLElement, clearFilters: (() => void) | 
 }
 
 function matchesView(stat: WordStatistics, view: ListView): boolean {
+  if (stat.suppressed && !view.showRetired) return false;
   if (view.stages.size > 0 && !view.stages.has(getFlashcardStage(stat))) return false;
   if (view.bands.size > 0 && !view.bands.has(bandOf(stat))) return false;
   return true;
@@ -252,6 +282,7 @@ function noMatchMessage(view: ListView): string {
   if (stages && bands) return `No ${stages} words in ${bands} yet.`;
   if (stages) return `No ${stages} words yet.`;
   if (bands) return `No ${bands} words yet.`;
+  if (!view.showRetired) return 'Every word tracked so far is retired.';
 
   // An unfiltered list with words in it is never empty.
   return NOTHING_TRACKED;

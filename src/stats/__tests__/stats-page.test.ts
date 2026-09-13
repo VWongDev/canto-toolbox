@@ -71,6 +71,14 @@ describe('StatsManager overview', () => {
     );
   }
 
+  function retiredTab(): HTMLElement {
+    return document.querySelector('[data-status="retired"]') as HTMLElement;
+  }
+
+  function clickRetired(): void {
+    retiredTab().dispatchEvent(new Event('click', { bubbles: true }));
+  }
+
   beforeEach(() => {
     document = new DOMParser().parseFromString(HTML, 'text/html');
     client = createClient();
@@ -113,12 +121,49 @@ describe('StatsManager overview', () => {
       .querySelector('[data-band="core"]')!
       .dispatchEvent(new Event('click', { bubbles: true }));
 
-    expect(listedWords()).toEqual(['常見', '退休']);
+    expect(listedWords()).toEqual(['常見']);
   });
 
   it('counts the words in each band', () => {
-    expect(text('count-core')).toBe('2');
+    expect(text('count-core')).toBe('1');
     expect(text('count-frequent')).toBe('1');
+  });
+
+  // A retired word was taken out of the deck on purpose; leaving it in the
+  // list pads the very list the reader uses to pick what to study next.
+  it('leaves retired words out of the list', () => {
+    expect(listedWords()).not.toContain('退休');
+  });
+
+  it('shows retired words once the pill is pressed', () => {
+    clickRetired();
+
+    expect(listedWords()).toContain('退休');
+    expect(retiredTab().getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('hides them again on a second press', () => {
+    clickRetired();
+    clickRetired();
+
+    expect(listedWords()).not.toContain('退休');
+    expect(retiredTab().getAttribute('aria-pressed')).toBe('false');
+  });
+
+  // The pill says what pressing it would reveal, so its own count is the one
+  // tally the filter does not narrow.
+  it('counts every retired word whether or not they are shown', () => {
+    expect(text('count-retired')).toBe('1');
+
+    clickRetired();
+
+    expect(text('count-retired')).toBe('1');
+  });
+
+  it('counts a retired word towards a band only while retired words are shown', () => {
+    clickRetired();
+
+    expect(text('count-core')).toBe('2');
   });
 });
 
@@ -267,6 +312,31 @@ describe('StatsManager empty list', () => {
     expect(actions).toContain('Study this');
   });
 
+  // Without this the page reports "No statistics yet" over a record full of
+  // words, and the only filter hiding them is the one that is on by default.
+  it('names the retired filter when it is what emptied the list', () => {
+    const retiredOnly = new DOMParser().parseFromString(HTML, 'text/html');
+    const client: StatsClient = {
+      ...createClient(),
+      getStatistics: vi.fn(cb =>
+        cb({
+          success: true,
+          type: 'get_statistics',
+          statistics: { 退休: { count: 5, firstSeen: 1, lastSeen: 200, suppressed: true } },
+        })
+      ),
+    };
+    new StatsManager(retiredOnly, client, storage).init();
+
+    const emptyState = retiredOnly.getElementById('empty-state')!;
+    expect(emptyState.querySelector('p')!.textContent).toBe('Every word tracked so far is retired.');
+
+    (emptyState.querySelector('.empty-state-reset') as HTMLButtonElement)
+      .dispatchEvent(new Event('click', { bubbles: true }));
+
+    expect(retiredOnly.getElementById('stats-list')!.style.display).toBe('flex');
+  });
+
   it('dims a pill that holds no words', () => {
     expect(document.querySelector('[data-stage="mastered"]')!.classList.contains('is-empty'))
       .toBe(true);
@@ -312,6 +382,12 @@ describe('StatsManager row status', () => {
       .dispatchEvent(new Event('click', { bubbles: true }));
   }
 
+  /** Retired words are filtered out by default, which would take the row away. */
+  function showRetired(): void {
+    document.querySelector('[data-status="retired"]')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+  }
+
   beforeEach(() => {
     document = new DOMParser().parseFromString(HTML, 'text/html');
     client = createClient();
@@ -322,6 +398,7 @@ describe('StatsManager row status', () => {
   // the panel down with it — the reader lost the definition they had open to
   // the press they made while reading it.
   it('leaves the row open when a word is retired', () => {
+    showRetired();
     const item = openRow('常見');
     press(item, 'retire');
 
@@ -332,6 +409,7 @@ describe('StatsManager row status', () => {
   });
 
   it('asks for the opposite on the next press', () => {
+    showRetired();
     const item = openRow('常見');
     press(item, 'retire');
     press(item, 'retire');
@@ -362,5 +440,13 @@ describe('StatsManager row status', () => {
 
     expect(document.getElementById('stats-list')!.style.display).toBe('none');
     expect(document.getElementById('empty-state')!.style.display).toBe('block');
+  });
+
+  // Retiring is the one press that always moves a word out of the default
+  // filter, so the row cannot be kept in place the way the others are.
+  it('takes the row away when retiring hides the word', () => {
+    press(openRow('常見'), 'retire');
+
+    expect(row('常見')).toBeNull();
   });
 });
