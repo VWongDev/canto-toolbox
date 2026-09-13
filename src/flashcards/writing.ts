@@ -37,16 +37,26 @@ export function ratingForMistakes(mistakes: number): FlashcardRating {
 }
 
 /**
- * The page is themed by `prefers-color-scheme`, and the quiz draws to SVG
- * rather than to CSS, so the colours have to be chosen here instead of
- * inherited.
+ * hanzi-writer paints an SVG rather than inheriting CSS, so it has to be
+ * handed colours. They are read off the page's own palette — which resolves
+ * per theme on its own — instead of being a second set kept in step by hand:
+ * the ones that used to be here belonged to no palette in the extension.
+ *
+ * The fallbacks are the light palette, for a document that has not painted
+ * yet or a test environment that computes no styles.
  */
-function quizColors(): { outlineColor: string; strokeColor: string; drawingColor: string } {
-  const dark = globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches === true;
+export function quizColors(
+  root: Element | undefined = globalThis.document?.documentElement,
+): { outlineColor: string; strokeColor: string; drawingColor: string } {
+  const styles = root ? globalThis.getComputedStyle?.(root) : undefined;
+  const read = (name: string, fallback: string): string =>
+    styles?.getPropertyValue(name).trim() || fallback;
 
-  return dark
-    ? { outlineColor: '#3a3f47', strokeColor: '#e8eaed', drawingColor: '#8ab4f8' }
-    : { outlineColor: '#dadce0', strokeColor: '#202124', drawingColor: '#1a73e8' };
+  return {
+    outlineColor: read('--ct-quiz-outline', '#dadce0'),
+    strokeColor: read('--ct-quiz-stroke', '#1a1a1a'),
+    drawingColor: read('--ct-quiz-drawing', '#0066cc'),
+  };
 }
 
 export interface WritingQuiz {
