@@ -46,6 +46,7 @@ const CHEVRON_SVG =
 let panelCount = 0;
 
 const STAGE_LABELS: Record<FlashcardStage, string> = {
+  candidate: 'Candidate',
   new: 'New',
   learning: 'Learning',
   familiar: 'Familiar',
@@ -154,7 +155,8 @@ export function showError(loadingEl: HTMLElement, message: string): void {
 }
 
 export function updateFilterCounts(elements: StatsElements, statistics: Statistics): void {
-  const stages: Record<FlashcardStage, number> = { new: 0, learning: 0, familiar: 0, mastered: 0 };
+  const stages: Record<FlashcardStage, number> =
+    { candidate: 0, new: 0, learning: 0, familiar: 0, mastered: 0 };
   const bands: Record<FrequencyBand, number> =
     { core: 0, common: 0, frequent: 0, uncommon: 0, rare: 0 };
 

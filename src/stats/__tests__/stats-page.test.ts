@@ -251,6 +251,22 @@ describe('StatsManager empty list', () => {
     expect(document.querySelector('.empty-state-reset')).toBeNull();
   });
 
+  // Seen but not enrolled is the state the reader acts on: the pill is how a
+  // word gets from "looked up a couple of times" into the deck.
+  it('narrows to words seen too rarely to have enrolled themselves', () => {
+    clickTab('[data-stage="candidate"]');
+
+    const words = Array.from(document.querySelectorAll('.stat-word'), el => el.textContent);
+    expect(words).toEqual(['少見']);
+  });
+
+  it('offers Study this on a candidate row', () => {
+    clickTab('[data-stage="candidate"]');
+
+    const actions = Array.from(document.querySelectorAll('.stat-action'), el => el.textContent);
+    expect(actions).toContain('Study this');
+  });
+
   it('dims a pill that holds no words', () => {
     expect(document.querySelector('[data-stage="mastered"]')!.classList.contains('is-empty'))
       .toBe(true);

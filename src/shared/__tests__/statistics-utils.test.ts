@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { getFlashcardStage, lastReviewedAt, mergeStatistics, nextDueAt } from '../statistics-utils.js';
+import {
+  MIN_COUNT,
+  getFlashcardStage,
+  lastReviewedAt,
+  mergeStatistics,
+  nextDueAt,
+} from '../statistics-utils.js';
 import { reviewCard } from '../scheduler.js';
 import type { FlashcardProgress, WordStatistics } from '../types.js';
 
@@ -178,8 +184,18 @@ describe('getFlashcardStage', () => {
     return { count: 5, firstSeen: 1, lastSeen: 2, flashcard: progress! };
   }
 
-  it('is new for a word that has never been reviewed', () => {
-    expect(getFlashcardStage({ count: 5, firstSeen: 1, lastSeen: 2 }, NOW)).toBe('new');
+  it('is new for an enrolled word that has never been reviewed', () => {
+    expect(getFlashcardStage({ count: MIN_COUNT, firstSeen: 1, lastSeen: 2 }, NOW)).toBe('new');
+  });
+
+  it('is a candidate while the word has been seen too rarely to enrol', () => {
+    const stat: WordStatistics = { count: MIN_COUNT - 1, firstSeen: 1, lastSeen: 2 };
+    expect(getFlashcardStage(stat, NOW)).toBe('candidate');
+  });
+
+  it('is new for a rarely seen word the reader chose outright', () => {
+    const stat: WordStatistics = { count: 1, firstSeen: 1, lastSeen: 2, pinned: true };
+    expect(getFlashcardStage(stat, NOW)).toBe('new');
   });
 
   it('is learning while the word is still in its learning steps', () => {

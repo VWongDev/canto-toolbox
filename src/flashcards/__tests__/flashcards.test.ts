@@ -65,7 +65,7 @@ function createClient(overrides: Partial<FlashcardClient> = {}): FlashcardClient
         type: 'get_statistics',
         statistics: {
           你好: { count: 5, firstSeen: 1, lastSeen: 2, context: '你好嗎' },
-          再见: { count: 3, firstSeen: 1, lastSeen: 2 }
+          再见: { count: 5, firstSeen: 1, lastSeen: 2 }
         }
       })
     ),

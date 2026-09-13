@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { selectSession } from '../session.js';
+import { MIN_COUNT } from '../../shared/statistics-utils.js';
 import type { Statistics, WordStatistics } from '../../shared/types.js';
 
 const NOW = Date.parse('2026-01-01T00:00:00Z');
@@ -61,8 +62,8 @@ describe('selectSession', () => {
   });
 
   it('gates unseen words on the exposure threshold', () => {
-    const stats: Statistics = { 一次: tracked(1), 兩次: tracked(2) };
-    expect(words(stats)).toEqual(['兩次']);
+    const stats: Statistics = { 幾次: tracked(MIN_COUNT - 1), 很多次: tracked(MIN_COUNT) };
+    expect(words(stats)).toEqual(['很多次']);
   });
 
   it('lets a pinned word skip the exposure threshold', () => {
@@ -103,14 +104,14 @@ describe('selectSession', () => {
   it('puts words the corpus never ranked behind ranked ones', () => {
     const stats: Statistics = {
       沒有排名: tracked(50),
-      有排名: { ...tracked(2), rank: 8000 },
+      有排名: { ...tracked(5), rank: 8000 },
     };
 
     expect(words(stats)).toEqual(['有排名', '沒有排名']);
   });
 
   it('falls back to hover count when neither word is ranked', () => {
-    const stats: Statistics = { 很少: tracked(2), 很多: tracked(20) };
+    const stats: Statistics = { 很少: tracked(5), 很多: tracked(20) };
     expect(words(stats)).toEqual(['很多', '很少']);
   });
 

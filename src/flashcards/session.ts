@@ -1,11 +1,8 @@
 import { dueAt, isDue, isLearning } from '../shared/scheduler.js';
-import { nextDueAt, progressFor } from '../shared/statistics-utils.js';
+import { isEnrolled, nextDueAt, progressFor } from '../shared/statistics-utils.js';
 import type { ReviewDirection, Statistics, WordStatistics } from '../shared/types.js';
 
 export const MAX_CARDS = 20;
-
-/** Sightings before an unpinned word is worth drilling at all. */
-export const MIN_COUNT = 2;
 
 /** Cap on cards introduced per session, so due reviews are never crowded out. */
 export const MAX_NEW_CARDS = 10;
@@ -36,7 +33,7 @@ const INTRODUCTION_ORDER: readonly ReviewDirection[] = [
 ];
 
 function isUnlocked(stat: WordStatistics, direction: ReviewDirection): boolean {
-  if (direction === 'recognition') return stat.pinned === true || stat.count >= MIN_COUNT;
+  if (direction === 'recognition') return isEnrolled(stat);
 
   // Producing a word, taking it apart, or writing it tests nothing until it is
   // recognised reliably — which is exactly what leaving the learning steps

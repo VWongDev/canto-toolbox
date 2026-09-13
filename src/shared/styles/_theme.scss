@@ -90,6 +90,8 @@
 
   // How far a word has got. These were the last colours written by hand at
   // their call site, in four pairs that belonged to no palette.
+  --ct-stage-candidate: #55606b;
+  --ct-stage-candidate-bg: rgba(85, 96, 107, 0.10);
   --ct-stage-new: #666;
   --ct-stage-new-bg: rgba(0, 0, 0, 0.06);
   --ct-stage-learning: #92600a;
@@ -175,6 +177,8 @@
   --ct-rating-easy: #4d9eef;
   --ct-rating-easy-hover: #3d8ed9;
 
+  --ct-stage-candidate: #9aa7b4;
+  --ct-stage-candidate-bg: rgba(154, 167, 180, 0.18);
   --ct-stage-new: #8e8e99;
   --ct-stage-new-bg: rgba(255, 255, 255, 0.08);
   --ct-stage-learning: #e89a3c;

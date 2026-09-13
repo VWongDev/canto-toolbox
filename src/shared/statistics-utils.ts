@@ -8,13 +8,37 @@ import type {
 import { isLearning, isMastered } from './scheduler.js';
 
 /**
+ * Sightings before an unchosen word is enrolled in the deck.
+ *
+ * Tracking a word and drilling it are different claims. Hovering is a cheap,
+ * honest record of what was read; enrolment spends a session slot on every
+ * review the word ever gets, and the deck only has `MAX_CARDS` of them. At two
+ * sightings the commonest words enrolled themselves faster than anything else
+ * could — which is why retiring by hand was routine rather than rare. A word
+ * looked up this many times is one the reader demonstrably has not retained,
+ * which is better evidence than a judgement made mid-sentence.
+ */
+export const MIN_COUNT = 5;
+
+/**
+ * Whether the word is in the deck at all: chosen outright with Study, or met
+ * often enough to have earned a slot. A word already carrying a schedule stays
+ * in regardless — this only gates the first card a word is ever offered.
+ */
+export function isEnrolled(stat: WordStatistics): boolean {
+  return stat.pinned === true || stat.count >= MIN_COUNT;
+}
+
+/**
  * Staging reads the scheduler rather than a raw streak, so a word decays out
  * of `mastered` on its own once its recall probability drops — a streak from
  * six months ago is not mastery.
  */
 export function getFlashcardStage(stat: WordStatistics, now: Date = new Date()): FlashcardStage {
   const fc = stat.flashcard;
-  if (!fc || fc.reviews === 0) return 'new';
+  // Seen but not in the deck is its own answer, not a kind of `new`: one is
+  // waiting to be taught, the other is waiting to be chosen.
+  if (!fc || fc.reviews === 0) return isEnrolled(stat) ? 'new' : 'candidate';
   if (isLearning(fc)) return 'learning';
   return isMastered(fc, now) ? 'mastered' : 'familiar';
 }

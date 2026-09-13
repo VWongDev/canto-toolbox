@@ -82,12 +82,12 @@ test('empty-state shown when no storage data', async () => {
   await page.close();
 });
 
-test('only words with count >= 2 appear in session', async () => {
+test('only words seen often enough, or chosen, appear in session', async () => {
   const now = Date.now();
   const helper = await openExtensionPage();
   await seedStorage(helper, {
     [WORD_LOW]: { count: 1, firstSeen: now, lastSeen: now },
-    [WORD_MID]: { count: 2, firstSeen: now, lastSeen: now },
+    [WORD_MID]: { count: 2, firstSeen: now, lastSeen: now, pinned: true },
     [WORD_HIGH]: { count: 5, firstSeen: now, lastSeen: now },
   });
   await helper.close();
@@ -95,7 +95,8 @@ test('only words with count >= 2 appear in session', async () => {
   const page = await openFlashcardsPage();
   await expect(page.locator('#review')).toBeVisible();
 
-  // Counter should say "of 2" — only WORD_MID and WORD_HIGH qualify
+  // WORD_MID was chosen outright and WORD_HIGH has been met enough times;
+  // WORD_LOW is only a candidate.
   const counter = page.locator('#counter');
   await expect(counter).toHaveText(/of 2/);
 
@@ -128,7 +129,7 @@ test('Again re-queues word so it re-appears later', async () => {
   const helper = await openExtensionPage();
   await seedStorage(helper, {
     [WORD_HIGH]: { count: 5, firstSeen: now, lastSeen: now },
-    [WORD_MID]: { count: 2, firstSeen: now, lastSeen: now },
+    [WORD_MID]: { count: 5, firstSeen: now, lastSeen: now },
   });
   await helper.close();
 
@@ -164,7 +165,7 @@ test('Good on all cards shows finished screen with correct count', async () => {
   const helper = await openExtensionPage();
   await seedStorage(helper, {
     [WORD_HIGH]: { count: 5, firstSeen: now, lastSeen: now },
-    [WORD_MID]: { count: 2, firstSeen: now, lastSeen: now },
+    [WORD_MID]: { count: 5, firstSeen: now, lastSeen: now },
   });
   await helper.close();
 
@@ -191,7 +192,7 @@ test('Review Again resets counter to Card 1', async () => {
   const helper = await openExtensionPage();
   await seedStorage(helper, {
     [WORD_HIGH]: { count: 5, firstSeen: now, lastSeen: now },
-    [WORD_MID]: { count: 2, firstSeen: now, lastSeen: now },
+    [WORD_MID]: { count: 5, firstSeen: now, lastSeen: now },
   });
   await helper.close();
 

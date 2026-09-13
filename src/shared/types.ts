@@ -61,7 +61,7 @@ export type FrequencyRanks = Record<string, number>;
 export type FrequencyBand = 'core' | 'common' | 'frequent' | 'uncommon' | 'rare';
 
 export type FlashcardRating = 'again' | 'hard' | 'good' | 'easy';
-export type FlashcardStage = 'new' | 'learning' | 'familiar' | 'mastered';
+export type FlashcardStage = 'candidate' | 'new' | 'learning' | 'familiar' | 'mastered';
 
 /**
  * What a card asks for. Recognition (word → meaning) is what reading trains on

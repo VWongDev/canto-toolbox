@@ -37,7 +37,8 @@ import { progressFor } from '../shared/statistics-utils.js';
 import { ratingForMistakes, startQuiz, type WritingQuiz } from './writing.js';
 
 const NOTHING_TRACKED =
-  'No words to review yet.\nHover over Chinese words at least twice to unlock flashcard review.';
+  'No words to review yet.\nPress + Study in the popup to add a word, ' +
+  'or keep reading — a word you look up often enough joins the deck on its own.';
 
 type Rating = 'again' | 'hard' | 'good' | 'easy';
 

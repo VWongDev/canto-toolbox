@@ -57,7 +57,7 @@ canto-toolbox/
 │   │   ├── message-router.ts  # registerHandlers() onMessage routing
 │   │   ├── offscreen-document.ts # ensureOffscreenDocument(); one host
 │   │   ├── storage-manager.ts # Thin chrome.storage wrapper
-│   │   ├── redundant-store.ts # sync→local reconciliation policy
+│   │   ├── redundant-store.ts # sync/local reconciliation policy
 │   │   ├── statistics-store.ts# The shared statistics key, cap and store
 │   │   ├── statistics-utils.ts# mergeStatistics(), getFlashcardStage()
 │   │   ├── scheduler.ts       # FSRS review scheduling
@@ -124,7 +124,7 @@ flowchart TD
     D -->|fetch chrome.runtime.getURL data/*.json| E[Packaged JSON]
     O -->|DefinitionResult| H1
     H1 -->|response| B
-    H1 -->|updateStatistics| F[RedundantStore: sync→local]
+    H1 -->|updateStatistics| F[RedundantStore: local + sync]
     G[Stats / Flashcards Page] -->|get_statistics| C
     G -->|flashcards only: fetch strokes/<char>.json| S[Packaged stroke graphics]
     H1 -->|hasStrokes: strokes/index.json| S
@@ -286,6 +286,10 @@ flowchart TD
   list's own filters. `ordering.ts` supplies the frequency-band filter and the
   sort (most studied, most common, due soonest, recently seen).
 - Each row can retire a word or pin it for study, through `set_word_status`.
+- The **Candidates** stage pill is where words enter the deck by hand: it holds
+  every word seen too rarely to have enrolled itself, ranked by the default
+  "most studied" sort, so the ones nearest the threshold are the ones offered
+  first and each row's **Study this** is one click.
 
 ### Flashcards Page (`src/flashcards/`)
 
@@ -304,6 +308,10 @@ flowchart TD
   `MAX_NEW_CARDS` within `MAX_CARDS`. A word offers **at most one card per
   session**, and retired words are skipped. With nothing due, the empty screen
   reports when the next review lands.
+- A word joins the deck only once `isEnrolled` says so — pressed **+ Study**, or
+  met `MIN_COUNT` times. Hovering still records every word; what it no longer
+  does is spend a session slot on one. The threshold gates the *first* card a
+  word is offered, so raising it never evicts a word already being reviewed.
 - The **writing card grades itself** (`writing.ts`): hanzi-writer draws the
   character's outline and counts how many strokes went in the wrong place, and
   that count picks the grade — none is Good, one or two is Hard, three or more
@@ -336,11 +344,11 @@ flowchart TD
 3. **Display** — content script renders the popup near the cursor.
 4. **Statistics** — a `track_word` (sent after the reader dwells on a word, or
    at once when they press Study in the popup) increments its count through
-   `RedundantStore` (write to sync, fall back to local) and records the sentence
-   it was first met in, its corpus rank, and whether it can carry a components
-   or a writing card. The stats/flashcards pages read both areas and reconcile with
-   `mergeStatistics`, which preserves every field a word carries rather than
-   the handful the merge names.
+   `RedundantStore` (transform the reconciled record, write both areas) and
+   records the sentence it was first met in, its corpus rank, and whether it can
+   carry a components or a writing card. The stats/flashcards pages read both
+   areas and reconcile with `mergeStatistics`, which preserves every field a
+   word carries rather than the handful the merge names.
 
 ## Storage
 
@@ -348,8 +356,14 @@ flowchart TD
   over `StorageManager(chrome.storage.sync, chrome.storage.local)`. The key, the
   store and the `MAX_TRACKED_WORDS` cap live in `src/shared/statistics-store.ts`
   so the write path, the stats page's warning and the flashcard handler all
-  address the same record. Writes prefer sync and fall back to local; reads
-  reconcile both areas via `mergeStatistics`.
+  address the same record. Reads reconcile both areas via `mergeStatistics`,
+  and so do writes: a `mutate` transforms what a read would have seen and writes
+  the result to both. **`chrome.storage.sync` rejects any item over 8 KB**,
+  which this record passes at a few dozen studied words, so past that point sync
+  keeps a fossil and local holds the truth — which is why local is written first
+  and why a merge lets it decide a word's retired and chosen flags. Transforming
+  sync alone silently dropped every retirement and every rating for a word sync
+  no longer held.
 - **Write batching**: `popup-storage.ts` accumulates counts with
   `createBatchedDebounce` and writes them through a `BoundedMap` capped at
   `MAX_TRACKED_WORDS`. Eviction is tiered rather than by study count alone —
@@ -455,14 +469,22 @@ is written in.
   feature does not handle, and error→`ErrorResponse` conversion.
 - **`ensureOffscreenDocument`** (`src/shared/offscreen-document.ts`) — the one
   offscreen host; popup and OCR both start it and forward.
-- **`RedundantStore`** (`src/shared/redundant-store.ts`) — sync→local
-  read/write reconciliation policy over `StorageManager`.
+- **`RedundantStore`** (`src/shared/redundant-store.ts`) — sync/local
+  reconciliation policy over `StorageManager`. Reads and writes both go through
+  the caller's reconcile; `mutate` writes local first, then sync best-effort.
 - **`statisticsStore` / `STATISTICS_KEY` / `MAX_TRACKED_WORDS`**
   (`src/shared/statistics-store.ts`) — the single record every feature addresses.
-- **`mergeStatistics`** (`src/shared/statistics-utils.ts`) — sums counts and
-  reconciles first/last-seen across storage areas.
-- **`getFlashcardStage`** (`src/shared/statistics-utils.ts`) — new / learning /
-  familiar / mastered, derived from the scheduler so `mastered` decays.
+- **`mergeStatistics` / `reconcileStatistics`**
+  (`src/shared/statistics-utils.ts`) — the record as both storage areas hold it.
+  Each area is a snapshot of the whole record rather than a share of it, so
+  counts take the higher of the two and local decides a word's retired and
+  chosen flags; reads and writes reconcile through the same function.
+- **`MIN_COUNT` / `isEnrolled`** (`src/shared/statistics-utils.ts`) — whether a
+  word is in the deck at all. Tracking a word and drilling it are separate:
+  hovering records everything, enrolment needs Study or `MIN_COUNT` sightings.
+- **`getFlashcardStage`** (`src/shared/statistics-utils.ts`) — candidate / new /
+  learning / familiar / mastered, derived from the scheduler so `mastered`
+  decays. `candidate` is seen-but-not-enrolled, which the stats page filters to.
 - **`reviewCard` / `isDue` / `isLeech`** (`src/shared/scheduler.ts`) — FSRS
   scheduling, persisted as the compact `SrsState` on each direction's progress.
 - **`progressFor` / `DIRECTION_FIELD` / `schedulesOf`**

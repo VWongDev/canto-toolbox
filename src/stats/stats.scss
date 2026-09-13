@@ -311,6 +311,11 @@ h1 {
   letter-spacing: 0.02em;
   white-space: nowrap;
 
+  &--candidate {
+    background: t.$color-stage-candidate-bg;
+    color: t.$color-stage-candidate;
+  }
+
   &--new {
     background: t.$color-stage-new-bg;
     color: t.$color-stage-new;
