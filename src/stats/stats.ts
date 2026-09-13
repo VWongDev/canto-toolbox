@@ -16,6 +16,7 @@ import {
   renderDefinition,
   renderOverview,
   renderSortOptions,
+  refreshStatRow,
   updateFilterCounts,
   updateFilterTabStates,
   type ListView,
@@ -108,9 +109,11 @@ export class StatsManager {
   }
 
   /**
-   * A retired or chosen word changes which stage it counts towards and whether
-   * the deck will offer it, so the list is rebuilt from the updated record
-   * rather than just the one row being repainted.
+   * A retired or chosen word changes which stage it counts towards, so the
+   * overview and the pills are redrawn from the updated record. The row itself
+   * is repainted in place: the buttons sit inside the row's expanded panel, and
+   * rebuilding the list closed the panel the reader had just opened. Only a
+   * word the press moves out of the current filter needs the list rebuilt.
    */
   private setWordStatus(elements: StatsElements, word: string, status: WordStatus): void {
     const stat = this.cachedStatistics?.[word];
@@ -120,7 +123,13 @@ export class StatsManager {
 
     this.cachedStatistics = { ...this.cachedStatistics, [word]: updated };
     this.client.setWordStatus(word, status, () => {});
-    this.render(elements, this.cachedStatistics);
+
+    renderOverview(this.document, summarise(this.cachedStatistics));
+    updateFilterCounts(elements, this.cachedStatistics);
+
+    if (!refreshStatRow(elements, word, updated, this.view)) {
+      this.render(elements, this.cachedStatistics);
+    }
   }
 
   /**

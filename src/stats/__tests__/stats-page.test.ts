@@ -289,3 +289,78 @@ describe('StatsManager empty list', () => {
     expect(reloaded.querySelector('[data-band="core"]')!.classList.contains('active')).toBe(true);
   });
 });
+
+describe('StatsManager row status', () => {
+  let document: Document;
+  let client: StatsClient;
+
+  function row(word: string): HTMLElement {
+    return document
+      .getElementById('stats-list')!
+      .querySelector(`.stat-item[data-word="${word}"]`) as HTMLElement;
+  }
+
+  function openRow(word: string): HTMLElement {
+    const item = row(word);
+    (item.querySelector('.stat-header') as HTMLButtonElement)
+      .dispatchEvent(new Event('click', { bubbles: true }));
+    return item;
+  }
+
+  function press(item: HTMLElement, action: string): void {
+    (item.querySelector(`[data-action="${action}"]`) as HTMLButtonElement)
+      .dispatchEvent(new Event('click', { bubbles: true }));
+  }
+
+  beforeEach(() => {
+    document = new DOMParser().parseFromString(HTML, 'text/html');
+    client = createClient();
+    new StatsManager(document, client, storage).init();
+  });
+
+  // The buttons live inside the row's own panel, so rebuilding the list took
+  // the panel down with it — the reader lost the definition they had open to
+  // the press they made while reading it.
+  it('leaves the row open when a word is retired', () => {
+    const item = openRow('常見');
+    press(item, 'retire');
+
+    const header = item.querySelector('.stat-header')!;
+    expect(header.getAttribute('aria-expanded')).toBe('true');
+    expect(item.querySelector<HTMLElement>('.stat-expanded')!.style.display).toBe('block');
+    expect(item.querySelector('[data-action="retire"]')!.textContent).toBe('Retired');
+  });
+
+  it('asks for the opposite on the next press', () => {
+    const item = openRow('常見');
+    press(item, 'retire');
+    press(item, 'retire');
+
+    expect(vi.mocked(client.setWordStatus).mock.calls.map(call => call[1])).toEqual([
+      { suppressed: true },
+      { suppressed: false },
+    ]);
+    expect(item.querySelector('[data-action="retire"]')!.textContent).toBe('I know this');
+  });
+
+  it('redraws the stage the word now counts towards', () => {
+    const item = openRow('少見');
+    expect(item.querySelector('.stage-badge')!.textContent).toBe('Candidate');
+
+    press(item, 'study');
+    expect(row('少見').querySelector('.stage-badge')!.textContent).toBe('New');
+    expect(document.getElementById('overview-retired')!.textContent).toBe('1');
+  });
+
+  // The pills promise the list holds that stage and nothing else, so a word the
+  // press moves out of one is rebuilt away, open panel or not.
+  it('rebuilds the list when the press moves the word out of the filter', () => {
+    document.querySelector('[data-stage="candidate"]')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+
+    press(openRow('少見'), 'study');
+
+    expect(document.getElementById('stats-list')!.style.display).toBe('none');
+    expect(document.getElementById('empty-state')!.style.display).toBe('block');
+  });
+});

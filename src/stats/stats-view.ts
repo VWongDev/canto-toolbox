@@ -367,41 +367,107 @@ function createStageBadge(stage: FlashcardStage): HTMLElement {
  * that hovering cannot: that they already know it, and that they want it
  * studied sooner than the exposure gate would allow.
  */
+interface ActionCopy {
+  on: { label: string; title: string };
+  off: { label: string; title: string };
+}
+
+const STUDY_COPY: ActionCopy = {
+  on: { label: 'Studying', title: 'Stop prioritising this word' },
+  off: { label: 'Study this', title: 'Add this word to the deck now' },
+};
+
+const RETIRE_COPY: ActionCopy = {
+  on: { label: 'Retired', title: 'Put this word back in the deck' },
+  off: { label: 'I know this', title: 'Stop reviewing this word' },
+};
+
+/**
+ * The button as the flag currently stands. It is painted rather than rebuilt so
+ * a press can repaint the row it is in without replacing the pressed button —
+ * which would drop the focus that reached it.
+ */
+function paintAction(button: HTMLButtonElement, copy: ActionCopy, on: boolean): void {
+  const text = on ? copy.on : copy.off;
+
+  button.className = `stat-action${on ? ' stat-action--on' : ''}`;
+  button.textContent = text.label;
+  button.title = text.title;
+  // The press reads the flag back off the button, so repainting is enough to
+  // change what the next press asks for.
+  button.dataset.on = String(on);
+}
+
+function createAction(
+  action: string,
+  copy: ActionCopy,
+  on: boolean,
+  press: (next: boolean) => void,
+): HTMLButtonElement {
+  const button = createElement<HTMLButtonElement>({
+    tag: 'button',
+    dataset: { action },
+    listeners: {
+      click: (event: Event) => {
+        event.stopPropagation();
+        press(button.dataset.on !== 'true');
+      },
+    },
+  });
+
+  paintAction(button, copy, on);
+  return button;
+}
+
 function createStatusControls(
   word: string,
   stat: WordStatistics,
   setStatus: SetWordStatus,
 ): HTMLElement {
-  const retired = stat.suppressed === true;
-  const pinned = stat.pinned === true;
+  const study = createAction(
+    'study',
+    STUDY_COPY,
+    stat.pinned === true,
+    next => setStatus(word, { pinned: next }),
+  );
 
-  const know = createElement<HTMLButtonElement>({
-    tag: 'button',
-    className: `stat-action${retired ? ' stat-action--on' : ''}`,
-    textContent: retired ? 'Retired' : 'I know this',
-    attributes: { title: retired ? 'Put this word back in the deck' : 'Stop reviewing this word' },
-    listeners: {
-      click: (event: Event) => {
-        event.stopPropagation();
-        setStatus(word, { suppressed: !retired });
-      },
-    },
-  });
-
-  const study = createElement<HTMLButtonElement>({
-    tag: 'button',
-    className: `stat-action${pinned ? ' stat-action--on' : ''}`,
-    textContent: pinned ? 'Studying' : 'Study this',
-    attributes: { title: pinned ? 'Stop prioritising this word' : 'Add this word to the deck now' },
-    listeners: {
-      click: (event: Event) => {
-        event.stopPropagation();
-        setStatus(word, { pinned: !pinned });
-      },
-    },
-  });
+  const know = createAction(
+    'retire',
+    RETIRE_COPY,
+    stat.suppressed === true,
+    next => setStatus(word, { suppressed: next }),
+  );
 
   return createElement({ className: 'stat-actions', children: [study, know] });
+}
+
+/**
+ * One row brought up to date with the record, leaving the rest of the list —
+ * and the open panel the buttons live in — where they are. A press that moves
+ * the word out of the current filter is not this function's to draw: it reports
+ * false and the caller rebuilds.
+ */
+export function refreshStatRow(
+  elements: StatsElements,
+  word: string,
+  stat: WordStatistics,
+  view: ListView,
+): boolean {
+  const item = Array.from(elements.statsListEl.children).find(
+    child => (child as HTMLElement).dataset.word === word,
+  ) as HTMLElement | undefined;
+
+  if (!item || !matchesView(stat, view)) return false;
+
+  item.querySelector('.stage-badge')?.replaceWith(createStageBadge(getFlashcardStage(stat)));
+
+  const study = item.querySelector<HTMLButtonElement>('[data-action="study"]');
+  const know = item.querySelector<HTMLButtonElement>('[data-action="retire"]');
+  if (!study || !know) return false;
+
+  paintAction(study, STUDY_COPY, stat.pinned === true);
+  paintAction(know, RETIRE_COPY, stat.suppressed === true);
+  return true;
 }
 
 function createStatItem(
