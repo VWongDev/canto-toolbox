@@ -1,6 +1,7 @@
 @use '../shared/styles/tokens' as t;
 @use '../shared/styles/dark-mode' as *;
 @use '../shared/styles/theme' as theme;
+@use '../shared/styles/a11y' as a;
 @use '../shared/styles/etymology';
 @use '../shared/styles/definition';
 
@@ -84,6 +85,8 @@
   line-height: 1.6;
   cursor: pointer;
   white-space: nowrap;
+
+  @include a.focus-ring;
 
   &:hover:not(:disabled) {
     border-color: t.$color-primary;

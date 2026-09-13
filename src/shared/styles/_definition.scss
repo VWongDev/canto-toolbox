@@ -1,4 +1,5 @@
 @use 'tokens' as t;
+@use 'a11y' as a;
 
 .definition-container {
   display: flex;
@@ -99,6 +100,8 @@
   color: t.$color-text-subtle;
   cursor: pointer;
   line-height: 0;
+
+  @include a.focus-ring(1px);
 
   &:hover {
     color: t.$color-primary;
@@ -204,6 +207,8 @@
   color: t.$color-primary;
   cursor: pointer;
   letter-spacing: 0.2px;
+
+  @include a.focus-ring(1px);
 
   &:hover {
     color: t.$color-primary-hover;

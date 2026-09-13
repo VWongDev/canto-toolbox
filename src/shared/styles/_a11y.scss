@@ -1,0 +1,41 @@
+@use 'tokens' as t;
+
+// One focus ring for the whole extension. Every control that can be reached by
+// Tab has to show where the caret is, and a ring defined per component drifts
+// into three slightly different rings. The accent resolves per theme on its
+// own, so the ring is stated once.
+@mixin focus-ring($offset: 2px) {
+  &:focus-visible {
+    outline: 2px solid t.$color-primary;
+    outline-offset: $offset;
+  }
+}
+
+// Movement a reader has asked their system not to make. The content script's
+// stylesheets are injected into pages the extension does not own, so this
+// deliberately carries no selector of its own: each stylesheet names what it
+// is stilling rather than blanketing whatever page it landed on.
+@mixin reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}
+
+// Cuts an animation or transition to nothing without having to restate which
+// property was moving.
+@mixin still {
+  animation-duration: 0.01ms;
+  animation-iteration-count: 1;
+  transition-duration: 0.01ms;
+}
+
+// Strips the browser's button chrome from a control that is a button for the
+// keyboard's sake rather than for the way it looks.
+@mixin unstyled-button {
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}

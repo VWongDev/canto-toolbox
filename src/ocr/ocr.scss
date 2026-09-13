@@ -1,5 +1,6 @@
 @use '../shared/styles/tokens' as t;
 @use '../shared/styles/theme' as theme;
+@use '../shared/styles/a11y' as a;
 
 // The badge that offers to read an image, and the transparent text laid over
 // one that has been read. Both sit at the document's top level and are
@@ -40,6 +41,8 @@
     opacity: 1;
   }
 
+  @include a.focus-ring;
+
   &[data-state='reading'] {
     cursor: progress;
     animation: canto-ocr-pulse 1s ease-in-out infinite;
@@ -54,6 +57,20 @@
 @keyframes canto-ocr-pulse {
   50% {
     opacity: 0.4;
+  }
+}
+
+// The badge pulses for as long as the model is busy, which is the one piece of
+// indefinite motion the extension puts on someone else's page. Stilled, it
+// still has to read as working, so it holds the dimmed half of the pulse.
+@include a.reduced-motion {
+  .canto-ocr-badge {
+    @include a.still;
+
+    &[data-state='reading'] {
+      animation: none;
+      opacity: 0.45;
+    }
   }
 }
 

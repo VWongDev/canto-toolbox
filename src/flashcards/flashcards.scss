@@ -1,6 +1,7 @@
 @use '../shared/styles/tokens' as t;
 @use '../shared/styles/dark-mode' as *;
 @use '../shared/styles/theme' as theme;
+@use '../shared/styles/a11y' as a;
 @use '../shared/styles/etymology';
 @use '../shared/styles/definition';
 @use '../shared/styles/context';
@@ -257,9 +258,8 @@ body {
   transform: scale(0.99);
 }
 
-.btn:focus-visible {
-  outline: 2px solid t.$color-primary;
-  outline-offset: 2px;
+.btn {
+  @include a.focus-ring;
 }
 
 .key-hint {
@@ -379,5 +379,16 @@ body {
 
   #loading p {
     color: t.$color-text-subtle;
+  }
+}
+
+@include a.reduced-motion {
+  .btn,
+  .progress-bar {
+    @include a.still;
+  }
+
+  .btn:active {
+    transform: none;
   }
 }
