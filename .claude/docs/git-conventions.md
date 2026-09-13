@@ -89,5 +89,6 @@ ai(agents): Add doc-reviewer subagent
 4. Keep commits focused on one domain when possible
 5. Use multiple domains when a change affects multiple areas (e.g., `refactor(content, stats)`)
 6. Use `global` domain if more than 3 domains would be specified
-7. Commit from inside the Nix dev shell — the `pre-commit` hook runs `pnpm lint
-   && pnpm typecheck && pnpm test` and aborts if `pnpm` is not on `PATH`
+7. Commit from a shell with the Nix dev environment loaded — direnv does this
+   automatically inside the repo, and the `pre-commit` hook runs `pnpm lint &&
+   pnpm typecheck && pnpm test` and aborts if `pnpm` is not on `PATH`

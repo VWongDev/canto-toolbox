@@ -13,6 +13,7 @@ canto-toolbox/
 ├── eslint.config.js           # Flat ESLint config (typescript-eslint)
 ├── tsconfig.json              # TypeScript configuration
 ├── flake.nix                  # Nix dev shell (Node 24 + pnpm)
+├── .envrc                     # `use flake` — direnv loads the dev shell
 ├── .husky/                    # pre-commit (lint/typecheck/test), commit-msg
 ├── src/
 │   ├── service-worker.ts      # MV3 service-worker entry; registers handlers

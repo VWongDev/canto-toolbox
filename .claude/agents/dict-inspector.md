@@ -125,7 +125,8 @@ All types are in `src/shared/types.ts`: `Dictionary`, `DictionaryEntry`,
 
 ## Build commands
 
-All commands must be run inside the nix shell: `nix develop --command <cmd>`
+direnv loads the Nix dev shell from `.envrc`, so these run directly — no
+`nix develop --command` prefix.
 
 - `pnpm build:scripts` — compile build-tools TypeScript to `build-tools/dist/`
 - `pnpm build:dict` — run the processors, generating `public/data/*.json`

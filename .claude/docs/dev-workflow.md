@@ -2,13 +2,19 @@
 
 ## Prerequisites
 
-The repo includes a `flake.nix`. With Nix installed, run:
+The repo includes a `flake.nix` and a checked-in `.envrc` (`use flake`). With
+Nix and [direnv](https://direnv.net/) installed, approve the environment once:
 
 ```sh
-nix develop
+direnv allow
 ```
 
-This drops you into a shell with the correct Node.js and pnpm versions already available. No manual version management needed.
+Every shell entering the repo then has the correct Node.js and pnpm versions on
+`PATH` automatically — commands are run as `pnpm build`, not
+`nix develop --command pnpm build`. No manual version management needed.
+
+Without direnv, `nix develop` drops you into the same shell by hand, and
+`nix develop --command <cmd>` runs a single command in it.
 
 Without Nix, install manually:
 - Node.js >= 22 (`engines` floor); the dev shell pins `nodejs_24` and CI uses 24
@@ -127,8 +133,9 @@ the Stats page).
 Husky installs two hooks (via the `prepare` script):
 
 - **`pre-commit`** — runs `pnpm lint && pnpm typecheck && pnpm test`. It first
-  checks that `pnpm` is on `PATH`, so committing from outside the Nix dev shell
-  fails with a pointer to `nix develop` rather than a confusing error.
+  checks that `pnpm` is on `PATH`, so committing from a shell that has not
+  loaded the dev environment fails with a pointer to `nix develop` rather than a
+  confusing error.
 - **`commit-msg`** — validates the message against `type(domain): Description`.
   See @.claude/docs/git-conventions.md.
 

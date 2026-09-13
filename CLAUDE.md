@@ -1,7 +1,9 @@
 # Agent Instructions
 
 ## Dev Environment
-Node.js and pnpm are only available inside the Nix dev shell. Every shell command (pnpm, node, tsc, git commit, etc.) must be run as `nix develop --command <cmd>`. Never run these commands directly — they will fail with "node: No such file or directory".
+Node.js and pnpm come from the Nix dev shell, which the checked-in `.envrc` (`use flake`) loads automatically through direnv. Run `pnpm`, `node`, `tsc` and the rest directly — no `nix develop --command` prefix.
+
+If a command fails with "node: No such file or directory", the shell has not loaded the environment: run `direnv allow` once in the repo root, or fall back to `nix develop --command <cmd>`.
 
 ## Package Manager
 Always use `pnpm`. Never use `npm` or `yarn`.
@@ -26,7 +28,7 @@ This project has automated coverage — do not assume verification is manual.
   interactively when debugging UI behaviour
 
 A husky `pre-commit` hook runs `pnpm lint && pnpm typecheck && pnpm test`, so
-committing from outside the Nix dev shell fails.
+committing from a shell that has not loaded the dev environment fails.
 
 See @.claude/docs/testing.md for the full guide.
 
