@@ -9,7 +9,7 @@ const WORD_HIGH = '你好';   // count 5
 const WORD_MID = '再见';    // count 2
 const WORD_LOW = '谢谢';    // count 1 (should be filtered)
 
-type WordStat = { count: number; firstSeen: number; lastSeen: number };
+type WordStat = { count: number; firstSeen: number; lastSeen: number; pinned?: boolean };
 
 let context: BrowserContext;
 let extensionId: string;
@@ -37,19 +37,23 @@ test.afterAll(async () => {
   fs.rmSync(tmpDataDir, { recursive: true, force: true });
 });
 
+/**
+ * Both areas, because the extension reads the record as the two of them
+ * reconciled and a write reaches both. Seeding sync alone left whatever an
+ * earlier test's ratings had written to local still standing — and local is
+ * the area that decides a word's schedule and its flags.
+ */
 async function seedStorage(page: Page, data: Record<string, WordStat>): Promise<void> {
-  await page.evaluate((storageData) => {
-    return new Promise<void>((resolve) => {
-      chrome.storage.sync.set({ wordStatistics: storageData }, () => resolve());
-    });
+  await page.evaluate(async (storageData) => {
+    await chrome.storage.sync.set({ wordStatistics: storageData });
+    await chrome.storage.local.set({ wordStatistics: storageData });
   }, data);
 }
 
 async function clearStorage(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    return new Promise<void>((resolve) => {
-      chrome.storage.sync.clear(() => resolve());
-    });
+  await page.evaluate(async () => {
+    await chrome.storage.sync.clear();
+    await chrome.storage.local.clear();
   });
 }
 

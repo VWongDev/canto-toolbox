@@ -39,16 +39,19 @@ async function openStatsPage(): Promise<Page> {
   return page;
 }
 
+/** Both areas — see the note on the flashcards spec's copy. */
 async function seedStorage(page: Page, data: Record<string, WordStat>): Promise<void> {
-  await page.evaluate((storageData) => new Promise<void>((resolve) => {
-    chrome.storage.sync.set({ wordStatistics: storageData }, () => resolve());
-  }), data);
+  await page.evaluate(async (storageData) => {
+    await chrome.storage.sync.set({ wordStatistics: storageData });
+    await chrome.storage.local.set({ wordStatistics: storageData });
+  }, data);
 }
 
 async function clearStorage(page: Page): Promise<void> {
-  await page.evaluate(() => new Promise<void>((resolve) => {
-    chrome.storage.sync.clear(() => resolve());
-  }));
+  await page.evaluate(async () => {
+    await chrome.storage.sync.clear();
+    await chrome.storage.local.clear();
+  });
 }
 
 test('stats page title is reachable', async () => {
