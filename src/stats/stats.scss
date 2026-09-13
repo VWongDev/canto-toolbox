@@ -1,8 +1,11 @@
 @use '../shared/styles/tokens' as t;
 @use '../shared/styles/dark-mode' as *;
+@use '../shared/styles/theme' as theme;
 @use '../shared/styles/etymology';
 @use '../shared/styles/definition';
 @use '../shared/styles/context';
+
+@include theme.theme;
 
 * {
   margin: 0;
@@ -30,14 +33,14 @@ header {
 }
 
 .header-icon {
-  font-size: 40px;
+  font-size: t.$glyph-md;
   line-height: 1;
-  margin-bottom: 12px;
+  margin-bottom: t.$space-3;
   opacity: 0.85;
 }
 
 h1 {
-  font-size: 26px;
+  font-size: t.$text-2xl;
   font-weight: 700;
   color: t.$color-text-strong;
   margin-bottom: 6px;
@@ -46,7 +49,7 @@ h1 {
 
 .subtitle {
   color: t.$color-text-subtle;
-  font-size: 13px;
+  font-size: t.$text-base;
 }
 
 // Primary action and its context group on the left; the destructive action is
@@ -57,10 +60,10 @@ h1 {
   gap: t.$space-4;
   margin-bottom: t.$space-5;
   padding: t.$space-3 t.$space-4;
-  background: white;
+  background: t.$color-surface;
   border-radius: t.$radius-lg;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid t.$color-border;
 }
 
 #clear-btn {
@@ -80,30 +83,22 @@ h1 {
 .btn:focus-visible {
   outline: 2px solid t.$color-primary;
   outline-offset: 2px;
-
-  @include dark { outline-color: t.$color-primary-dark; }
 }
 
+// A filled button takes the fill accent rather than the text one, so a white
+// label stays readable on it in either theme.
 .btn-primary {
-  background: t.$color-primary;
-  color: white;
+  background: t.$color-primary-fill;
+  border-color: t.$color-primary-fill;
+  color: #fff;
 
   &:hover {
-    background: t.$color-primary-hover;
+    background: t.$color-primary-fill-hover;
+    border-color: t.$color-primary-fill-hover;
   }
 
   &:active {
     transform: scale(0.99);
-  }
-
-  @include dark {
-    background: t.$color-primary-fill-dark;
-    border-color: t.$color-primary-fill-dark;
-
-    &:hover {
-      background: t.$color-primary-fill-hover-dark;
-      border-color: t.$color-primary-fill-hover-dark;
-    }
   }
 }
 
@@ -112,17 +107,8 @@ h1 {
   color: t.$color-text-subtle;
 
   &:hover {
-    background: rgba(179, 38, 30, 0.06);
+    background: t.$color-danger-tint;
     color: t.$color-danger;
-  }
-
-  @include dark {
-    color: t.$color-text-subtle-dark;
-
-    &:hover {
-      background: rgba(t.$color-danger-dark, 0.12);
-      color: t.$color-danger-dark;
-    }
   }
 }
 
@@ -143,35 +129,22 @@ h1 {
   border: 1px solid t.$color-border-muted;
   border-radius: t.$radius-sm;
   background: t.$color-surface-alt;
-
-  @include dark {
-    border-color: t.$color-border-bold-dark;
-    background: t.$color-surface-alt-dark;
-  }
 }
 
 .overview-item {
   dt {
     color: t.$color-text-subtle;
-    font-size: 11px;
+    font-size: t.$text-xs;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-
-    @include dark {
-      color: t.$color-text-subtle-dark;
-    }
   }
 
   dd {
     margin: 2px 0 0;
     color: t.$color-text-strong;
-    font-size: 20px;
+    font-size: t.$text-figure;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-
-    @include dark {
-      color: t.$color-text-strong-dark;
-    }
   }
 }
 
@@ -187,9 +160,9 @@ h1 {
   display: flex;
   align-items: center;
   gap: t.$space-2;
-  margin-bottom: 12px;
+  margin-bottom: t.$space-3;
   color: t.$color-text-subtle;
-  font-size: 12px;
+  font-size: t.$text-sm;
 
   select {
     padding: 5px t.$space-2;
@@ -198,18 +171,8 @@ h1 {
     background: t.$color-surface;
     color: t.$color-text;
     font: inherit;
-    font-size: 12px;
+    font-size: t.$text-sm;
     cursor: pointer;
-  }
-
-  @include dark {
-    color: t.$color-text-subtle-dark;
-
-    select {
-      border-color: t.$color-border-bold-dark;
-      background: t.$color-surface-dark;
-      color: t.$color-text-dark;
-    }
   }
 }
 
@@ -233,10 +196,10 @@ h1 {
   gap: t.$space-2;
   padding: 6px 14px;
   line-height: 1.4;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 20px;
-  background: white;
-  font-size: 13px;
+  border: 1px solid t.$color-border-bold;
+  border-radius: t.$radius-pill;
+  background: t.$color-surface;
+  font-size: t.$text-base;
   font-weight: 500;
   color: t.$color-text-subtle;
   cursor: pointer;
@@ -248,13 +211,13 @@ h1 {
   }
 
   &.active {
-    background: t.$color-primary;
-    border-color: t.$color-primary;
-    color: white;
+    background: t.$color-primary-fill;
+    border-color: t.$color-primary-fill;
+    color: #fff;
 
     .tab-count {
       background: rgba(255, 255, 255, 0.25);
-      color: white;
+      color: #fff;
     }
   }
 }
@@ -269,11 +232,15 @@ h1 {
   height: 18px;
   padding: 0 6px;
   border-radius: t.$radius-pill;
-  background: rgba(0, 0, 0, 0.07);
-  font-size: 11px;
+  background: t.$color-chip-bg;
+  font-size: t.$text-xs;
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+
+  // Without this the chip keeps the pill's own subdued ink and reads as part
+  // of the label rather than as a count.
+  @include dark { color: t.$color-text; }
 }
 
 .stage-badge {
@@ -281,70 +248,70 @@ h1 {
   align-items: center;
   padding: 2px 7px;
   border-radius: 10px;
-  font-size: 11px;
+  font-size: t.$text-xs;
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
 
   &--new {
-    background: rgba(0, 0, 0, 0.06);
-    color: #666;
+    background: t.$color-stage-new-bg;
+    color: t.$color-stage-new;
   }
 
   &--learning {
-    background: #fff3cd;
-    color: #92600a;
+    background: t.$color-stage-learning-bg;
+    color: t.$color-stage-learning;
   }
 
   &--familiar {
-    background: #dbeafe;
-    color: #1e40af;
+    background: t.$color-stage-familiar-bg;
+    color: t.$color-stage-familiar;
   }
 
   &--mastered {
-    background: #dcfce7;
-    color: #166534;
+    background: t.$color-stage-mastered-bg;
+    color: t.$color-stage-mastered;
   }
 }
 
 .stat-word-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: t.$space-2;
   flex: 1;
 }
 
 .stats-container {
-  background: white;
-  border-radius: 8px;
+  background: t.$color-surface;
+  border-radius: t.$radius-lg;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 24px;
+  border: 1px solid t.$color-border;
+  padding: t.$space-5;
   min-height: 200px;
 }
 
 .loading {
   text-align: center;
   color: t.$color-text-faint;
-  padding: 40px;
-  font-size: 14px;
+  padding: t.$space-6;
+  font-size: t.$text-body;
 }
 
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
-  color: #999;
+  padding: 60px t.$space-5;
+  color: t.$color-text-subtle;
 }
 
 .empty-state-icon {
-  font-size: 48px;
+  font-size: t.$glyph-lg;
   line-height: 1;
-  margin-bottom: 16px;
+  margin-bottom: t.$space-4;
   opacity: 0.3;
 }
 
 .empty-state p {
-  font-size: 15px;
+  font-size: t.$text-md;
   line-height: 1.8;
 }
 
@@ -450,22 +417,12 @@ h1 {
   background: transparent;
   color: t.$color-text-subtle;
   font: inherit;
-  font-size: 12px;
+  font-size: t.$text-sm;
   cursor: pointer;
 
   &:hover {
     border-color: t.$color-primary;
     color: t.$color-primary;
-  }
-
-  @include dark {
-    border-color: t.$color-border-bold-dark;
-    color: t.$color-text-subtle-dark;
-
-    &:hover {
-      border-color: t.$color-primary-dark;
-      color: t.$color-primary-dark;
-    }
   }
 }
 
@@ -473,142 +430,49 @@ h1 {
   border-color: t.$color-primary;
   color: t.$color-primary;
   font-weight: 600;
-
-  @include dark {
-    border-color: t.$color-primary-dark;
-    color: t.$color-primary-dark;
-  }
 }
 
 .stat-loading,
 .stat-error {
   text-align: center;
-  padding: 20px;
+  padding: t.$space-5;
   color: t.$color-text-faint;
-  font-size: 14px;
+  font-size: t.$text-body;
 }
 
 .stat-error {
   color: t.$color-danger;
-
-  @include dark { color: t.$color-danger-dark; }
 }
 
+// What is left once the palette carries the theme: the surfaces whose role
+// changes on a dark canvas rather than just their value.
 @include dark {
-  body {
-    background: t.$color-bg-dark;
-    color: t.$color-text-dark;
-  }
-
-  h1 {
-    color: t.$color-text-strong-dark;
-  }
-
-  .subtitle {
-    color: t.$color-text-subtle-dark;
-  }
-
   .controls,
   .stats-container {
-    background: t.$color-surface-dark;
     box-shadow: none;
-    border-color: t.$color-border-dark;
   }
 
-  .word-count {
-    color: t.$color-text-subtle-dark;
-  }
-
+  // The row lifts off the canvas instead of sitting on white, so the list and
+  // its opened panel swap which surface each uses.
   .stat-item {
-    background: t.$color-surface-alt-dark;
-    border-color: t.$color-border-muted-dark;
-  }
-
-  .stat-item:hover {
-    border-color: t.$color-control-border-dark;
-  }
-
-  .stat-item.expanded {
-    border-color: t.$color-control-border-dark;
+    background: t.$color-surface-alt;
   }
 
   .stat-item:hover .stat-header,
   .stat-item.expanded .stat-header {
-    background: t.$color-control-hover-dark;
+    background: t.$color-control-hover;
   }
 
   .stat-expanded {
-    background: t.$color-surface-dark;
-    border-top-color: t.$color-border-bold-dark;
-  }
-
-  .stat-loading {
-    color: t.$color-text-subtle-dark;
-  }
-
-  .stat-word {
-    color: t.$color-text-strong-dark;
+    background: t.$color-surface;
+    border-top-color: t.$color-border-bold;
   }
 
   .stat-count {
-    color: t.$color-primary-dark;
+    color: t.$color-primary;
   }
 
-  .stat-label {
-    color: t.$color-text-subtle-dark;
-  }
-
-  .stat-expand-icon {
-    color: t.$color-text-subtle-dark;
-  }
-
-  .empty-state {
-    color: t.$color-text-subtle-dark;
-  }
-
-  .filter-tab {
-    background: t.$color-surface-dark;
-    border-color: t.$color-border-dark;
-    color: t.$color-text-subtle-dark;
-
-    &:hover {
-      border-color: t.$color-primary-dark;
-      color: t.$color-primary-dark;
-    }
-
-    &.active {
-      background: t.$color-primary-fill-dark;
-      border-color: t.$color-primary-fill-dark;
-      color: #fff;
-    }
-  }
-
-  // Without this the chip keeps its light translucent black and vanishes into
-  // the dark pill, leaving the count adrift.
-  .tab-count {
-    background: rgba(255, 255, 255, 0.1);
-    color: t.$color-text-dark;
-  }
-
-  .stage-badge {
-    &--new {
-      background: rgba(255, 255, 255, 0.08);
-      color: t.$color-text-subtle-dark;
-    }
-
-    &--learning {
-      background: rgba(t.$color-rating-hard-dark, 0.2);
-      color: t.$color-rating-hard-dark;
-    }
-
-    &--familiar {
-      background: rgba(t.$color-rating-easy-dark, 0.2);
-      color: t.$color-rating-easy-dark;
-    }
-
-    &--mastered {
-      background: rgba(t.$color-rating-good-dark, 0.2);
-      color: t.$color-rating-good-dark;
-    }
+  .stat-loading {
+    color: t.$color-text-subtle;
   }
 }

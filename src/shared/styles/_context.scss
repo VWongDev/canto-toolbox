@@ -1,5 +1,4 @@
 @use 'tokens' as t;
-@use 'dark-mode' as *;
 
 // The sentence a word was met in. Shared by the stats list and the review
 // cards, so the snippet looks the same wherever the word is studied.
@@ -9,44 +8,27 @@
   border-left: 3px solid t.$color-primary;
   border-radius: 0 t.$radius-sm t.$radius-sm 0;
   background: t.$color-surface-alt;
-
-  @include dark {
-    border-left-color: t.$color-primary-dark;
-    background: t.$color-surface-alt-dark;
-  }
 }
 
 .context-label {
   display: block;
   margin-bottom: 2px;
   color: t.$color-text-subtle;
-  font-size: 11px;
+  font-size: t.$text-xs;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-
-  @include dark {
-    color: t.$color-text-subtle-dark;
-  }
 }
 
 .context-sentence {
   margin: 0;
   color: t.$color-text-faint;
-  font-size: 14px;
+  font-size: t.$text-body;
   line-height: 1.6;
-
-  @include dark {
-    color: t.$color-text-faint-dark;
-  }
 }
 
 .context-word {
   color: t.$color-primary;
   font-weight: 600;
-
-  @include dark {
-    color: t.$color-primary-dark;
-  }
 }
 
 // The gap on a cloze prompt: visible enough to count the hidden characters,
@@ -54,8 +36,4 @@
 .context-blank {
   color: t.$color-primary;
   letter-spacing: 0.1em;
-
-  @include dark {
-    color: t.$color-primary-dark;
-  }
 }

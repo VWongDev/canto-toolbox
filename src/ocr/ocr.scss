@@ -1,9 +1,16 @@
 @use '../shared/styles/tokens' as t;
+@use '../shared/styles/theme' as theme;
 
 // The badge that offers to read an image, and the transparent text laid over
 // one that has been read. Both sit at the document's top level and are
 // positioned in page coordinates, so an ancestor's overflow or stacking
 // context cannot clip them.
+
+// Injected into pages the extension does not own, so the palette goes on each
+// of these rather than on the host's :root. The badge is deliberately the same
+// ink over either theme — it sits on a picture, not on the page — so only the
+// overlay needs it.
+@include theme.theme('.canto-ocr-overlay');
 
 .canto-ocr-badge {
   position: absolute;
@@ -84,6 +91,6 @@
     left: 0;
     right: 0;
     bottom: 0;
-    border-bottom: 1px dotted rgba(0, 102, 204, 0.55);
+    border-bottom: 1px dotted t.$color-ocr-underline;
   }
 }

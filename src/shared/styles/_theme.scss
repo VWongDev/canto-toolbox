@@ -1,0 +1,205 @@
+// The palette, as CSS custom properties.
+//
+// Sass variables are resolved at compile time, which had two costs. Dark mode
+// had to be restated component by component — every rule that set a colour
+// needed a matching `@include dark` block naming the `-dark` twin of the same
+// token — and nothing outside the stylesheets could read a colour at all, so
+// the stroke quiz, which draws to SVG, carried a hand-written palette of its
+// own that matched nothing on the page.
+//
+// Declaring the values here instead means a colour is chosen once and resolved
+// by the browser, in whichever theme the reader is in. `_tokens.scss` still
+// exposes the same `$color-*` names, now pointing at these.
+//
+// The content script injects its stylesheets into pages the extension does not
+// own, so `theme()` takes the selector to plant the properties on: extension
+// pages use `:root`, injected UI uses its own outermost element.
+
+@mixin palette {
+  --ct-primary: #0066cc;
+  --ct-primary-hover: #0052a3;
+  // On a dark canvas the accent splits in two: one legible as text, one dark
+  // enough to carry a white label.
+  --ct-primary-fill: #0066cc;
+  --ct-primary-fill-hover: #0052a3;
+  --ct-primary-tint: rgba(0, 102, 204, 0.12);
+
+  --ct-text: #333;
+  --ct-text-strong: #1a1a1a;
+  --ct-text-muted: #555;
+  --ct-text-faint: #666;
+  --ct-text-subtle: #888;
+
+  --ct-bg: #f5f5f5;
+  --ct-surface: #ffffff;
+  --ct-surface-alt: #f8f8f8;
+
+  --ct-border: rgba(0, 0, 0, 0.06);
+  --ct-border-muted: #e8e8e8;
+  --ct-border-bold: #e0e0e0;
+
+  --ct-meaning: #2a7a3b;
+  --ct-sound: #0055aa;
+  --ct-meaning-tint: rgba(42, 122, 59, 0.10);
+  --ct-sound-tint: rgba(0, 85, 170, 0.10);
+
+  // The neutral fill behind a small inline chip — a component glyph, a count.
+  --ct-chip-bg: rgba(0, 0, 0, 0.06);
+
+  --ct-danger: #b3261e;
+  --ct-danger-tint: rgba(179, 38, 30, 0.06);
+
+  // Mandarin 1-4 follow the MDBG/Pleco convention learners will already know;
+  // Cantonese reuses those four and adds two for its extra tones. Every hue
+  // clears 4.5:1 on the light surfaces.
+  --ct-tone-1: #c0392b;
+  --ct-tone-2: #1e7a3c;
+  --ct-tone-3: #1f6feb;
+  --ct-tone-4: #7d3c98;
+  --ct-tone-5: #a05a00;
+  --ct-tone-6: #0e6b6b;
+  --ct-tone-neutral: #767676;
+
+  // Warmer as a word gets commoner, so the chip reads as priority at a glance.
+  --ct-band-core: #8a4b00;
+  --ct-band-core-bg: #fdf0d8;
+  --ct-band-common: #1e6b3a;
+  --ct-band-common-bg: #e4f4e8;
+  --ct-band-frequent: #1a5490;
+  --ct-band-frequent-bg: #e4eefb;
+  --ct-band-rare: #5f5f68;
+  --ct-band-rare-bg: #eeeef0;
+
+  // Colour is reserved for the primary action, so secondary and tertiary
+  // buttons carry weight through surface and border only.
+  --ct-control: #ffffff;
+  --ct-control-hover: #f2f2f2;
+  --ct-control-border: #d4d4d4;
+  --ct-control-text: #333;
+
+  // Anki-style Again / Hard / Good / Easy fills.
+  --ct-rating-again: #e53935;
+  --ct-rating-again-hover: #c62828;
+  --ct-rating-hard: #fb8c00;
+  --ct-rating-hard-hover: #ef6c00;
+  --ct-rating-good: #43a047;
+  --ct-rating-good-hover: #2e7d32;
+  --ct-rating-good-tint: rgba(67, 160, 71, 0.14);
+  --ct-rating-easy: #1e88e5;
+  --ct-rating-easy-hover: #1565c0;
+
+  // How far a word has got. These were the last colours written by hand at
+  // their call site, in four pairs that belonged to no palette.
+  --ct-stage-new: #666;
+  --ct-stage-new-bg: rgba(0, 0, 0, 0.06);
+  --ct-stage-learning: #92600a;
+  --ct-stage-learning-bg: #fff3cd;
+  --ct-stage-familiar: #1e40af;
+  --ct-stage-familiar-bg: #dbeafe;
+  --ct-stage-mastered: #166534;
+  --ct-stage-mastered-bg: #dcfce7;
+
+  // The stroke quiz draws to SVG, so hanzi-writer is handed these rather than
+  // inheriting them. They have to be opaque: they are painted, not layered.
+  --ct-quiz-outline: #dadce0;
+  --ct-quiz-stroke: #1a1a1a;
+  --ct-quiz-drawing: #0066cc;
+
+  // The hairline under text the popup can answer for, drawn over the picture
+  // it was read out of.
+  --ct-ocr-underline: rgba(0, 102, 204, 0.55);
+}
+
+// Canvas is a lifted zinc, not crushed black; surfaces step up in elevation.
+@mixin palette-dark {
+  --ct-primary: #6cb3ff;
+  --ct-primary-hover: #8ac4ff;
+  --ct-primary-fill: #1f6feb;
+  --ct-primary-fill-hover: #1a5fd0;
+  --ct-primary-tint: rgba(108, 179, 255, 0.18);
+
+  --ct-text: #e8e8ed;
+  --ct-text-strong: #f5f5f7;
+  --ct-text-muted: #b4b4be;
+  --ct-text-faint: #7a7a86;
+  --ct-text-subtle: #8e8e99;
+
+  --ct-bg: #161618;
+  --ct-surface: #222326;
+  --ct-surface-alt: #2c2d32;
+
+  --ct-border: rgba(255, 255, 255, 0.08);
+  --ct-border-muted: rgba(255, 255, 255, 0.10);
+  --ct-border-bold: rgba(255, 255, 255, 0.14);
+
+  --ct-meaning: #6bc98a;
+  --ct-sound: #6ba8e0;
+  --ct-meaning-tint: rgba(107, 201, 138, 0.22);
+  --ct-sound-tint: rgba(107, 168, 224, 0.22);
+
+  --ct-chip-bg: rgba(255, 255, 255, 0.10);
+
+  --ct-danger: #f09088;
+  --ct-danger-tint: rgba(240, 144, 136, 0.12);
+
+  --ct-tone-1: #ff8a80;
+  --ct-tone-2: #7bd88f;
+  --ct-tone-3: #79b8ff;
+  --ct-tone-4: #d7a3f0;
+  --ct-tone-5: #e8b06a;
+  --ct-tone-6: #63cccc;
+  --ct-tone-neutral: #9a9aa4;
+
+  // The dark canvas keeps the band hue and drops the fill to a tint.
+  --ct-band-core: #f0b866;
+  --ct-band-core-bg: rgba(240, 184, 102, 0.14);
+  --ct-band-common: #7bd88f;
+  --ct-band-common-bg: rgba(123, 216, 143, 0.13);
+  --ct-band-frequent: #79b8ff;
+  --ct-band-frequent-bg: rgba(121, 184, 255, 0.13);
+  --ct-band-rare: #9a9aa4;
+  --ct-band-rare-bg: rgba(255, 255, 255, 0.07);
+
+  --ct-control: #2a2b30;
+  --ct-control-hover: #34353b;
+  --ct-control-border: rgba(255, 255, 255, 0.12);
+  --ct-control-text: #e8e8ed;
+
+  --ct-rating-again: #e0554d;
+  --ct-rating-again-hover: #c94a44;
+  --ct-rating-hard: #e89a3c;
+  --ct-rating-hard-hover: #d48c32;
+  --ct-rating-good: #4caf63;
+  --ct-rating-good-hover: #3d9a52;
+  --ct-rating-good-tint: rgba(76, 175, 99, 0.20);
+  --ct-rating-easy: #4d9eef;
+  --ct-rating-easy-hover: #3d8ed9;
+
+  --ct-stage-new: #8e8e99;
+  --ct-stage-new-bg: rgba(255, 255, 255, 0.08);
+  --ct-stage-learning: #e89a3c;
+  --ct-stage-learning-bg: rgba(232, 154, 60, 0.20);
+  --ct-stage-familiar: #4d9eef;
+  --ct-stage-familiar-bg: rgba(77, 158, 239, 0.20);
+  --ct-stage-mastered: #4caf63;
+  --ct-stage-mastered-bg: rgba(76, 175, 99, 0.20);
+
+  --ct-quiz-outline: #3a3f47;
+  --ct-quiz-stroke: #f5f5f7;
+  --ct-quiz-drawing: #6cb3ff;
+
+  --ct-ocr-underline: rgba(108, 179, 255, 0.55);
+}
+
+/// Plant the palette on `$selector`, light and dark.
+@mixin theme($selector: ':root') {
+  #{$selector} {
+    @include palette;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    #{$selector} {
+      @include palette-dark;
+    }
+  }
+}

@@ -1,5 +1,4 @@
 @use 'tokens' as t;
-@use 'dark-mode' as *;
 
 .definition-container {
   display: flex;
@@ -14,11 +13,6 @@
   color: t.$color-text-strong;
   padding-bottom: t.$space-3;
   border-bottom: 1px solid t.$color-border-bold;
-
-  @include dark {
-    color: t.$color-text-strong-dark;
-    border-bottom-color: t.$color-border-bold-dark;
-  }
 }
 
 .definition-body {
@@ -74,29 +68,6 @@
   color: t.$color-band-rare;
 }
 
-@include dark {
-  .frequency-badge--core {
-    background: t.$color-band-core-bg-dark;
-    color: t.$color-band-core-dark;
-  }
-
-  .frequency-badge--common {
-    background: t.$color-band-common-bg-dark;
-    color: t.$color-band-common-dark;
-  }
-
-  .frequency-badge--frequent {
-    background: t.$color-band-frequent-bg-dark;
-    color: t.$color-band-frequent-dark;
-  }
-
-  .frequency-badge--uncommon,
-  .frequency-badge--rare {
-    background: t.$color-band-rare-bg-dark;
-    color: t.$color-band-rare-dark;
-  }
-}
-
 .definition-section {
   flex: 1;
   min-width: 0;
@@ -115,8 +86,6 @@
   text-transform: uppercase;
   color: t.$color-text-subtle;
   letter-spacing: 0.5px;
-
-  @include dark { color: t.$color-text-subtle-dark; }
 }
 
 .pronunciation-speak {
@@ -137,15 +106,6 @@
   }
 
   &:active { transform: scale(0.92); }
-
-  @include dark {
-    color: t.$color-text-subtle-dark;
-
-    &:hover {
-      color: t.$color-primary-dark;
-      background: t.$color-surface-alt-dark;
-    }
-  }
 }
 
 .definition-variant {
@@ -160,22 +120,19 @@
   text-transform: uppercase;
   color: t.$color-text-subtle;
   letter-spacing: 0.5px;
-
-  @include dark { color: t.$color-text-subtle-dark; }
 }
 
 .definition-variant-form {
   font-size: t.$text-md;
   color: t.$color-text-muted;
-
-  @include dark { color: t.$color-text-muted-dark; }
 }
 
 /**
  * Tone colours supplement the mark or digit, which still carries the tone —
  * colour is never the only cue. Mandarin follows the familiar MDBG/Pleco
  * mapping; Cantonese needs six hues and keeps level tones cool, contour tones
- * warm. Both palettes are lightened for dark mode to stay legible.
+ * warm. Both palettes are lightened for dark mode to stay legible, which the
+ * tokens themselves now take care of.
  */
 .tone-pinyin-1 { color: t.$color-tone-1; }
 .tone-pinyin-2 { color: t.$color-tone-2; }
@@ -190,16 +147,6 @@
 .tone-jyutping-5 { color: t.$color-tone-5; }
 .tone-jyutping-6 { color: t.$color-tone-6; }
 
-@include dark {
-  .tone-pinyin-1, .tone-jyutping-1 { color: t.$color-tone-1-dark; }
-  .tone-pinyin-2, .tone-jyutping-2 { color: t.$color-tone-2-dark; }
-  .tone-pinyin-3, .tone-jyutping-3 { color: t.$color-tone-3-dark; }
-  .tone-pinyin-4, .tone-jyutping-4 { color: t.$color-tone-4-dark; }
-  .tone-pinyin-5 { color: t.$color-tone-neutral-dark; }
-  .tone-jyutping-5 { color: t.$color-tone-5-dark; }
-  .tone-jyutping-6 { color: t.$color-tone-6-dark; }
-}
-
 // Romanisation is not a link, so it is not link-coloured.
 .definition-pinyin,
 .definition-jyutping {
@@ -208,8 +155,6 @@
   font-weight: 600;
   margin-bottom: t.$space-1;
   font-family: t.$font-romanisation;
-
-  @include dark { color: t.$color-text-strong-dark; }
 }
 
 .definition-text {
@@ -219,8 +164,6 @@
   list-style-type: disc;
   padding-left: t.$space-4;
   margin: 0;
-
-  @include dark { color: t.$color-text-muted-dark; }
 }
 
 .pronunciation-group {
@@ -265,13 +208,5 @@
   &:hover {
     color: t.$color-primary-hover;
     text-decoration: underline;
-  }
-
-  @include dark {
-    color: t.$color-primary-dark;
-
-    &:hover {
-      color: t.$color-primary-hover-dark;
-    }
   }
 }

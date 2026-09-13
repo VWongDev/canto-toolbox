@@ -3,22 +3,21 @@
 
 .popup-etymology-section {
   width: 100%;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
+  margin-bottom: t.$space-3;
+  padding-bottom: t.$space-3;
   border-bottom: 1px solid t.$color-border-bold;
-
-  @include dark { border-bottom-color: t.$color-border-bold-dark; }
 }
 
+// Quieter against the dark canvas, where muted grey reads as body text.
 .popup-etymology-label {
-  font-size: 11px;
+  font-size: t.$text-xs;
   font-weight: 600;
   text-transform: uppercase;
   color: t.$color-text-muted;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
 
-  @include dark { color: t.$color-text-subtle-dark; }
+  @include dark { color: t.$color-text-subtle; }
 }
 
 .popup-etymology-characters {
@@ -38,11 +37,6 @@
   border-radius: t.$radius-md;
   border: 1px solid t.$color-border-muted;
   overflow: hidden;
-
-  @include dark {
-    background: t.$color-surface-alt-dark;
-    border-color: t.$color-border-muted-dark;
-  }
 }
 
 // Sized and centred in a fixed box so glyphs line up across chips regardless
@@ -58,8 +52,6 @@
   align-items: center;
   justify-content: center;
   min-height: 28px;
-
-  @include dark { color: t.$color-text-strong-dark; }
 }
 
 .popup-etymology-details {
@@ -70,22 +62,22 @@
 }
 
 .popup-etymology-type {
-  font-size: 10px;
+  font-size: t.$text-2xs;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   color: t.$color-text-subtle;
 
-  @include dark { color: t.$color-text-faint-dark; }
+  @include dark { color: t.$color-text-faint; }
 }
 
 .popup-etymology-hint {
-  font-size: 12px;
+  font-size: t.$text-sm;
   color: t.$color-text;
   line-height: 1.4;
   font-style: italic;
 
-  @include dark { color: t.$color-text-muted-dark; }
+  @include dark { color: t.$color-text-muted; }
 }
 
 .popup-etymology-components {
@@ -101,40 +93,30 @@
   align-items: baseline;
   gap: t.$space-1;
   padding: 3px t.$space-2;
-  background: rgba(0, 0, 0, 0.05);
+  background: t.$color-chip-bg;
   border-radius: t.$radius-sm;
   white-space: nowrap;
   max-width: 100%;
 
-  @include dark { background: rgba(255, 255, 255, 0.10); }
-
   &--meaning {
     background: t.$color-meaning-tint;
-
-    @include dark { background: t.$color-meaning-tint-dark; }
   }
 
   &--sound {
     background: t.$color-sound-tint;
-
-    @include dark { background: t.$color-sound-tint-dark; }
   }
 }
 
 .popup-etymology-component-glyph {
-  font-size: 15px;
+  font-size: t.$text-md;
   font-weight: 500;
   color: t.$color-text-strong;
-
-  @include dark { color: t.$color-text-strong-dark; }
 }
 
 .popup-etymology-component-def {
-  font-size: 11px;
+  font-size: t.$text-xs;
   color: t.$color-text-muted;
   min-width: 0;
-
-  @include dark { color: t.$color-text-muted-dark; }
 }
 
 .popup-etymology-component-role--meaning,
@@ -144,6 +126,4 @@
   color: t.$color-text-subtle;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-
-  @include dark { color: t.$color-text-subtle-dark; }
 }

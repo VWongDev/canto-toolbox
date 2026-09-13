@@ -7,12 +7,23 @@ $text-2xs:     10px;
 $text-xs:      11px;
 $text-sm:      12px;
 $text-base:    13px;
+// The hover popup's running text, a step above the pages': it is read over
+// whatever the host page is setting, at whatever size that is.
+$text-body:    14px;
 $text-md:      15px;
 $text-lg:      18px;
+// A figure read at a glance — the overview counts, the production gloss.
+$text-figure:  20px;
 $text-xl:      22px;
 $text-2xl:     26px;
 $text-3xl:     34px;
 $text-display: 56px;
+
+// Single characters a screen is built around, rather than running text: the
+// page mastheads and the glyph an empty state is illustrated with.
+$glyph-md: 40px;
+$glyph-lg: 48px;
+$glyph-xl: 64px;
 
 // Spacing scale — 4px base
 $space-1: 4px;
@@ -28,122 +39,77 @@ $radius-md: 6px;
 $radius-lg: 8px;
 $radius-pill: 999px;
 
-// Colours — light
-$color-primary:       #0066cc;
-$color-primary-hover: #0052a3;
-$color-text:          #333;
-$color-text-strong:   #1a1a1a;
-$color-text-muted:    #555;
-$color-text-faint:    #666;
-$color-text-subtle:   #888;
-$color-bg:            #f5f5f5;
-$color-surface:       #ffffff;
-$color-surface-alt:   #f8f8f8;
-$color-border:        rgba(0, 0, 0, 0.06);
-$color-border-muted:  #e8e8e8;
-$color-border-bold:   #e0e0e0;
-$color-meaning:       #2a7a3b;
-$color-sound:         #0055aa;
-$color-danger:        #b3261e;
+// Colours. The values live in `_theme.scss` as custom properties, so a colour
+// is chosen once and resolved by the browser in whichever theme the reader is
+// in — see the note there. These names are what stylesheets use.
+$color-primary:            var(--ct-primary);
+$color-primary-hover:      var(--ct-primary-hover);
+$color-primary-fill:       var(--ct-primary-fill);
+$color-primary-fill-hover: var(--ct-primary-fill-hover);
+$color-primary-tint:       var(--ct-primary-tint);
 
-// Tone colours. Mandarin 1-4 follow the MDBG/Pleco convention learners will
-// already know; Cantonese reuses those four and adds two for its extra tones.
-// Every hue clears 4.5:1 on the light surfaces.
-$color-tone-1:        #c0392b;
-$color-tone-2:        #1e7a3c;
-$color-tone-3:        #1f6feb;
-$color-tone-4:        #7d3c98;
-$color-tone-5:        #a05a00;
-$color-tone-6:        #0e6b6b;
-$color-tone-neutral:  #767676;
+$color-text:        var(--ct-text);
+$color-text-strong: var(--ct-text-strong);
+$color-text-muted:  var(--ct-text-muted);
+$color-text-faint:  var(--ct-text-faint);
+$color-text-subtle: var(--ct-text-subtle);
 
-// Frequency bands — warmer as a word gets commoner, so the chip reads as
-// priority at a glance.
-$color-band-core:        #8a4b00;
-$color-band-core-bg:     #fdf0d8;
-$color-band-common:      #1e6b3a;
-$color-band-common-bg:   #e4f4e8;
-$color-band-frequent:    #1a5490;
-$color-band-frequent-bg: #e4eefb;
-$color-band-rare:        #5f5f68;
-$color-band-rare-bg:     #eeeef0;
+$color-bg:          var(--ct-bg);
+$color-surface:     var(--ct-surface);
+$color-surface-alt: var(--ct-surface-alt);
 
-// Neutral controls — colour is reserved for the primary action, so secondary
-// and tertiary buttons carry weight through surface and border only.
-$color-control:        #ffffff;
-$color-control-hover:  #f2f2f2;
-$color-control-border: #d4d4d4;
-$color-control-text:   #333;
+$color-border:       var(--ct-border);
+$color-border-muted: var(--ct-border-muted);
+$color-border-bold:  var(--ct-border-bold);
 
-// Role tints for etymology component chips — distinguishable without
-// competing with the text they sit behind.
-$color-meaning-tint: rgba(42, 122, 59, 0.10);
-$color-sound-tint:   rgba(0, 85, 170, 0.10);
+$color-meaning:      var(--ct-meaning);
+$color-sound:        var(--ct-sound);
+$color-meaning-tint: var(--ct-meaning-tint);
+$color-sound-tint:   var(--ct-sound-tint);
+$color-chip-bg:      var(--ct-chip-bg);
 
-// Flashcard ratings — Anki-style Again / Hard / Good / Easy fills.
-$color-rating-again:       #e53935;
-$color-rating-again-hover: #c62828;
-$color-rating-hard:        #fb8c00;
-$color-rating-hard-hover:  #ef6c00;
-$color-rating-good:        #43a047;
-$color-rating-good-hover:  #2e7d32;
-$color-rating-easy:        #1e88e5;
-$color-rating-easy-hover:  #1565c0;
+$color-danger:      var(--ct-danger);
+$color-danger-tint: var(--ct-danger-tint);
 
-// Colours — dark. Canvas is a lifted zinc, not crushed black; surfaces step
-// up in elevation. Primary-dark is the on-dark accent (text, progress, focus);
-// primary-fill-dark is for filled buttons so white labels stay readable.
-$color-primary-dark:            #6cb3ff;
-$color-primary-hover-dark:      #8ac4ff;
-$color-primary-fill-dark:       #1f6feb;
-$color-primary-fill-hover-dark: #1a5fd0;
-$color-text-dark:          #e8e8ed;
-$color-text-strong-dark:   #f5f5f7;
-$color-text-muted-dark:    #b4b4be;
-$color-text-subtle-dark:   #8e8e99;
-$color-text-faint-dark:    #7a7a86;
-$color-bg-dark:            #161618;
-$color-surface-dark:       #222326;
-$color-surface-alt-dark:   #2c2d32;
-$color-border-dark:        rgba(255, 255, 255, 0.08);
-$color-border-muted-dark:  rgba(255, 255, 255, 0.10);
-$color-border-bold-dark:   rgba(255, 255, 255, 0.14);
-$color-meaning-dark:       #6bc98a;
-$color-sound-dark:         #6ba8e0;
+$color-tone-1:       var(--ct-tone-1);
+$color-tone-2:       var(--ct-tone-2);
+$color-tone-3:       var(--ct-tone-3);
+$color-tone-4:       var(--ct-tone-4);
+$color-tone-5:       var(--ct-tone-5);
+$color-tone-6:       var(--ct-tone-6);
+$color-tone-neutral: var(--ct-tone-neutral);
 
-// Tone colours, lightened for the dark canvas.
-$color-tone-1-dark:        #ff8a80;
-$color-tone-2-dark:        #7bd88f;
-$color-tone-3-dark:        #79b8ff;
-$color-tone-4-dark:        #d7a3f0;
-$color-tone-5-dark:        #e8b06a;
-$color-tone-6-dark:        #63cccc;
-$color-tone-neutral-dark:  #9a9aa4;
+$color-band-core:        var(--ct-band-core);
+$color-band-core-bg:     var(--ct-band-core-bg);
+$color-band-common:      var(--ct-band-common);
+$color-band-common-bg:   var(--ct-band-common-bg);
+$color-band-frequent:    var(--ct-band-frequent);
+$color-band-frequent-bg: var(--ct-band-frequent-bg);
+$color-band-rare:        var(--ct-band-rare);
+$color-band-rare-bg:     var(--ct-band-rare-bg);
 
-// Frequency bands — dark canvas keeps the hue, drops the fill to a tint.
-$color-band-core-dark:        #f0b866;
-$color-band-core-bg-dark:     rgba(240, 184, 102, 0.14);
-$color-band-common-dark:      #7bd88f;
-$color-band-common-bg-dark:   rgba(123, 216, 143, 0.13);
-$color-band-frequent-dark:    #79b8ff;
-$color-band-frequent-bg-dark: rgba(121, 184, 255, 0.13);
-$color-band-rare-dark:        #9a9aa4;
-$color-band-rare-bg-dark:     rgba(255, 255, 255, 0.07);
-$color-danger-dark:        #f09088;
+$color-control:        var(--ct-control);
+$color-control-hover:  var(--ct-control-hover);
+$color-control-border: var(--ct-control-border);
+$color-control-text:   var(--ct-control-text);
 
-$color-control-dark:        #2a2b30;
-$color-control-hover-dark:  #34353b;
-$color-control-border-dark: rgba(255, 255, 255, 0.12);
-$color-control-text-dark:   #e8e8ed;
+$color-rating-again:       var(--ct-rating-again);
+$color-rating-again-hover: var(--ct-rating-again-hover);
+$color-rating-hard:        var(--ct-rating-hard);
+$color-rating-hard-hover:  var(--ct-rating-hard-hover);
+$color-rating-good:        var(--ct-rating-good);
+$color-rating-good-hover:  var(--ct-rating-good-hover);
+$color-rating-good-tint:   var(--ct-rating-good-tint);
+$color-rating-easy:        var(--ct-rating-easy);
+$color-rating-easy-hover:  var(--ct-rating-easy-hover);
 
-$color-meaning-tint-dark: rgba(107, 201, 138, 0.22);
-$color-sound-tint-dark:   rgba(107, 168, 224, 0.22);
+$color-stage-new:           var(--ct-stage-new);
+$color-stage-new-bg:        var(--ct-stage-new-bg);
+$color-stage-learning:      var(--ct-stage-learning);
+$color-stage-learning-bg:   var(--ct-stage-learning-bg);
+$color-stage-familiar:      var(--ct-stage-familiar);
+$color-stage-familiar-bg:   var(--ct-stage-familiar-bg);
+$color-stage-mastered:      var(--ct-stage-mastered);
+$color-stage-mastered-bg:   var(--ct-stage-mastered-bg);
 
-$color-rating-again-dark:       #e0554d;
-$color-rating-again-hover-dark: #c94a44;
-$color-rating-hard-dark:        #e89a3c;
-$color-rating-hard-hover-dark:  #d48c32;
-$color-rating-good-dark:        #4caf63;
-$color-rating-good-hover-dark:  #3d9a52;
-$color-rating-easy-dark:        #4d9eef;
-$color-rating-easy-hover-dark:  #3d8ed9;
+$color-ocr-underline: var(--ct-ocr-underline);
