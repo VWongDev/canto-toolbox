@@ -27,7 +27,7 @@ describe('StatsStorageClient.getStatistics', () => {
     const result = await makeClient(syncArea, localArea).getStatistics();
 
     expect(result).toEqual(mergeStatistics(sync, local));
-    expect(result['你好']).toEqual({ count: 5, firstSeen: now - 1000, lastSeen: now + 1000 });
+    expect(result['你好']).toEqual({ count: 3, firstSeen: now - 1000, lastSeen: now + 1000 });
   });
 
   it('returns an empty object when neither area has data', async () => {

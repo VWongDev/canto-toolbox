@@ -1,5 +1,7 @@
 import { RedundantStore } from './redundant-store.js';
 import { StorageManager } from './storage-manager.js';
+import { reconcileStatistics } from './statistics-utils.js';
+import type { Statistics } from './types.js';
 
 /**
  * The single storage key and store instance for word statistics. The popup
@@ -20,3 +22,14 @@ export const MAX_TRACKED_WORDS = 500;
 export const statisticsStore = new RedundantStore(
   new StorageManager(chrome.storage.sync, chrome.storage.local)
 );
+
+/**
+ * Change the record. Every writer goes through here so none of them can
+ * transform a single storage area's partial view of it — which silently
+ * dropped a retirement, or a review, for any word the area did not hold.
+ */
+export function mutateStatistics(
+  transform: (existing: Statistics) => Statistics,
+): Promise<void> {
+  return statisticsStore.mutate<Statistics>(STATISTICS_KEY, reconcileStatistics, transform);
+}

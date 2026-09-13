@@ -2,7 +2,7 @@ import { RedundantStore } from '../shared/redundant-store.js';
 import { MAX_TRACKED_WORDS, STATISTICS_KEY, statisticsStore } from '../shared/statistics-store.js';
 import { createBatchedDebounce } from '../shared/debounce.js';
 import { BoundedMap } from '../shared/bounded-map.js';
-import { lastReviewedAt } from '../shared/statistics-utils.js';
+import { lastReviewedAt, reconcileStatistics } from '../shared/statistics-utils.js';
 import type { Statistics } from '../shared/types';
 
 const DEBOUNCE_DELAY = 500;
@@ -92,12 +92,12 @@ export class PopupStorageClient implements PopupStorage {
     const details = new Map(this.pendingDetails);
     this.pendingDetails.clear();
 
-    await this.store.mutate<Statistics>(STATISTICS_KEY, (existing) => {
+    await this.store.mutate<Statistics>(STATISTICS_KEY, reconcileStatistics, (existing) => {
       const now = Date.now();
       const stats = new BoundedMap<string, Statistics[string]>(
         MAX_TRACKED_WORDS,
         evictionRank,
-        Object.entries(existing ?? {})
+        Object.entries(existing)
       );
 
       // Collected and written in one go, so a batch of new words is ranked

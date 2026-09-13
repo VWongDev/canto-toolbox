@@ -101,11 +101,16 @@ function mergeContext(sync: WordStatistics, local: WordStatistics): string | und
 function mergeWord(sync: WordStatistics, local: WordStatistics): WordStatistics {
   // Spreading both areas first carries every field the branches below do not
   // name, so anything recorded per word survives a merge by default instead of
-  // being dropped the first time the word turns up in both areas.
+  // being dropped the first time the word turns up in both areas. Local is
+  // spread last because it is the area every write reaches.
   const merged: WordStatistics = {
-    ...local,
     ...sync,
-    count: sync.count + local.count,
+    ...local,
+    // Each area holds a snapshot of the whole record rather than a share of it,
+    // so the larger count is the later one. Summing them counted every sighting
+    // that reached both areas twice over, and would compound now that a
+    // reconciled record is what gets written back.
+    count: Math.max(sync.count, local.count),
     firstSeen: Math.min(sync.firstSeen, local.firstSeen),
     lastSeen: Math.max(sync.lastSeen, local.lastSeen),
   };
@@ -120,10 +125,17 @@ function mergeWord(sync: WordStatistics, local: WordStatistics): WordStatistics 
   if (context) merged.context = context;
   else delete merged.context;
 
-  // Retiring or choosing a word is a decision, not an observation: it stands
-  // even when only one area recorded it.
-  if (sync.suppressed || local.suppressed) merged.suppressed = true;
-  if (sync.pinned || local.pinned) merged.pinned = true;
+  // Retiring or choosing a word is a decision, and local is where every
+  // decision lands: sync only carries it on to other devices and is skipped
+  // whenever the record has outgrown its 8 KB item quota. So local's answer
+  // stands, including when that answer is the absence of one — ORing the two
+  // made a retirement impossible to undo, since the fossil in sync kept
+  // putting it back.
+  if (local.suppressed) merged.suppressed = true;
+  else delete merged.suppressed;
+
+  if (local.pinned) merged.pinned = true;
+  else delete merged.pinned;
 
   return merged;
 }
@@ -140,4 +152,16 @@ export function mergeStatistics(syncStats: Statistics, localStats: Statistics): 
   }
 
   return merged;
+}
+
+/**
+ * The record as both storage areas together hold it. Reads and writes go
+ * through the same reconciliation — a write that transformed one area alone
+ * would be editing a record missing every word the other area holds.
+ */
+export function reconcileStatistics(
+  sync: Statistics | undefined,
+  local: Statistics | undefined,
+): Statistics {
+  return mergeStatistics(sync ?? {}, local ?? {});
 }

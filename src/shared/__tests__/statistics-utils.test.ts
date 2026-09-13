@@ -18,12 +18,34 @@ describe('mergeStatistics', () => {
     expect(result['字']!.count).toBe(1);
   });
 
-  it('merges counts for a word present in both', () => {
+  // Each area holds a snapshot of the whole record, so the larger count is the
+  // later one. Summing counted a sighting that reached both areas twice.
+  it('takes the higher count for a word present in both', () => {
     const result = mergeStatistics(
       { 好: { count: 3, firstSeen: 100, lastSeen: 200 } },
       { 好: { count: 2, firstSeen: 50, lastSeen: 150 } }
     );
-    expect(result['好']!.count).toBe(5);
+    expect(result['好']!.count).toBe(3);
+  });
+
+  // Sync keeps a fossil of the record from before it outgrew its 8 KB item
+  // quota. ORing the two areas' flags made that fossil authoritative, so a
+  // retirement could never be undone.
+  it('lets local drop a flag the sync copy still carries', () => {
+    const result = mergeStatistics(
+      { 好: { count: 1, firstSeen: 50, lastSeen: 150, suppressed: true, pinned: true } },
+      { 好: { count: 2, firstSeen: 50, lastSeen: 150 } }
+    );
+    expect(result['好']!.suppressed).toBeUndefined();
+    expect(result['好']!.pinned).toBeUndefined();
+  });
+
+  it('takes local as the authority on a retirement', () => {
+    const result = mergeStatistics(
+      { 好: { count: 1, firstSeen: 50, lastSeen: 150 } },
+      { 好: { count: 2, firstSeen: 50, lastSeen: 150, suppressed: true } }
+    );
+    expect(result['好']!.suppressed).toBe(true);
   });
 
   it('takes the earliest firstSeen when merging', () => {

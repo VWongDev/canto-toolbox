@@ -34,24 +34,28 @@ describe('RedundantStore', () => {
   });
 
   describe('mutate', () => {
-    it('writes the transformed value to sync', async () => {
+    const sum = (sync: number | undefined, local: number | undefined) =>
+      (sync ?? 0) + (local ?? 0);
+
+    it('transforms what both areas hold together, not one of them', async () => {
       const sync = makeArea();
       const local = makeArea();
       vi.mocked(sync.get).mockResolvedValue({ k: 1 } as unknown as void);
+      vi.mocked(local.get).mockResolvedValue({ k: 10 } as unknown as void);
 
-      await makeStore(sync, local).mutate<number>('k', (existing) => (existing ?? 0) + 1);
+      await makeStore(sync, local).mutate<number>('k', sum, (existing) => existing + 1);
 
-      expect(sync.set).toHaveBeenCalledWith({ k: 2 });
-      expect(local.set).not.toHaveBeenCalled();
+      expect(sync.set).toHaveBeenCalledWith({ k: 12 });
+      expect(local.set).toHaveBeenCalledWith({ k: 12 });
     });
 
-    it('falls back to local (re-reading local) when the sync write fails', async () => {
+    it('still writes local when the sync write fails', async () => {
       const sync = makeArea();
       const local = makeArea();
       vi.mocked(sync.set).mockRejectedValue(new Error('QuotaExceededError'));
       vi.mocked(local.get).mockResolvedValue({ k: 10 } as unknown as void);
 
-      await makeStore(sync, local).mutate<number>('k', (existing) => (existing ?? 0) + 1);
+      await makeStore(sync, local).mutate<number>('k', sum, (existing) => existing + 1);
 
       expect(local.set).toHaveBeenCalledWith({ k: 11 });
     });
@@ -63,7 +67,7 @@ describe('RedundantStore', () => {
       vi.mocked(local.set).mockRejectedValue(new Error('local down'));
 
       await expect(
-        makeStore(sync, local).mutate<number>('k', () => 1),
+        makeStore(sync, local).mutate<number>('k', sum, () => 1),
       ).resolves.toBeUndefined();
     });
   });

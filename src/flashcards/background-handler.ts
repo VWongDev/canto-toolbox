@@ -1,8 +1,8 @@
 import { registerHandlers } from '../shared/message-router.js';
-import { STATISTICS_KEY, statisticsStore } from '../shared/statistics-store.js';
+import { mutateStatistics } from '../shared/statistics-store.js';
 import { isLeech, reviewCard } from '../shared/scheduler.js';
 import { DIRECTION_FIELD, progressFor } from '../shared/statistics-utils.js';
-import type { FlashcardProgress, Statistics, WordStatistics } from '../shared/types.js';
+import type { FlashcardProgress, WordStatistics } from '../shared/types.js';
 
 /**
  * A word buries itself once one of its cards becomes a leech. Burying is the
@@ -20,8 +20,8 @@ export function register(): void {
       // A rating that predates the other card directions is a recognition one.
       const direction = msg.direction ?? 'recognition';
 
-      await statisticsStore.mutate<Statistics>(STATISTICS_KEY, (existing) => {
-        const stats = { ...(existing ?? {}) };
+      await mutateStatistics((existing) => {
+        const stats = { ...existing };
         const stat = stats[msg.word];
         if (!stat) return stats;
 
@@ -36,8 +36,8 @@ export function register(): void {
     },
 
     set_word_status: async (msg) => {
-      await statisticsStore.mutate<Statistics>(STATISTICS_KEY, (existing) => {
-        const stats = { ...(existing ?? {}) };
+      await mutateStatistics((existing) => {
+        const stats = { ...existing };
         const stat = stats[msg.word];
         if (!stat) return stats;
 

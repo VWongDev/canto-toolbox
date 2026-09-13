@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../../shared/statistics-store.js', () => ({
   STATISTICS_KEY: 'wordStatistics',
-  statisticsStore: { mutate: vi.fn() },
+  mutateStatistics: vi.fn(),
 }));
 
 import { register } from '../background-handler.js';
-import { statisticsStore } from '../../shared/statistics-store.js';
+import { mutateStatistics } from '../../shared/statistics-store.js';
 import { LEECH_LAPSES } from '../../shared/scheduler.js';
 import type { BackgroundMessage, BackgroundResponse, Statistics } from '../../shared/types.js';
 
@@ -25,11 +25,9 @@ function registerAndGetListener(): Listener {
 /** Run a message through the handler and return the record it wrote. */
 async function applied(message: BackgroundMessage, existing: Statistics): Promise<Statistics> {
   let written: Statistics = {};
-  vi.mocked(statisticsStore.mutate).mockImplementation(
-    async (_key: string, transform: (current: unknown) => unknown) => {
-      written = transform(existing) as Statistics;
-    },
-  );
+  vi.mocked(mutateStatistics).mockImplementation(async (transform) => {
+    written = transform(existing);
+  });
 
   const listener = registerAndGetListener();
   const sendResponse = vi.fn();
@@ -44,7 +42,7 @@ const TRACKED: Statistics = { 你好: { count: 5, firstSeen: 1, lastSeen: 2 } };
 describe('flashcard background-handler update_flashcard', () => {
   beforeEach(() => {
     vi.mocked(chrome.runtime.onMessage.addListener).mockClear();
-    vi.mocked(statisticsStore.mutate).mockReset();
+    vi.mocked(mutateStatistics).mockReset();
   });
 
   it('writes a recognition rating to the original flashcard field', async () => {
@@ -119,7 +117,7 @@ describe('flashcard background-handler update_flashcard', () => {
 describe('flashcard background-handler set_word_status', () => {
   beforeEach(() => {
     vi.mocked(chrome.runtime.onMessage.addListener).mockClear();
-    vi.mocked(statisticsStore.mutate).mockReset();
+    vi.mocked(mutateStatistics).mockReset();
   });
 
   it('retires a word', async () => {
