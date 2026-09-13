@@ -22,7 +22,14 @@ const MAX_INLINED_BYTES = 8 * 1024 * 1024;
 const IMAGE_BADGE_TITLE = 'Read the Chinese in this image';
 const VIDEO_BADGE_TITLE = 'Read the Chinese in this frame';
 
-type BadgeState = 'idle' | 'reading' | 'failed';
+type BadgeState = 'idle' | 'reading' | 'empty' | 'failed';
+
+/** What the badge says it is doing, or what came of it. */
+const BADGE_TITLES: Readonly<Record<Exclude<BadgeState, 'idle'>, string>> = {
+  reading: 'Reading…',
+  empty: 'No Chinese text found here',
+  failed: 'Could not read this — click to try again',
+};
 
 interface Attached {
   overlay: HTMLElement;
@@ -197,10 +204,24 @@ export class MediaOcrManager {
     this.badgeTarget = null;
   }
 
+  /**
+   * The badge is the only thing the reader can see the model through, so every
+   * outcome has to land on it. Its title carries the words, since the badge
+   * itself cannot: a label legible enough to say "nothing here" would be
+   * Chinese on the page, which the popup would stop and look up.
+   */
   private setBadgeState(state: BadgeState): void {
     if (!this.badge) return;
     this.badge.dataset.state = state;
     this.badge.toggleAttribute('disabled', state === 'reading');
+
+    const title = state === 'idle' ? this.badgeTitle() : BADGE_TITLES[state];
+    this.badge.setAttribute('title', title);
+    this.badge.setAttribute('aria-label', title);
+  }
+
+  private badgeTitle(): string {
+    return this.badgeTarget && isVideo(this.badgeTarget) ? VIDEO_BADGE_TITLE : IMAGE_BADGE_TITLE;
   }
 
   private async read(media: MediaElement): Promise<void> {
@@ -212,8 +233,16 @@ export class MediaOcrManager {
         : await resolveImageSource(media);
 
       const result = await this.requestOcr(source);
+
+      // Nothing found is an answer, not a no-op. The reader clicked, waited
+      // out a model load, and without this the badge simply vanished.
+      if (result.items.length === 0) {
+        this.setBadgeState('empty');
+        return;
+      }
+
       this.hideBadge();
-      if (result.items.length > 0) this.attach(media, result);
+      this.attach(media, result);
     } catch (error) {
       console.error('[OCR] Could not read the media:', error);
       this.setBadgeState('failed');

@@ -48,9 +48,22 @@
     animation: canto-ocr-pulse 1s ease-in-out infinite;
   }
 
+  // Read, and there was nothing in it. The bars go faint rather than red: the
+  // model did its job and the answer is simply no.
+  &[data-state='empty'] {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.4);
+
+    &::before {
+      opacity: 0.35;
+    }
+  }
+
+  // A failure is worth another click — the frame may have been mid-seek, or
+  // the tab capture may have lost a race — so it stays a button.
   &[data-state='failed'] {
+    opacity: 1;
     background: rgba(150, 30, 30, 0.75);
-    cursor: not-allowed;
   }
 }
 

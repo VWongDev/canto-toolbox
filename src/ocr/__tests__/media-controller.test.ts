@@ -147,6 +147,34 @@ describe('reading a frame', () => {
     expect(badge()?.dataset.state).toBe('failed');
     expect(document.querySelector('.canto-ocr-line')).toBeNull();
   });
+
+  // The reader clicked and waited out a model load; the badge disappearing
+  // said nothing about whether it had worked.
+  it('says so when the frame holds no Chinese', async () => {
+    ocr.readImage.mockImplementation((_src: string, cb: (r: never) => void) =>
+      cb({ success: true, type: 'ocr_image', result: { ...RESULT, items: [] } } as never)
+    );
+    hover(addVideo(true));
+    badge()!.click();
+    await settle();
+
+    expect(badge()?.dataset.state).toBe('empty');
+    expect(badge()?.getAttribute('title')).toBe('No Chinese text found here');
+  });
+
+  it('offers a failed read another try', async () => {
+    vi.mocked(captureFrame).mockRejectedValueOnce(new Error('no frame'));
+    hover(addVideo(true));
+
+    badge()!.click();
+    await settle();
+    expect(badge()?.getAttribute('title')).toBe('Could not read this — click to try again');
+
+    badge()!.click();
+    await settle();
+
+    expect(document.querySelector('.canto-ocr-line')?.textContent).toBe('今天天气很好');
+  });
 });
 
 describe('following playback', () => {
