@@ -135,13 +135,22 @@ describe('flashcard background-handler set_word_status', () => {
     expect(stats['你好']!.suppressed).toBeUndefined();
   });
 
-  it('pins a word without touching whether it is retired', async () => {
+  it('takes a word out of retirement when it is chosen', async () => {
     const stats = await applied({ type: 'set_word_status', word: '你好', pinned: true }, {
       你好: { ...TRACKED['你好']!, suppressed: true },
     });
 
     expect(stats['你好']!.pinned).toBe(true);
+    expect(stats['你好']!.suppressed).toBeUndefined();
+  });
+
+  it('drops the pin when a chosen word is retired', async () => {
+    const stats = await applied({ type: 'set_word_status', word: '你好', suppressed: true }, {
+      你好: { ...TRACKED['你好']!, pinned: true },
+    });
+
     expect(stats['你好']!.suppressed).toBe(true);
+    expect(stats['你好']!.pinned).toBeUndefined();
   });
 
   it('keeps the progress a word has made when its status changes', async () => {

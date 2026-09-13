@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   MIN_COUNT,
+  applyWordStatus,
   getFlashcardStage,
   lastReviewedAt,
   mergeStatistics,
@@ -52,6 +53,16 @@ describe('mergeStatistics', () => {
       { 好: { count: 2, firstSeen: 50, lastSeen: 150, suppressed: true } }
     );
     expect(result['好']!.suppressed).toBe(true);
+  });
+
+  // Records written before the two flags were made exclusive can carry both.
+  it('drops a pin from a record that was also retired', () => {
+    const result = mergeStatistics(
+      { 好: { count: 1, firstSeen: 50, lastSeen: 150 } },
+      { 好: { count: 2, firstSeen: 50, lastSeen: 150, suppressed: true, pinned: true } }
+    );
+    expect(result['好']!.suppressed).toBe(true);
+    expect(result['好']!.pinned).toBeUndefined();
   });
 
   it('takes the earliest firstSeen when merging', () => {
@@ -215,5 +226,28 @@ describe('getFlashcardStage', () => {
     const neglected = new Date(stat.flashcard!.lastReviewed! + stability * DAY_MS * 10);
 
     expect(getFlashcardStage(stat, neglected)).toBe('familiar');
+  });
+});
+
+describe('applyWordStatus', () => {
+  const SEEN: WordStatistics = { count: 3, firstSeen: 1, lastSeen: 2 };
+
+  it('drops the pin when the word is retired', () => {
+    const result = applyWordStatus({ ...SEEN, pinned: true }, { suppressed: true });
+
+    expect(result.suppressed).toBe(true);
+    expect(result.pinned).toBeUndefined();
+  });
+
+  it('drops the retirement when the word is chosen', () => {
+    const result = applyWordStatus({ ...SEEN, suppressed: true }, { pinned: true });
+
+    expect(result.pinned).toBe(true);
+    expect(result.suppressed).toBeUndefined();
+  });
+
+  it('leaves the other flag alone when a decision is withdrawn', () => {
+    const result = applyWordStatus({ ...SEEN, pinned: true }, { suppressed: false });
+    expect(result.pinned).toBe(true);
   });
 });

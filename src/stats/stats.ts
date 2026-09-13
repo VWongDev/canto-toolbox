@@ -3,7 +3,6 @@ import type {
   LookupResponse,
   ErrorResponse,
   Statistics,
-  WordStatistics,
   WordStatus,
 } from '../shared/types.js';
 import { statsClient, type StatsClient } from './stats-client.js';
@@ -24,6 +23,7 @@ import {
 } from './stats-view.js';
 import { summarise } from './overview.js';
 import { DEFAULT_SORT, isSortKey } from './ordering.js';
+import { applyWordStatus } from '../shared/statistics-utils.js';
 
 const CLEAR_LABEL = 'Clear Statistics';
 const CLEAR_CONFIRM_LABEL = 'Clear everything?';
@@ -116,15 +116,7 @@ export class StatsManager {
     const stat = this.cachedStatistics?.[word];
     if (!stat || !this.cachedStatistics) return;
 
-    const updated: WordStatistics = { ...stat };
-    if (status.suppressed !== undefined) {
-      if (status.suppressed) updated.suppressed = true;
-      else delete updated.suppressed;
-    }
-    if (status.pinned !== undefined) {
-      if (status.pinned) updated.pinned = true;
-      else delete updated.pinned;
-    }
+    const updated = applyWordStatus(stat, status);
 
     this.cachedStatistics = { ...this.cachedStatistics, [word]: updated };
     this.client.setWordStatus(word, status, () => {});

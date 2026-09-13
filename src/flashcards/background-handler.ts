@@ -1,7 +1,7 @@
 import { registerHandlers } from '../shared/message-router.js';
 import { mutateStatistics } from '../shared/statistics-store.js';
 import { isLeech, reviewCard } from '../shared/scheduler.js';
-import { DIRECTION_FIELD, progressFor } from '../shared/statistics-utils.js';
+import { DIRECTION_FIELD, applyWordStatus, progressFor } from '../shared/statistics-utils.js';
 import type { FlashcardProgress, WordStatistics } from '../shared/types.js';
 
 /**
@@ -11,7 +11,7 @@ import type { FlashcardProgress, WordStatistics } from '../shared/types.js';
  * about its progress is thrown away.
  */
 function withLeechBuried(stat: WordStatistics, progress: FlashcardProgress): WordStatistics {
-  return isLeech(progress) ? { ...stat, suppressed: true } : stat;
+  return isLeech(progress) ? applyWordStatus(stat, { suppressed: true }) : stat;
 }
 
 export function register(): void {
@@ -41,17 +41,7 @@ export function register(): void {
         const stat = stats[msg.word];
         if (!stat) return stats;
 
-        const next = { ...stat };
-        if (msg.suppressed !== undefined) {
-          if (msg.suppressed) next.suppressed = true;
-          else delete next.suppressed;
-        }
-        if (msg.pinned !== undefined) {
-          if (msg.pinned) next.pinned = true;
-          else delete next.pinned;
-        }
-
-        stats[msg.word] = next;
+        stats[msg.word] = applyWordStatus(stat, msg);
         return stats;
       });
       return { success: true, type: 'set_word_status' };

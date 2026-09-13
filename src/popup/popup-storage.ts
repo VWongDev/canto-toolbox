@@ -2,7 +2,7 @@ import { RedundantStore } from '../shared/redundant-store.js';
 import { MAX_TRACKED_WORDS, STATISTICS_KEY, statisticsStore } from '../shared/statistics-store.js';
 import { createBatchedDebounce } from '../shared/debounce.js';
 import { BoundedMap } from '../shared/bounded-map.js';
-import { lastReviewedAt, reconcileStatistics } from '../shared/statistics-utils.js';
+import { applyWordStatus, lastReviewedAt, reconcileStatistics } from '../shared/statistics-utils.js';
 import type { Statistics } from '../shared/types';
 
 const DEBOUNCE_DELAY = 500;
@@ -122,12 +122,7 @@ export class PopupStorageClient implements PopupStorage {
         if (seen?.writable !== undefined) entry.writable = seen.writable;
 
         // Asking for a word is also a way of saying it is no longer retired.
-        if (seen?.pinned) {
-          entry.pinned = true;
-          delete entry.suppressed;
-        }
-
-        touched.push([word, entry]);
+        touched.push([word, seen?.pinned ? applyWordStatus(entry, { pinned: true }) : entry]);
       }
 
       stats.setAll(touched);

@@ -4,6 +4,7 @@ import type {
   ReviewDirection,
   Statistics,
   WordStatistics,
+  WordStatus,
 } from './types';
 import { isLearning, isMastered } from './scheduler.js';
 
@@ -27,6 +28,37 @@ export const MIN_COUNT = 5;
  */
 export function isEnrolled(stat: WordStatistics): boolean {
   return stat.pinned === true || stat.count >= MIN_COUNT;
+}
+
+/**
+ * The reader's decisions applied to a word. Retiring a word and choosing it
+ * answer the same question opposite ways, so each clears the other. A word
+ * carrying both is read inconsistently: the deck leaves it out, the list draws
+ * it as studied, and the eviction tiers keep it as wanted. Every path that
+ * sets either flag goes through here, so the rule is stated once.
+ */
+export function applyWordStatus(stat: WordStatistics, status: WordStatus): WordStatistics {
+  const next = { ...stat };
+
+  if (status.suppressed !== undefined) {
+    if (status.suppressed) {
+      next.suppressed = true;
+      delete next.pinned;
+    } else {
+      delete next.suppressed;
+    }
+  }
+
+  if (status.pinned !== undefined) {
+    if (status.pinned) {
+      next.pinned = true;
+      delete next.suppressed;
+    } else {
+      delete next.pinned;
+    }
+  }
+
+  return next;
 }
 
 /**
@@ -158,7 +190,10 @@ function mergeWord(sync: WordStatistics, local: WordStatistics): WordStatistics 
   if (local.suppressed) merged.suppressed = true;
   else delete merged.suppressed;
 
-  if (local.pinned) merged.pinned = true;
+  // Retiring wins over choosing, which heals a record written before the two
+  // were made exclusive: the deck already skipped such a word, so keeping the
+  // pin would only have the list disagree with it.
+  if (local.pinned && !merged.suppressed) merged.pinned = true;
   else delete merged.pinned;
 
   return merged;
