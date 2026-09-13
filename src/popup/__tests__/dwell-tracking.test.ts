@@ -78,6 +78,21 @@ describe('dwell tracking', () => {
     expect(client.trackWord).not.toHaveBeenCalled();
   });
 
+  /**
+   * Switching tab or window leaves the page with no pointer at all, which
+   * reaches the popup as a bare mouseleave. The cursor never left the word, so
+   * the dwell still stands - and the popup's grace period is shorter than it,
+   * so treating this as leaving would cancel the study before it is recorded.
+   */
+  it('records the study when the page loses the pointer', () => {
+    hoverAt(2);
+    document.getElementById('chinese-hover-popup')!
+      .dispatchEvent(new MouseEvent('mouseleave', { relatedTarget: null }));
+    vi.advanceTimersByTime(400);
+
+    expect(client.trackWord).toHaveBeenCalledWith('好字', expect.any(Function), expect.any(String));
+  });
+
   it('counts moving across one word as a single study', () => {
     hoverAt(2);
     vi.advanceTimersByTime(400);

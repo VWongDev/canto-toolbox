@@ -348,8 +348,13 @@ export class ChineseHoverPopupManager {
           this.clearTimer('hide');
           this.isHoveringChinese = true;
         },
+        // Only a move onto something that is not the word dismisses the popup,
+        // and the move handler already schedules that. A bare mouseleave also
+        // arrives when the page loses the pointer entirely - switching tab or
+        // window - which must not count as leaving, since the hide it would
+        // schedule lands before the dwell and cancels the study with it.
         mouseleave: () => {
-          this.scheduleHide();
+          if (!this.isHoveringChinese) this.scheduleHide();
         }
       }
     });
