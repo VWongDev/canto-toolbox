@@ -100,7 +100,10 @@ test('clear button empties the statistics', async () => {
   const page = await openStatsPage();
   await expect(page.locator('.stat-item')).toHaveCount(1);
 
-  page.on('dialog', dialog => dialog.accept());
+  // Clearing asks twice through the button itself rather than through a modal
+  // dialog, which the page cannot rely on as the extension's action popup.
+  await page.click('#clear-btn');
+  await expect(page.locator('#clear-btn')).toHaveText('Clear everything?');
   await page.click('#clear-btn');
 
   await expect(page.locator('#empty-state')).toBeVisible({ timeout: 15000 });
