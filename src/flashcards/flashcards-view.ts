@@ -387,14 +387,14 @@ export function renderBack(
     // Only the production card withheld the word, so only its answer leads
     // with it; the others already have it on the front. The components card is
     // the one whose answer *is* the breakdown, so its disclosure starts open.
+    // Context is handed to the definition so it lands under the senses and
+    // above the breakdown, rather than after a disclosure that hid it.
     cardBack.appendChild(
       createDefinitionElement(card.word, definition, card.direction === 'production', {
         expandEtymology: card.direction === 'components',
+        ...(card.context !== undefined && { context: card.context }),
       })
     );
-    // The sentence the reader actually met the word in, under the dictionary
-    // senses: a gloss says what a word means, this says how it was used.
-    if (card.context) cardBack.appendChild(createContextSentence(card.word, card.context));
     cardBack.style.display = '';
   }
   if (showAnswerContainer) showAnswerContainer.style.display = 'none';

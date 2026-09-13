@@ -2,6 +2,7 @@ import type { DefinitionResult, DictionaryEntry } from './types.js';
 import { createElement } from './dom-element.js';
 import { createPronunciationSection } from './pronunciation-section.js';
 import { createEtymologySection } from './etymology-section.js';
+import { createContextSentence } from './context-sentence.js';
 import { createFrequencyBadge } from './frequency-badge.js';
 
 export function createMandarinSection(
@@ -105,6 +106,12 @@ export function createDefinitionSections(definition: DefinitionResult): HTMLElem
 export interface DefinitionElementOptions {
   /** Render the character breakdown already open. See {@link createEtymologySection}. */
   expandEtymology?: boolean;
+  /**
+   * The sentence the word was met in. Sits under the senses and above the
+   * breakdown: a gloss says what a word means, this says how it was used, and
+   * the components are the optional extra.
+   */
+  context?: string;
 }
 
 /**
@@ -114,13 +121,15 @@ export interface DefinitionElementOptions {
  *
  * What the word means comes before what it is built from: the breakdown is
  * worth reading second, and leading with it buried the definition under a
- * screen of component chips.
+ * screen of component chips. When a sentence is supplied, it sits between
+ * those two — under the senses, above the disclosure — so the breakdown is
+ * never the thing that splits the word from where it was met.
  */
 export function createDefinitionElement(
   word: string,
   definition: DefinitionResult,
   showWord = true,
-  { expandEtymology = false }: DefinitionElementOptions = {},
+  { expandEtymology = false, context }: DefinitionElementOptions = {},
 ): HTMLElement {
   const displayWord = definition.word || word;
 
@@ -129,6 +138,10 @@ export function createDefinitionElement(
     : [];
 
   children.push(createDefinitionSections(definition));
+
+  if (context) {
+    children.push(createContextSentence(word, context));
+  }
 
   if (definition.etymology?.length) {
     children.push(createEtymologySection(definition.etymology, { expanded: expandEtymology }));

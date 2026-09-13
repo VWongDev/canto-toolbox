@@ -126,6 +126,19 @@ describe('createDefinitionElement', () => {
     expect(open.querySelector('.popup-etymology-section')!.classList.contains('is-collapsed'))
       .toBe(false);
   });
+
+  it('puts the met-in sentence under the senses and above the breakdown', () => {
+    const el = createDefinitionElement('字', withEtymology(), true, { context: '寫字' });
+    const order = Array.from(el.children).map(child => child.className);
+
+    expect(order).toEqual([
+      'definition-word',
+      'definition-body',
+      'context',
+      'popup-etymology-section is-collapsed',
+    ]);
+    expect(el.querySelector('.context-sentence')?.textContent).toBe('寫字');
+  });
 });
 
 describe('findScriptVariant', () => {

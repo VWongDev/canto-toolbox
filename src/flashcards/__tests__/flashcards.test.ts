@@ -223,6 +223,31 @@ describe('FlashcardManager keyboard shortcuts', () => {
     expect(context?.querySelector('.context-sentence')?.textContent).toBe('你好嗎');
   });
 
+  it('places the sentence above the character breakdown', () => {
+    start({
+      lookupWord: vi.fn((_word, cb) =>
+        cb({
+          success: true,
+          type: 'lookup_word',
+          definition: {
+            ...DEFINITION,
+            etymology: [{ character: '你', definition: 'you', decomposition: '⿰亻尔', radical: '亻' }],
+          },
+        })
+      ),
+    });
+    press(' ');
+
+    const order = Array.from(
+      document.getElementById('card-back')!.querySelector('.definition-container')!.children,
+      child => child.className,
+    );
+
+    expect(order.indexOf('context')).toBeLessThan(
+      order.findIndex(name => name.includes('popup-etymology-section')),
+    );
+  });
+
   it('omits the sentence for a word that has none', () => {
     start();
     press(' ');

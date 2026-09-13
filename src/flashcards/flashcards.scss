@@ -281,6 +281,17 @@ body {
   max-width: 34ch;
 }
 
+// The definition-container already spaces its children; extra margins here
+// stacked a second gap under Seen in and glued the sentence to the breakdown
+// when it used to sit outside that flex column.
+.card-back .context {
+  margin-bottom: 0;
+}
+
+.card-back .popup-etymology-section {
+  margin-top: 0;
+}
+
 .card-back {
   flex: 1;
   min-height: 0;
