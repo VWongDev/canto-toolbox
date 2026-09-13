@@ -246,6 +246,12 @@ h1 {
       color: #fff;
     }
   }
+
+  // Holds nothing, so it is not a cut worth trying — but it stays clickable,
+  // since the count moves as words are studied.
+  &.is-empty:not(.active) {
+    opacity: 0.45;
+  }
 }
 
 // The count reads as a chip beside its label, so it is sized from the digits
@@ -343,6 +349,26 @@ h1 {
 .empty-state p {
   font-size: t.$text-md;
   line-height: 1.8;
+}
+
+// Shown only when a filter is what emptied the list, so it is the way back
+// rather than a permanent control.
+.empty-state-reset {
+  margin-top: t.$space-3;
+  padding: 5px t.$space-3;
+  border: 1px solid t.$color-border-muted;
+  border-radius: t.$radius-sm;
+  background: transparent;
+  color: t.$color-primary;
+  font: inherit;
+  font-size: t.$text-sm;
+  cursor: pointer;
+
+  @include a.focus-ring;
+
+  &:hover {
+    border-color: t.$color-primary;
+  }
 }
 
 .stats-list {

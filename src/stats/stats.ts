@@ -3,8 +3,6 @@ import type {
   LookupResponse,
   ErrorResponse,
   Statistics,
-  FlashcardStage,
-  FrequencyBand,
   WordStatistics,
   WordStatus,
 } from '../shared/types.js';
@@ -39,6 +37,7 @@ export class StatsManager {
   private readonly client: StatsClient;
   private readonly storage: StatsStorage;
   private cachedStatistics: Statistics | null = null;
+  private controlsReady = false;
   private view: ListView = { stages: new Set(), bands: new Set(), sort: DEFAULT_SORT };
 
   constructor(document: Document, client: StatsClient, storage: StatsStorage) {
@@ -98,7 +97,14 @@ export class StatsManager {
       (word, container) => this.loadDefinition(word, container),
       this.view,
       (word, status) => this.setWordStatus(elements, word, status),
+      () => this.clearFilters(elements),
     );
+  }
+
+  private clearFilters(elements: StatsElements): void {
+    this.view.stages.clear();
+    this.view.bands.clear();
+    if (this.cachedStatistics) this.render(elements, this.cachedStatistics);
   }
 
   /**
@@ -125,10 +131,18 @@ export class StatsManager {
     this.render(elements, this.cachedStatistics);
   }
 
+  /**
+   * Wired once. Statistics are loaded again after a clear, and re-running this
+   * would leave two listeners on each row of pills — a click toggling a filter
+   * on and straight back off.
+   */
   private setupListControls(elements: StatsElements): void {
+    if (this.controlsReady) return;
+    this.controlsReady = true;
+
     renderSortOptions(elements.sortSelectEl);
-    this.setupTabs<FlashcardStage>(elements, elements.filterTabsEl, 'stage', this.view.stages);
-    this.setupTabs<FrequencyBand>(elements, elements.bandTabsEl, 'band', this.view.bands);
+    this.setupTabs(elements, elements.filterTabsEl, 'stage');
+    this.setupTabs(elements, elements.bandTabsEl, 'band');
 
     elements.sortSelectEl.addEventListener('change', () => {
       const chosen = elements.sortSelectEl.value;
@@ -139,19 +153,23 @@ export class StatsManager {
     });
   }
 
-  /** Each tab toggles one value; an empty set means the filter is off entirely. */
-  private setupTabs<T extends string>(
+  /**
+   * Each tab toggles one value; an empty set means the filter is off entirely.
+   * The set is read off the view on every click rather than captured, so
+   * replacing the view does not leave the pills editing a discarded one.
+   */
+  private setupTabs(
     elements: StatsElements,
     tabsEl: HTMLElement,
     key: 'stage' | 'band',
-    active: Set<T>,
   ): void {
     tabsEl.addEventListener('click', (e: Event) => {
       if (!(e.target instanceof HTMLElement)) return;
       const tab = e.target.closest(`[data-${key}]`) as HTMLElement | null;
-      const value = tab?.dataset[key] as T | undefined;
+      const value = tab?.dataset[key];
       if (!value) return;
 
+      const active: Set<string> = key === 'stage' ? this.view.stages : this.view.bands;
       if (active.has(value)) active.delete(value);
       else active.add(value);
 
@@ -170,7 +188,9 @@ export class StatsManager {
   private async clearStatistics(): Promise<void> {
     await this.storage.clearStatistics();
     this.cachedStatistics = null;
-    this.view = { stages: new Set(), bands: new Set(), sort: DEFAULT_SORT };
+    this.view.stages.clear();
+    this.view.bands.clear();
+    this.view.sort = DEFAULT_SORT;
     this.loadStatistics();
   }
 

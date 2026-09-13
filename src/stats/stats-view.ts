@@ -164,14 +164,25 @@ export function updateFilterCounts(elements: StatsElements, statistics: Statisti
   }
 
   for (const [stage, count] of Object.entries(stages)) {
-    const el = elements.filterTabsEl.querySelector(`#count-${stage}`);
-    if (el) el.textContent = String(count);
+    setTabCount(elements.filterTabsEl, stage, count);
   }
 
   for (const [band, count] of Object.entries(bands)) {
-    const el = elements.bandTabsEl.querySelector(`#count-${band}`);
-    if (el) el.textContent = String(count);
+    setTabCount(elements.bandTabsEl, band, count);
   }
+}
+
+/**
+ * A pill holding no words narrows the list to nothing, so it reads as spent
+ * rather than as another cut worth trying. It stays clickable: the count moves
+ * as words are studied, and a disabled control would have to be explained.
+ */
+function setTabCount(tabsEl: HTMLElement, value: string, count: number): void {
+  const el = tabsEl.querySelector(`#count-${value}`);
+  if (!el) return;
+
+  el.textContent = String(count);
+  el.closest('.filter-tab')?.classList.toggle('is-empty', count === 0);
 }
 
 function updateTabStates(tabsEl: HTMLElement, key: string, active: ReadonlySet<string>): void {
@@ -191,6 +202,28 @@ export function updateFilterTabStates(elements: StatsElements, view: ListView): 
   elements.sortSelectEl.value = view.sort;
 }
 
+/** The markup's own copy, restored whenever the record really is empty. */
+const NOTHING_TRACKED =
+  'No statistics yet.\nStart hovering over Chinese words on web pages to track them.';
+
+const FILTER_RESET_CLASS = 'empty-state-reset';
+
+/** Puts the way out of a filter that hides everything, or takes it away again. */
+function setFilterReset(emptyStateEl: HTMLElement, clearFilters: (() => void) | undefined): void {
+  emptyStateEl.querySelector(`.${FILTER_RESET_CLASS}`)?.remove();
+  if (!clearFilters) return;
+
+  emptyStateEl.appendChild(
+    createElement<HTMLButtonElement>({
+      tag: 'button',
+      className: FILTER_RESET_CLASS,
+      textContent: 'Show all words',
+      attributes: { type: 'button' },
+      listeners: { click: () => clearFilters() },
+    })
+  );
+}
+
 function matchesView(stat: WordStatistics, view: ListView): boolean {
   if (view.stages.size > 0 && !view.stages.has(getFlashcardStage(stat))) return false;
   if (view.bands.size > 0 && !view.bands.has(bandOf(stat))) return false;
@@ -206,12 +239,45 @@ function describeTotal(total: number): string {
   return total >= MAX_TRACKED_WORDS * 0.8 ? `${words} of ${MAX_TRACKED_WORDS}` : words;
 }
 
+/**
+ * Why the list is empty. The two filter rows are ANDed, so naming them with a
+ * single "or" described a narrowing the page never applies.
+ */
+function noMatchMessage(view: ListView): string {
+  const stages = [...view.stages].map(stage => STAGE_LABELS[stage]).join(' or ');
+  const bands = [...view.bands].map(band => BAND_LABELS[band]).join(' or ');
+
+  if (stages && bands) return `No ${stages} words in ${bands} yet.`;
+  if (stages) return `No ${stages} words yet.`;
+  if (bands) return `No ${bands} words yet.`;
+
+  // An unfiltered list with words in it is never empty.
+  return NOTHING_TRACKED;
+}
+
+/**
+ * The empty state is the same element whichever emptiness it is reporting, so
+ * its copy is rewritten each time rather than edited once and left behind.
+ */
+function setEmptyMessage(emptyStateEl: HTMLElement, message: string): void {
+  const paragraph = emptyStateEl.querySelector('p');
+  if (!paragraph) return;
+
+  const { ownerDocument } = paragraph;
+  paragraph.replaceChildren();
+  message.split('\n').forEach((line, index) => {
+    if (index > 0) paragraph.appendChild(ownerDocument.createElement('br'));
+    paragraph.appendChild(ownerDocument.createTextNode(line));
+  });
+}
+
 export function renderStatistics(
   statistics: Statistics,
   elements: StatsElements,
   loadDefinition: LoadDefinition,
   view: ListView,
   setStatus: SetWordStatus,
+  clearFilters: () => void,
 ): void {
   const { loadingEl, emptyStateEl, statsListEl, wordCountEl } = elements;
   const allWords = Object.keys(statistics);
@@ -222,6 +288,8 @@ export function renderStatistics(
     emptyStateEl.style.display = 'block';
     statsListEl.style.display = 'none';
     wordCountEl.textContent = '0 words tracked';
+    setEmptyMessage(emptyStateEl, NOTHING_TRACKED);
+    setFilterReset(emptyStateEl, undefined);
     return;
   }
 
@@ -230,17 +298,17 @@ export function renderStatistics(
     return stat !== undefined && matchesView(stat, view);
   });
 
-  emptyStateEl.style.display = filtered.length === 0 ? 'block' : 'none';
-  statsListEl.style.display = filtered.length === 0 ? 'none' : 'flex';
+  const empty = filtered.length === 0;
+  emptyStateEl.style.display = empty ? 'block' : 'none';
+  statsListEl.style.display = empty ? 'none' : 'flex';
   wordCountEl.textContent = describeTotal(allWords.length);
 
-  if (filtered.length === 0) {
-    const names = [
-      ...[...view.stages].map(stage => STAGE_LABELS[stage]),
-      ...[...view.bands].map(band => BAND_LABELS[band]),
-    ].join(' or ');
-    const p = emptyStateEl.querySelector('p');
-    if (p) p.textContent = `No ${names} words yet.`;
+  // The words are there; a filter is hiding them, so the way back is offered
+  // rather than left to be found among nine pills.
+  setFilterReset(emptyStateEl, empty ? clearFilters : undefined);
+
+  if (empty) {
+    setEmptyMessage(emptyStateEl, noMatchMessage(view));
     return;
   }
 

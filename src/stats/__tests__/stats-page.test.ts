@@ -205,3 +205,71 @@ describe('StatsManager clearing', () => {
     expect(clearBtn.textContent).toBe('Clear everything?');
   });
 });
+
+describe('StatsManager empty list', () => {
+  let document: Document;
+
+  function emptyText(): string {
+    return document.getElementById('empty-state')!.querySelector('p')!.textContent ?? '';
+  }
+
+  function clickTab(selector: string): void {
+    document.querySelector(selector)!.dispatchEvent(new Event('click', { bubbles: true }));
+  }
+
+  beforeEach(() => {
+    document = new DOMParser().parseFromString(HTML, 'text/html');
+    new StatsManager(document, createClient(), storage).init();
+  });
+
+  // The two rows narrow the list together, so naming them with one "or"
+  // described a filter the page never applies.
+  it('names the stage and the band as the one filter they are', () => {
+    clickTab('[data-stage="mastered"]');
+    expect(emptyText()).toBe('No Mastered words yet.');
+
+    clickTab('[data-band="rare"]');
+    expect(emptyText()).toBe('No Mastered words in Rare yet.');
+  });
+
+  it('puts its own copy back when the filter is lifted', () => {
+    clickTab('[data-stage="mastered"]');
+    clickTab('[data-stage="mastered"]');
+    clickTab('[data-band="uncommon"]');
+
+    expect(emptyText()).toBe('No Uncommon words yet.');
+  });
+
+  it('offers the way back out of a filter that hides everything', () => {
+    clickTab('[data-stage="mastered"]');
+    const reset = document.querySelector('.empty-state-reset') as HTMLButtonElement;
+    expect(reset).toBeTruthy();
+
+    reset.dispatchEvent(new Event('click', { bubbles: true }));
+
+    expect(document.getElementById('stats-list')!.style.display).toBe('flex');
+    expect(document.querySelector('.empty-state-reset')).toBeNull();
+  });
+
+  it('dims a pill that holds no words', () => {
+    expect(document.querySelector('[data-stage="mastered"]')!.classList.contains('is-empty'))
+      .toBe(true);
+    expect(document.querySelector('[data-stage="new"]')!.classList.contains('is-empty'))
+      .toBe(false);
+  });
+
+  // Statistics are loaded again after a clear; a second listener on each row
+  // would toggle a filter on and straight back off.
+  it('wires each row of pills once however often the record is loaded', () => {
+    const reloaded = new DOMParser().parseFromString(HTML, 'text/html');
+    const manager = new StatsManager(reloaded, createClient(), storage);
+    manager.init();
+    manager.init();
+
+    reloaded
+      .querySelector('[data-band="core"]')!
+      .dispatchEvent(new Event('click', { bubbles: true }));
+
+    expect(reloaded.querySelector('[data-band="core"]')!.classList.contains('active')).toBe(true);
+  });
+});
