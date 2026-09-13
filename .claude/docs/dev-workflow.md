@@ -139,6 +139,29 @@ Husky installs two hooks (via the `prepare` script):
 - **`commit-msg`** — validates the message against `type(domain): Description`.
   See @.claude/docs/git-conventions.md.
 
+## Dependency Updates
+
+[Renovate](https://docs.renovatebot.com/) raises the update PRs, configured by
+`renovate.json` in the repo root. It covers four sources:
+
+- **npm** (`package.json` + `pnpm-lock.yaml`) — minor and patch devDependency
+  bumps arrive grouped, majors and runtime dependencies one PR each. A weekly
+  lock-file refresh picks up transitive updates nothing declares.
+- **GitHub Actions** — the pinned action versions in `.github/workflows/`, as
+  one grouped `ci(build)` PR.
+- **Nix** (`flake.lock`) — the `nixpkgs` and `flake-utils` inputs, so the dev
+  shell's Node does not drift from CI's.
+- **Git submodules** — the three dictionary sources, monthly. This is a *data*
+  update, not a dependency bump: the PR changes nothing in `src/`, and what it
+  actually alters is the generated JSON, so the CI e2e job building the
+  dictionaries is the only thing that checks it.
+
+Renovate commits are shaped to pass `commit-msg`, since a squash merge keeps
+the message: `chore(build):` for npm and Nix, `ci(build):` for Actions,
+`chore(dict):` for the submodules. Renovate's own commits never run the husky
+hooks — they are made server-side — so the format is a convention it is
+configured to follow rather than one enforced on it.
+
 ## Benchmarking
 
 ```sh
