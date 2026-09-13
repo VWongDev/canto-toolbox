@@ -45,20 +45,11 @@
       </dl>
 
       <div class="filters">
-        <div class="filter-toolbar">
-          <div class="filter-tabs" id="filter-tabs">
-            <button class="filter-tab" type="button" aria-pressed="false" data-stage="new">New <span class="tab-count" id="count-new">0</span></button>
-            <button class="filter-tab" type="button" aria-pressed="false" data-stage="learning">Learning <span class="tab-count" id="count-learning">0</span></button>
-            <button class="filter-tab" type="button" aria-pressed="false" data-stage="familiar">Familiar <span class="tab-count" id="count-familiar">0</span></button>
-            <button class="filter-tab" type="button" aria-pressed="false" data-stage="mastered">Mastered <span class="tab-count" id="count-mastered">0</span></button>
-          </div>
-
-          <label class="sort-control">
-            Sort
-            <!-- Options are filled from SORT_LABELS so the labels and the keys
-                 that sort by them cannot drift apart. -->
-            <select id="sort-select"></select>
-          </label>
+        <div class="filter-tabs" id="filter-tabs">
+          <button class="filter-tab" type="button" aria-pressed="false" data-stage="new">New <span class="tab-count" id="count-new">0</span></button>
+          <button class="filter-tab" type="button" aria-pressed="false" data-stage="learning">Learning <span class="tab-count" id="count-learning">0</span></button>
+          <button class="filter-tab" type="button" aria-pressed="false" data-stage="familiar">Familiar <span class="tab-count" id="count-familiar">0</span></button>
+          <button class="filter-tab" type="button" aria-pressed="false" data-stage="mastered">Mastered <span class="tab-count" id="count-mastered">0</span></button>
         </div>
 
         <div class="filter-tabs filter-tabs--band" id="band-tabs">
@@ -72,6 +63,12 @@
     </section>
 
     <div class="stats-container">
+      <label class="sort-control">
+        Sort
+        <!-- Options are filled from SORT_LABELS so the labels and the keys
+             that sort by them cannot drift apart. -->
+        <select id="sort-select"></select>
+      </label>
       <div id="loading" class="loading" role="status">Loading statistics...</div>
       <div id="empty-state" class="empty-state" role="status" style="display: none;">
         <div class="empty-state-icon">字</div>

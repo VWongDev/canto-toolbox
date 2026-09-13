@@ -197,21 +197,14 @@ h1 {
   padding: t.$space-3 t.$space-4;
 }
 
-// Sort shares the stage row, so the five frequency pills can keep a single
-// line at the popup's 560px floor instead of orphaning Rare.
-.filter-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: t.$space-3;
-  flex-wrap: wrap;
-}
-
+// Sort orders the list, so it lives on the list rather than between the two
+// filter rows — where a wrap left it stranded on a line of its own.
 .sort-control {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: t.$space-2;
-  flex-shrink: 0;
+  margin-bottom: t.$space-3;
   color: t.$color-text-subtle;
   font-size: t.$text-sm;
 
@@ -219,7 +212,7 @@ h1 {
     padding: 4px t.$space-2;
     border: 1px solid t.$color-border-muted;
     border-radius: t.$radius-sm;
-    background: t.$color-surface;
+    background: t.$color-bg;
     color: t.$color-text;
     font: inherit;
     font-size: t.$text-sm;
@@ -227,6 +220,10 @@ h1 {
 
     @include a.focus-ring;
   }
+}
+
+.stats-container:not(:has(#stats-list[style*="flex"])) .sort-control {
+  display: none;
 }
 
 .filter-tabs {
@@ -639,6 +636,10 @@ h1 {
   .stats-container {
     padding: t.$space-3;
     min-height: 0;
+  }
+
+  .sort-control {
+    margin-bottom: t.$space-2;
   }
 
   .empty-state {
