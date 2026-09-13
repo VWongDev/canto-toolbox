@@ -226,7 +226,9 @@ flowchart TD
   model loads on the first click, never on page load. A video is only offered
   **while paused** — a frame the reader is still watching is one they have
   already left, and the badge would fight the player's own controls for the
-  same corner.
+  same corner. What is on offer is reconsidered on `play` and `pause` as well
+  as on hover, since every way a reader pauses (space, `k`, a click on the
+  picture) leaves the cursor where it was and fires no pointer event.
 - **Following playback**: once a frame is read, `play` clears the overlay (text
   read off one frame is wrong for every frame after it) while `pause` and
   `seeked` read the new frame, so stepping between subtitles needs no further

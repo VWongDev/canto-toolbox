@@ -56,16 +56,25 @@ export class MediaOcrManager {
   private readonly attached = new Map<MediaElement, Attached>();
   private badge: HTMLElement | null = null;
   private badgeTarget: MediaElement | null = null;
+  /**
+   * What the cursor is over, offerable or not. A video is normally paused with
+   * the cursor already on it — space, `k`, or a click on the picture — and none
+   * of those move the pointer, so what is on offer has to be reconsidered when
+   * playback changes rather than only when the cursor arrives.
+   */
+  private hovered: MediaElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private repositionFrame: number | null = null;
   private readonly boundMouseOver: (e: MouseEvent) => void;
   private readonly boundReposition: () => void;
+  private readonly boundPlayback: (e: Event) => void;
 
   constructor(document: Document, client: OcrClient) {
     this.document = document;
     this.client = client;
     this.boundMouseOver = (e) => this.handleMouseOver(e);
     this.boundReposition = () => this.scheduleReposition();
+    this.boundPlayback = (e) => this.handlePlayback(e);
   }
 
   /**
@@ -85,6 +94,8 @@ export class MediaOcrManager {
   init(): void {
     this.injectStyles();
     this.document.addEventListener('mouseover', this.boundMouseOver, true);
+    this.document.addEventListener('play', this.boundPlayback, true);
+    this.document.addEventListener('pause', this.boundPlayback, true);
     window.addEventListener('scroll', this.boundReposition, true);
     window.addEventListener('resize', this.boundReposition);
     this.resizeObserver = new ResizeObserver(() => this.scheduleReposition());
@@ -92,6 +103,8 @@ export class MediaOcrManager {
 
   destroy(): void {
     this.document.removeEventListener('mouseover', this.boundMouseOver, true);
+    this.document.removeEventListener('play', this.boundPlayback, true);
+    this.document.removeEventListener('pause', this.boundPlayback, true);
     window.removeEventListener('scroll', this.boundReposition, true);
     window.removeEventListener('resize', this.boundReposition);
     this.resizeObserver?.disconnect();
@@ -102,6 +115,7 @@ export class MediaOcrManager {
     }
 
     for (const media of [...this.attached.keys()]) this.detach(media);
+    this.hovered = null;
     this.hideBadge();
   }
 
@@ -111,16 +125,29 @@ export class MediaOcrManager {
     if (!isMedia(target)) {
       // Moving onto the badge itself must not dismiss it.
       const overBadge = target instanceof Element && target.closest('.canto-ocr-badge');
-      if (!overBadge) this.hideBadge();
+      if (!overBadge) {
+        this.hovered = null;
+        this.hideBadge();
+      }
       return;
     }
 
-    if (!this.isOfferable(target)) {
-      this.hideBadge();
-      return;
-    }
+    this.hovered = target;
+    this.refreshBadge();
+  }
 
-    this.showBadge(target);
+  /**
+   * `play` and `pause` do not bubble, so they are caught on the way down. Only
+   * the picture under the cursor can change what is being offered there.
+   */
+  private handlePlayback(event: Event): void {
+    if (event.target === this.hovered) this.refreshBadge();
+  }
+
+  /** Offers the hovered picture, or withdraws an offer that no longer holds. */
+  private refreshBadge(): void {
+    if (this.hovered && this.isOfferable(this.hovered)) this.showBadge(this.hovered);
+    else this.hideBadge();
   }
 
   /**

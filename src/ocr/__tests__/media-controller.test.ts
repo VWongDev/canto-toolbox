@@ -92,6 +92,31 @@ describe('the badge', () => {
     expect(badge()).toBeNull();
   });
 
+  /**
+   * The way a reader actually reaches the frame they want read: space, `k` or
+   * a click on the picture, none of which move the pointer off the video.
+   */
+  it('is offered when the video is paused under the cursor', () => {
+    const video = addVideo(false);
+    hover(video);
+    expect(badge()).toBeNull();
+
+    (video as { paused: boolean }).paused = true;
+    video.dispatchEvent(new Event('pause'));
+
+    expect(badge()).not.toBeNull();
+  });
+
+  it('is withdrawn when the video plays on under the cursor', () => {
+    const video = addVideo(true);
+    hover(video);
+
+    (video as { paused: boolean }).paused = false;
+    video.dispatchEvent(new Event('play'));
+
+    expect(badge()).toBeNull();
+  });
+
   it('is not offered on a video too small to hold readable text', () => {
     const video = addVideo(true);
     video.getBoundingClientRect = () => ({ left: 0, top: 0, width: 40, height: 30 }) as DOMRect;
