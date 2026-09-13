@@ -1,11 +1,45 @@
 @use 'tokens' as t;
 @use 'dark-mode' as *;
 
+// The breakdown follows the definition rather than leading it, so it is ruled
+// off above instead of below.
 .popup-etymology-section {
   width: 100%;
-  margin-bottom: t.$space-3;
-  padding-bottom: t.$space-3;
-  border-bottom: 1px solid t.$color-border-bold;
+  margin-top: t.$space-3;
+  padding-top: t.$space-3;
+  border-top: 1px solid t.$color-border-bold;
+
+  &.is-collapsed .popup-etymology-characters {
+    display: none;
+  }
+
+  &:not(.is-collapsed) .popup-etymology-chevron {
+    transform: rotate(90deg);
+  }
+}
+
+// The label is the disclosure, so the whole row is the hit target.
+.popup-etymology-toggle {
+  display: flex;
+  align-items: center;
+  gap: t.$space-2;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover .popup-etymology-label,
+  &:hover .popup-etymology-chevron {
+    color: t.$color-primary;
+  }
+
+  &:focus-visible {
+    outline: 2px solid t.$color-primary;
+    outline-offset: 2px;
+  }
 }
 
 // Quieter against the dark canvas, where muted grey reads as body text.
@@ -15,15 +49,24 @@
   text-transform: uppercase;
   color: t.$color-text-muted;
   letter-spacing: 0.5px;
-  margin-bottom: 6px;
 
   @include dark { color: t.$color-text-subtle; }
+}
+
+.popup-etymology-chevron {
+  display: flex;
+  align-items: center;
+  color: t.$color-text-subtle;
+  transition: transform 0.2s, color 0.15s;
+
+  svg { display: block; }
 }
 
 .popup-etymology-characters {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  margin-top: 6px;
 }
 
 .popup-etymology-character {

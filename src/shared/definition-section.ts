@@ -102,16 +102,25 @@ export function createDefinitionSections(definition: DefinitionResult): HTMLElem
   });
 }
 
+export interface DefinitionElementOptions {
+  /** Render the character breakdown already open. See {@link createEtymologySection}. */
+  expandEtymology?: boolean;
+}
+
 /**
- * Full `definition-container` element (word + optional etymology +
- * Mandarin/Cantonese sections) shared verbatim by the stats and flashcard
- * surfaces. The popup builds its own shell around
- * {@link createDefinitionSections} instead.
+ * Full `definition-container` element (word + Mandarin/Cantonese sections +
+ * optional etymology) shared verbatim by the stats and flashcard surfaces. The
+ * popup builds its own shell around {@link createDefinitionSections} instead.
+ *
+ * What the word means comes before what it is built from: the breakdown is
+ * worth reading second, and leading with it buried the definition under a
+ * screen of component chips.
  */
 export function createDefinitionElement(
   word: string,
   definition: DefinitionResult,
   showWord = true,
+  { expandEtymology = false }: DefinitionElementOptions = {},
 ): HTMLElement {
   const displayWord = definition.word || word;
 
@@ -119,11 +128,11 @@ export function createDefinitionElement(
     ? [createElement({ className: 'definition-word', textContent: displayWord })]
     : [];
 
-  if (definition.etymology?.length) {
-    children.push(createEtymologySection(definition.etymology));
-  }
-
   children.push(createDefinitionSections(definition));
+
+  if (definition.etymology?.length) {
+    children.push(createEtymologySection(definition.etymology, { expanded: expandEtymology }));
+  }
 
   return createElement({ className: 'definition-container', children });
 }

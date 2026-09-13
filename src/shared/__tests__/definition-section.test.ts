@@ -16,6 +16,10 @@ const makeDefinition = (overrides: Partial<DefinitionResult> = {}): DefinitionRe
   ...overrides,
 });
 
+const withEtymology = (): DefinitionResult => makeDefinition({
+  etymology: [{ character: '字', definition: 'character', decomposition: '⿱宀子', radical: '宀' }],
+});
+
 describe('createDefinitionTextElement', () => {
   it('renders one list item per definition', () => {
     const el = createDefinitionTextElement(['a', 'b']);
@@ -97,11 +101,30 @@ describe('createDefinitionElement', () => {
     const noEty = createDefinitionElement('字', makeDefinition());
     expect(noEty.children.length).toBe(2); // word + definition-sections
 
-    const withEty = createDefinitionElement('字', makeDefinition({
-      etymology: [{ character: '字', definition: 'character', decomposition: '⿱宀子', radical: '宀' }],
-    }));
-    // word + etymology + definition-sections
+    const withEty = createDefinitionElement('字', withEtymology());
+    // word + definition-sections + etymology
     expect(withEty.children.length).toBe(3);
+  });
+
+  it('puts the readings before the breakdown', () => {
+    const el = createDefinitionElement('字', withEtymology());
+    const order = Array.from(el.children).map(child => child.className);
+
+    expect(order).toEqual([
+      'definition-word',
+      'definition-body',
+      'popup-etymology-section is-collapsed',
+    ]);
+  });
+
+  it('opens the breakdown only when asked to', () => {
+    const closed = createDefinitionElement('字', withEtymology());
+    expect(closed.querySelector('.popup-etymology-section')!.classList.contains('is-collapsed'))
+      .toBe(true);
+
+    const open = createDefinitionElement('字', withEtymology(), true, { expandEtymology: true });
+    expect(open.querySelector('.popup-etymology-section')!.classList.contains('is-collapsed'))
+      .toBe(false);
   });
 });
 

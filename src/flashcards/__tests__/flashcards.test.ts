@@ -544,3 +544,69 @@ describe('FlashcardManager writing cards', () => {
     expect(quiz.cancelQuiz).toHaveBeenCalled();
   });
 });
+
+describe('FlashcardManager components cards', () => {
+  let document: Document;
+
+  const DECOMPOSED: DefinitionResult = {
+    ...DEFINITION,
+    word: '好',
+    etymology: [{ character: '好', definition: 'good', decomposition: '⿰女子', radical: '女' }],
+  };
+
+  function srs(state = 2) {
+    return {
+      reviews: 3,
+      consecutiveCorrect: 3,
+      lastReviewed: 1,
+      srs: {
+        due: Date.now() + 86_400_000,
+        stability: 10,
+        difficulty: 5,
+        scheduledDays: 10,
+        learningSteps: 0,
+        lapses: 0,
+        state,
+      },
+    };
+  }
+
+  /** Recognition and production are both introduced, so components is next. */
+  const READY: Statistics = {
+    好: {
+      count: 5,
+      firstSeen: 1,
+      lastSeen: 2,
+      decomposable: true,
+      flashcard: srs(),
+      production: srs(),
+    },
+  };
+
+  function start(): void {
+    const client = createClient({
+      getStatistics: vi.fn(cb => cb({ success: true, type: 'get_statistics', statistics: READY })),
+      lookupWord: vi.fn((_word, cb) =>
+        cb({ success: true, type: 'lookup_word', definition: DECOMPOSED })
+      ),
+    });
+    new FlashcardManager(document, client).init();
+  }
+
+  beforeEach(() => {
+    document = new DOMParser().parseFromString(HTML, 'text/html');
+  });
+
+  // Every other surface keeps the breakdown closed, but here it is the answer
+  // the card asked for, so it has to be on screen without a second click.
+  it('opens the breakdown on the answer', () => {
+    start();
+    expect(document.getElementById('card')!.dataset.currentDirection).toBe('components');
+
+    document.getElementById('show-answer-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
+
+    const section = document.getElementById('card-back')!.querySelector('.popup-etymology-section');
+    expect(section?.classList.contains('is-collapsed')).toBe(false);
+    expect(section?.querySelectorAll('.popup-etymology-component-glyph')).toHaveLength(2);
+  });
+});

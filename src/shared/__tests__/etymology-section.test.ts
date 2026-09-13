@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createEtymologySection } from '../etymology-section.js';
 import type { CharacterEtymology } from '../types.js';
 
@@ -175,5 +175,51 @@ describe('createEtymologySection', () => {
   it('renders an empty characters container for an empty input array', () => {
     const el = createEtymologySection([]);
     expect(el.querySelectorAll('.popup-etymology-character').length).toBe(0);
+  });
+});
+
+describe('createEtymologySection disclosure', () => {
+  const toggleOf = (el: HTMLElement) =>
+    el.querySelector('.popup-etymology-toggle') as HTMLButtonElement;
+
+  it('starts closed', () => {
+    const el = createEtymologySection([makeEtymology()]);
+
+    expect(el.classList.contains('is-collapsed')).toBe(true);
+    expect(toggleOf(el).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('starts open when asked to', () => {
+    const el = createEtymologySection([makeEtymology()], { expanded: true });
+
+    expect(el.classList.contains('is-collapsed')).toBe(false);
+    expect(toggleOf(el).getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('opens and closes on the toggle', () => {
+    const el = createEtymologySection([makeEtymology()]);
+    const toggle = toggleOf(el);
+
+    toggle.click();
+    expect(el.classList.contains('is-collapsed')).toBe(false);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+    toggle.click();
+    expect(el.classList.contains('is-collapsed')).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  // Stats rows expand on a click anywhere in them, so an opening breakdown
+  // must not close the row that holds it.
+  it('does not let the toggle click reach the surface around it', () => {
+    const el = createEtymologySection([makeEtymology()]);
+    const row = document.createElement('div');
+    const onRowClick = vi.fn();
+    row.addEventListener('click', onRowClick);
+    row.appendChild(el);
+
+    toggleOf(el).click();
+
+    expect(onRowClick).not.toHaveBeenCalled();
   });
 });

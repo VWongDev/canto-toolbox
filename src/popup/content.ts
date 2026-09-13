@@ -357,11 +357,13 @@ export class ChineseHoverPopupManager {
       }),
     );
 
+    // The reader stopped on this word to find out what it means, so the
+    // readings come first and the breakdown follows, closed.
+    popup.appendChild(createDefinitionSections(definition));
+
     if (definition.etymology?.length) {
       popup.appendChild(createEtymologySection(definition.etymology));
     }
-
-    popup.appendChild(createDefinitionSections(definition));
 
     this.document.body.appendChild(popup);
     this.currentPopup = popup;

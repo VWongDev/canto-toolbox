@@ -142,15 +142,64 @@ function createCharacterCard(etymology: CharacterEtymology): HTMLElement {
   });
 }
 
-export function createEtymologySection(etymologies: CharacterEtymology[]): HTMLElement {
-  return createElement({
-    className: 'popup-etymology-section',
-    children: [
-      createElement({ className: 'popup-etymology-label', textContent: 'Character Breakdown' }),
-      createElement({
-        className: 'popup-etymology-characters',
-        children: etymologies.map(createCharacterCard)
-      })
-    ]
+/** Chevron drawn as SVG so it inherits colour; rotation is handled in CSS. */
+const CHEVRON_SVG =
+  '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">' +
+  '<path d="M3.5 1.5L7 5l-3.5 3.5" stroke="currentColor" stroke-width="1.5" ' +
+  'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+export interface EtymologySectionOptions {
+  /**
+   * Open the breakdown on render. Off everywhere but the components card,
+   * whose question the breakdown is itself the answer to.
+   */
+  expanded?: boolean;
+}
+
+/**
+ * The character breakdown, behind a disclosure and under the definition. It
+ * starts closed because a reader who stopped on a word wants to know what the
+ * word means: expanded, the breakdown pushed that answer most of a screen down
+ * on every surface that shows both.
+ */
+export function createEtymologySection(
+  etymologies: CharacterEtymology[],
+  { expanded = false }: EtymologySectionOptions = {},
+): HTMLElement {
+  const characters = createElement({
+    className: 'popup-etymology-characters',
+    children: etymologies.map(createCharacterCard)
   });
+
+  const toggle = createElement<HTMLButtonElement>({
+    tag: 'button',
+    className: 'popup-etymology-toggle',
+    attributes: { type: 'button', 'aria-expanded': String(expanded) },
+    children: [
+      createElement({
+        tag: 'span',
+        className: 'popup-etymology-label',
+        textContent: 'Character Breakdown',
+      }),
+    ],
+  });
+
+  const chevron = createElement({ tag: 'span', className: 'popup-etymology-chevron' });
+  chevron.innerHTML = CHEVRON_SVG;
+  toggle.appendChild(chevron);
+
+  const section = createElement({
+    className: expanded ? 'popup-etymology-section' : 'popup-etymology-section is-collapsed',
+    children: [toggle, characters],
+  });
+
+  toggle.addEventListener('click', (event) => {
+    // Surfaces wrap this in clickable rows; opening the breakdown must not
+    // also collapse the row it sits in.
+    event.stopPropagation();
+    const collapsed = section.classList.toggle('is-collapsed');
+    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  });
+
+  return section;
 }

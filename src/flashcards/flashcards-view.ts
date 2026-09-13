@@ -319,9 +319,12 @@ export function renderBack(
   if (cardBack) {
     cardBack.replaceChildren();
     // Only the production card withheld the word, so only its answer leads
-    // with it; the others already have it on the front.
+    // with it; the others already have it on the front. The components card is
+    // the one whose answer *is* the breakdown, so its disclosure starts open.
     cardBack.appendChild(
-      createDefinitionElement(card.word, definition, card.direction === 'production')
+      createDefinitionElement(card.word, definition, card.direction === 'production', {
+        expandEtymology: card.direction === 'components',
+      })
     );
     // The sentence the reader actually met the word in, under the dictionary
     // senses: a gloss says what a word means, this says how it was used.
