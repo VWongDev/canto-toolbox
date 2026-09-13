@@ -150,7 +150,10 @@ flowchart TD
   (`document.caretRangeFromPoint`, with a realm-safe `nodeType` check so
   frames work) and send it with the hovered offset, leaving segmentation to
   the dictionary; request a lookup via `popup-client` (`sendMessage`); render
-  the popup with the shared section components.
+  the popup with the shared section components. Leaving the word starts a
+  short grace period rather than hiding at once — the popup is offset from the
+  cursor, so reaching its audio or **+ Study** button means crossing text that
+  is not the word, and hovering the popup cancels the pending hide.
 - **Study signal**: showing a popup is not studying. After `DWELL_MS` with the
   popup still on the same word, the script sends `track_word` — once per word,
   along with `extractContext`'s snippet of the sentence it was met in. The
