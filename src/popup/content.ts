@@ -28,13 +28,19 @@ const STUDY_ADDED_LABEL = 'Added';
 
 const SENTENCE_BOUNDARY = /[\u3002\uff01\uff1f\uff1b\uff1a\u3001\n.!?;]/;
 const SELECTION_HIDE_DELAY_MS = 200;
+/**
+ * How long the popup survives the cursor leaving the word. The popup is offset
+ * from the cursor, so reaching it means crossing text that is not the word —
+ * hiding on the first such move would put it out of reach.
+ */
+const POPUP_HIDE_DELAY_MS = 300;
 const SELECTION_TRACKING_DELAY_MS = 300;
 const POPUP_OFFSET_PX = 15;
 const SELECTION_PADDING_PX = 10;
 const VIEWPORT_MARGIN_PX = 10;
 
 /** What each pending timer is waiting to do. */
-type TimerName = 'selection' | 'track';
+type TimerName = 'selection' | 'track' | 'hide';
 
 interface CursorResult {
   /** The contiguous run of Chinese characters under the cursor. */
@@ -56,6 +62,7 @@ export class ChineseHoverPopupManager {
   private readonly timers: Record<TimerName, ReturnType<typeof setTimeout> | null> = {
     selection: null,
     track: null,
+    hide: null,
   };
   private lastHoveredWord: string | null = null;
   private lastHoveredOffset = -1;
@@ -162,8 +169,7 @@ export class ChineseHoverPopupManager {
     if (relatedTarget?.closest('#chinese-hover-popup')) return;
 
     if (!this.isHoveringChinese && this.currentPopup && !this.currentPopup.matches(':hover')) {
-      this.hidePopup();
-      this.resetHoverState();
+      this.scheduleHide();
     }
   }
 
@@ -178,6 +184,7 @@ export class ChineseHoverPopupManager {
 
     const element = target instanceof Element ? target : target instanceof Node ? target.parentElement : null;
     if (element?.closest('#chinese-hover-popup')) {
+      this.clearTimer('hide');
       this.isHoveringChinese = true;
       return;
     }
@@ -186,8 +193,7 @@ export class ChineseHoverPopupManager {
 
     if (!canHoldText(target)) {
       if (this.isHoveringChinese || this.currentPopup) {
-        this.resetHoverState();
-        this.hidePopup();
+        this.scheduleHide();
       }
       return;
     }
@@ -195,13 +201,13 @@ export class ChineseHoverPopupManager {
     const result = getChineseWordAtCursor(this.document, event);
     if (!result) {
       if (this.isHoveringChinese || this.currentPopup) {
-        this.resetHoverState();
-        this.hidePopup();
+        this.scheduleHide();
       }
       return;
     }
 
     const { run, runOffset, textNode, offset } = result;
+    this.clearTimer('hide');
     this.isHoveringChinese = true;
 
     // Caret offsets are whole characters, so any difference at all is a move
@@ -339,10 +345,11 @@ export class ChineseHoverPopupManager {
       dataset: { word },
       listeners: {
         mouseenter: () => {
+          this.clearTimer('hide');
           this.isHoveringChinese = true;
         },
         mouseleave: () => {
-          if (!this.isHoveringChinese) this.hidePopup();
+          this.scheduleHide();
         }
       }
     });
@@ -373,6 +380,7 @@ export class ChineseHoverPopupManager {
   private hidePopup(): void {
     // A word the reader moved off before the dwell elapsed was never studied.
     this.clearTimer('track');
+    this.clearTimer('hide');
     this.lookupGeneration++;
 
     if (this.currentPopup) {
@@ -403,6 +411,15 @@ export class ChineseHoverPopupManager {
     this.isHoveringChinese = false;
     this.lastHoveredElement = null;
     this.lastHoveredOffset = -1;
+  }
+
+  /**
+   * The cursor has left the word. Hovering the popup within the grace period
+   * cancels this, so a reader reaching for the audio or Study button keeps it.
+   */
+  private scheduleHide(): void {
+    this.resetHoverState();
+    this.setTimer('hide', () => this.hidePopup(), POPUP_HIDE_DELAY_MS);
   }
 
   private scheduleSelectionHide(): void {
