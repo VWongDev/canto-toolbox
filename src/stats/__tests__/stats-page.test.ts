@@ -408,6 +408,27 @@ describe('StatsManager row status', () => {
     expect(item.querySelector('[data-action="retire"]')!.textContent).toBe('Retired');
   });
 
+  // The badge is what a reader scrolling the list has to go on; the button
+  // saying "Retired" is two clicks away inside the row.
+  it('marks a retired word on its collapsed row', () => {
+    showRetired();
+
+    expect(row('退休').querySelector('.stage-badge--retired')!.textContent).toBe('Retired');
+    expect(row('常見').querySelector('.stage-badge--retired')).toBeNull();
+
+    press(openRow('常見'), 'retire');
+    expect(row('常見').querySelector('.stage-badge--retired')!.textContent).toBe('Retired');
+  });
+
+  it('takes the retired badge off a word put back in the deck', () => {
+    showRetired();
+    const item = openRow('退休');
+    press(item, 'retire');
+
+    expect(row('退休').querySelector('.stage-badge--retired')).toBeNull();
+    expect(row('退休').querySelector('.stage-badge')!.textContent).toBe('New');
+  });
+
   it('asks for the opposite on the next press', () => {
     showRetired();
     const item = openRow('常見');

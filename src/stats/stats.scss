@@ -335,6 +335,15 @@ h1 {
     background: t.$color-stage-mastered-bg;
     color: t.$color-stage-mastered;
   }
+
+  // Retirement is not a stage, so it is drawn as an outline rather than a
+  // fill: it reads as its own badge while scrolling instead of borrowing the
+  // colour of a stage the word is not in.
+  &--retired {
+    padding: 1px 6px;
+    border: 1px dashed currentColor;
+    color: t.$color-text-muted;
+  }
 }
 
 .stat-word-row {

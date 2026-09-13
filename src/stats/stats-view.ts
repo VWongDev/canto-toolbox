@@ -394,6 +394,20 @@ function createStageBadge(stage: FlashcardStage): HTMLElement {
 }
 
 /**
+ * A retired word keeps the stage its progress earned, so retirement is drawn
+ * beside that stage rather than in place of it — and on the collapsed row,
+ * since a status only the open panel admits to is one the reader has to hunt
+ * for a word at a time.
+ */
+function createRetiredBadge(): HTMLElement {
+  return createElement({
+    tag: 'span',
+    className: 'stage-badge stage-badge--retired',
+    textContent: 'Retired',
+  });
+}
+
+/**
  * Retiring and choosing are the two things the reader can say about a word
  * that hovering cannot: that they already know it, and that they want it
  * studied sooner than the exposure gate would allow.
@@ -490,7 +504,16 @@ export function refreshStatRow(
 
   if (!item || !matchesView(stat, view)) return false;
 
-  item.querySelector('.stage-badge')?.replaceWith(createStageBadge(getFlashcardStage(stat)));
+  item
+    .querySelector('.stage-badge:not(.stage-badge--retired)')
+    ?.replaceWith(createStageBadge(getFlashcardStage(stat)));
+
+  const retiredBadge = item.querySelector('.stage-badge--retired');
+  if (stat.suppressed === true) {
+    if (!retiredBadge) item.querySelector('.stat-word-row')?.appendChild(createRetiredBadge());
+  } else {
+    retiredBadge?.remove();
+  }
 
   const study = item.querySelector<HTMLButtonElement>('[data-action="study"]');
   const know = item.querySelector<HTMLButtonElement>('[data-action="retire"]');
@@ -528,6 +551,7 @@ function createStatItem(
     children: [
       createElement({ className: 'stat-word', textContent: word }),
       createStageBadge(stage),
+      ...(stat.suppressed === true ? [createRetiredBadge()] : []),
     ],
   });
 
