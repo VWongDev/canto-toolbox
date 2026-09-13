@@ -14,12 +14,15 @@
   box-sizing: border-box;
 }
 
+// This page is the extension's action popup as well as a full page, and Chrome
+// sizes a popup from its content up to 800x600. The floor is what the two
+// definition columns need to stay side by side inside one.
 body {
   font-family: t.$font-system;
   background: t.$color-bg;
   color: t.$color-text;
   line-height: 1.6;
-  min-width: 500px;
+  min-width: 560px;
 }
 
 .container {
@@ -58,6 +61,7 @@ h1 {
 .controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: t.$space-4;
   margin-bottom: t.$space-5;
   padding: t.$space-3 t.$space-4;
@@ -547,5 +551,81 @@ h1 {
   .stat-item,
   .stat-expand-icon {
     @include a.still;
+  }
+}
+
+// Opened as the action popup, the page gets at most 600px of height. The hero,
+// the summary and two rows of pills spent roughly three quarters of that
+// before the first word, so at that height the chrome gives way to the list:
+// the header becomes one line, the summary tightens, and the padding halves.
+// A tab is taller than this and keeps the full layout.
+@media (max-height: 640px) {
+  .container {
+    padding: t.$space-3 t.$space-4;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: t.$space-2;
+    margin-bottom: t.$space-3;
+    text-align: left;
+  }
+
+  .header-icon {
+    font-size: t.$text-xl;
+    margin-bottom: 0;
+  }
+
+  h1 {
+    font-size: t.$text-md;
+    margin-bottom: 0;
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  .controls {
+    margin-bottom: t.$space-3;
+    padding: t.$space-2 t.$space-3;
+  }
+
+  .overview {
+    gap: t.$space-4;
+    margin-bottom: t.$space-3;
+    padding: t.$space-2 t.$space-3;
+  }
+
+  .overview-item dd {
+    font-size: t.$text-md;
+  }
+
+  .filter-tabs {
+    gap: t.$space-1;
+    margin-bottom: t.$space-2;
+  }
+
+  .filter-tab {
+    padding: 3px t.$space-3;
+    font-size: t.$text-sm;
+  }
+
+  .stats-container {
+    padding: t.$space-3;
+    min-height: 0;
+  }
+
+  .empty-state {
+    padding: t.$space-5 t.$space-4;
+  }
+
+  .empty-state-icon {
+    font-size: t.$text-2xl;
+    margin-bottom: t.$space-2;
+  }
+
+  .loading {
+    padding: t.$space-5;
   }
 }
