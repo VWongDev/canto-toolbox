@@ -158,9 +158,28 @@ async function prepareHoverPopup(
 
   console.log('[Screenshots] Waiting for popup...');
   await waitForPopup(page);
+
+  await expandCharacterBreakdowns(page);
 }
 
-const VIEWPORT_CLIP = { x: 0, y: 0, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT };
+/**
+ * Opens every character breakdown on the page. The UI ships them closed so the
+ * definition stays at the top; a store screenshot is meant to show the feature.
+ */
+async function expandCharacterBreakdowns(page: Page): Promise<void> {
+  const opened = await page.$$eval(
+    '.popup-etymology-section.is-collapsed .popup-etymology-toggle',
+    toggles => {
+      toggles.forEach(toggle => (toggle as HTMLElement).click());
+      return toggles.length;
+    }
+  );
+  if (opened > 0) {
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+}
+
+const VIEWPORT_CLIP ={ x: 0, y: 0, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT };
 const POPUP_CLIP_PADDING = 120;
 
 function getPopupClip(box: { x: number; y: number; width: number; height: number }) {
@@ -217,6 +236,8 @@ async function captureStatsScreenshot(
   });
   await new Promise(resolve => setTimeout(resolve, 300));
 
+  await expandCharacterBreakdowns(page);
+
   console.log('[Screenshots] Capturing statistics.png (1280×800)...');
   await page.screenshot({ path: outputPath, type: 'png', clip: VIEWPORT_CLIP });
 }
@@ -245,6 +266,8 @@ async function captureFlashcardScreenshot(
   await page.click('#show-answer-btn');
   await page.waitForSelector('.definition-container', { visible: true, timeout: 15000 });
   await new Promise(resolve => setTimeout(resolve, 300));
+
+  await expandCharacterBreakdowns(page);
 
   console.log('[Screenshots] Capturing flashcard-review.png (1280×800)...');
   await page.screenshot({ path: outputPath, type: 'png', clip: VIEWPORT_CLIP });
