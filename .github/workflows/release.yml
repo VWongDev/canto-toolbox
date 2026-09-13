@@ -39,6 +39,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The same gates CI runs, stated here rather than left to the husky
+      # pre-commit hook the version-bump commit happens to fire: a release
+      # should fail before it builds 76 MB and pushes a tag, not after.
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Coverage (non-blocking)
+        continue-on-error: true
+        run: pnpm test:coverage
+
       - name: Bump version in package.json
         run: npm version ${{ inputs.bump }} --no-git-tag-version
         env:
@@ -64,12 +80,29 @@ jobs:
           key: ocr-models-${{ hashFiles('build-tools/fetch-ocr-assets.ts') }}
 
       - name: Build extension
-        run: pnpm build
+        run: NODE_OPTIONS=--max-old-space-size=8192 pnpm build
+
+      - name: Benchmark lookup performance
+        run: pnpm bench
 
       - name: Install xvfb and Chromium dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb fonts-noto-cjk libgbm1 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libasound2t64
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Run e2e tests
+        run: xvfb-run --auto-servernum pnpm test:e2e
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
       - name: Install Puppeteer Chrome
         run: npx puppeteer browsers install chrome
