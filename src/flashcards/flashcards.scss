@@ -113,6 +113,55 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+// Says what the last press buried, and takes it back. Aligned to the card so
+// it reads as part of the session rather than as an alert over it.
+.retired-notice {
+  width: 100%;
+  max-width: 640px;
+  margin: t.$space-2 auto 0;
+  padding: t.$space-2 t.$space-5;
+  display: flex;
+  align-items: center;
+  gap: t.$space-2;
+  flex-shrink: 0;
+  font-size: t.$text-sm;
+  color: t.$color-text-subtle;
+}
+
+.retired-undo {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: t.$color-primary;
+  cursor: pointer;
+  text-decoration: underline;
+
+  @include a.focus-ring;
+}
+
+.finished-actions {
+  display: flex;
+  align-items: center;
+  gap: t.$space-3;
+}
+
+// Reads as the way out rather than as a second primary action.
+.btn-secondary {
+  background: t.$color-control;
+  border-color: t.$color-control-border;
+  color: t.$color-control-text;
+
+  &:hover {
+    background: t.$color-control-hover;
+  }
+}
+
+#empty-state .btn-secondary {
+  margin-top: t.$space-5;
+}
+
 .card {
   width: 100%;
   max-width: 640px;

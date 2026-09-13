@@ -27,7 +27,10 @@ import {
   isAnswerVisible,
   isWritingAnswerVisible,
   isAnswerRevealable,
-  renderRatingIntervals
+  renderRatingIntervals,
+  showRetiredNotice,
+  hideRetiredNotice,
+  STATS_LINK_SELECTOR
 } from './flashcards-view.js';
 import { previewSchedule } from '../shared/scheduler.js';
 import { progressFor } from '../shared/statistics-utils.js';
@@ -47,6 +50,19 @@ const RATING_KEYS: Readonly<Record<string, Rating>> = {
 
 const ADVANCE_KEYS = [' ', 'Enter'];
 const DEFAULT_RATING: Rating = 'good';
+
+const STATS_PAGE = 'src/stats/stats.html';
+
+/** Everything a retirement took out of the session, so undoing puts it back. */
+interface RetiredWord {
+  word: string;
+  /** The card that was on screen when the word was retired. */
+  card: ReviewCard;
+  /** Its other queued appearances — a card requeued by an earlier "Again". */
+  queued: ReviewCard[];
+  session: ReviewCard[];
+  totalCount: number;
+}
 
 function fisherYatesShuffle<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -97,6 +113,8 @@ export class FlashcardManager {
   private quiz: WritingQuiz | undefined;
   /** The grade a finished quiz measured, waiting on the reader to move on. */
   private pendingRating: Rating | undefined;
+  /** What the last retirement took out of the session, in case it was a slip. */
+  private retired: RetiredWord | undefined;
 
   constructor(document: Document, client: FlashcardClient) {
     this.document = document;
@@ -109,6 +127,8 @@ export class FlashcardManager {
     this.setupWritingNextButton();
     this.setupReviewAgainButton();
     this.setupKnowButton();
+    this.setupUndoRetireButton();
+    this.setupStatsLinks();
     this.setupKeyboardShortcuts();
 
     this.client.getStatistics((response: StatisticsResponse | ErrorResponse) => {
@@ -342,6 +362,9 @@ export class FlashcardManager {
     const card = this.currentCard();
     if (!card) return;
 
+    // Answering another card is moving on; the offer to undo goes with it.
+    this.dismissRetired();
+
     if (rating === 'again' || rating === 'hard') {
       this.reviewQueue.push(card);
     } else {
@@ -369,19 +392,85 @@ export class FlashcardManager {
    * so without this the deck fills with 的 and 是 and keeps asking about them;
    * a reader who already knows a word should be able to say so once.
    */
+  private dismissRetired(): void {
+    if (!this.retired) return;
+    this.retired = undefined;
+    hideRetiredNotice(this.document);
+  }
+
   private retireCurrentWord(): void {
     const card = this.currentCard();
     if (!card) return;
 
+    this.dismissRetired();
     this.client.setWordStatus(card.word, { suppressed: true }, () => {});
 
     // Its other cards are owed no answer either, and a retired word must not
     // come back through the restart the finished screen offers.
+    this.retired = {
+      word: card.word,
+      queued: this.reviewQueue.filter(queued => queued.word === card.word),
+      session: this.sessionCards.filter(queued => queued.word === card.word),
+      totalCount: this.totalCount,
+      card,
+    };
     this.reviewQueue = this.reviewQueue.filter(queued => queued.word !== card.word);
     this.sessionCards = this.sessionCards.filter(queued => queued.word !== card.word);
     this.totalCount = Math.max(this.totalCount - 1, this.correctCount);
 
+    showRetiredNotice(this.document, card.word);
     this.showNextCard();
+  }
+
+  private setupUndoRetireButton(): void {
+    const btn = this.document.getElementById(ELEMENT_IDS.undoRetireBtn);
+    if (!btn) return;
+
+    btn.addEventListener('click', () => this.undoRetire());
+  }
+
+  /**
+   * Put back the word the last press buried. Retiring is one keystroke and
+   * takes every card the word owns with it, which is a lot to lose to a
+   * mistyped rating.
+   */
+  private undoRetire(): void {
+    const retired = this.retired;
+    if (!retired) return;
+
+    this.retired = undefined;
+    hideRetiredNotice(this.document);
+    this.client.setWordStatus(retired.word, { suppressed: false }, () => {});
+
+    // Retiring moved the session on, so whatever it moved on to is owed its
+    // turn back once the retired card has had the one it lost.
+    const displaced = isScreenVisible(this.document, SCREEN_IDS.review)
+      ? this.currentCard()
+      : undefined;
+
+    this.sessionCards = [...this.sessionCards, ...retired.session];
+    this.totalCount = retired.totalCount;
+    this.reviewQueue = [
+      retired.card,
+      ...retired.queued.filter(queued => queued !== retired.card),
+      ...(displaced ? [displaced] : []),
+      ...this.reviewQueue,
+    ];
+
+    setScreen(this.document, SCREEN_IDS.review);
+    this.showNextCard();
+  }
+
+  /**
+   * The deck opens in a tab of its own, so without these the only way on from
+   * a finished or empty session is to close it.
+   */
+  private setupStatsLinks(): void {
+    this.document.querySelectorAll(STATS_LINK_SELECTOR).forEach(link => {
+      link.addEventListener('click', () => {
+        this.document.location.href = chrome.runtime.getURL(STATS_PAGE);
+      });
+    });
   }
 
   private setupReviewAgainButton(): void {

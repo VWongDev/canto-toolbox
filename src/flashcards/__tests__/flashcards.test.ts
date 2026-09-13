@@ -329,6 +329,88 @@ describe('FlashcardManager retiring a word', () => {
   });
 });
 
+describe('FlashcardManager undoing a retirement', () => {
+  let document: Document;
+  let client: FlashcardClient;
+
+  function start(): void {
+    client = createClient();
+    new FlashcardManager(document, client).init();
+  }
+
+  function retire(): void {
+    document.getElementById('know-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
+  }
+
+  function undo(): void {
+    document.getElementById('undo-retire-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
+  }
+
+  function isVisible(id: string): boolean {
+    return document.getElementById(id)!.style.display !== 'none';
+  }
+
+  beforeEach(() => {
+    document = new DOMParser().parseFromString(HTML, 'text/html');
+  });
+
+  // One keystroke buries every card the word owns, which is a lot to lose to a
+  // mistyped rating.
+  it('says which word was retired', () => {
+    start();
+    const word = document.getElementById('card')!.dataset.currentWord;
+
+    retire();
+
+    expect(isVisible('retired-notice')).toBe(true);
+    expect(document.getElementById('retired-message')!.textContent).toBe(`Retired ${word}.`);
+  });
+
+  it('puts the word back, on screen and in the record', () => {
+    start();
+    const word = document.getElementById('card')!.dataset.currentWord;
+
+    retire();
+    undo();
+
+    expect(client.setWordStatus).toHaveBeenLastCalledWith(
+      word,
+      { suppressed: false },
+      expect.any(Function)
+    );
+    expect(document.getElementById('card')!.dataset.currentWord).toBe(word);
+    expect(document.getElementById('counter')!.textContent).toBe('Card 1 of 2');
+    expect(isVisible('retired-notice')).toBe(false);
+  });
+
+  // Retiring the last card ends the session; undoing has to bring the review
+  // screen back rather than leaving the word restored behind a finished one.
+  it('returns to the review from a session the retirement finished', () => {
+    start();
+    document.getElementById('show-answer-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true }));
+    const last = document.getElementById('card')!.dataset.currentWord;
+
+    retire();
+    expect(isVisible('finished')).toBe(true);
+
+    undo();
+
+    expect(isVisible('review')).toBe(true);
+    expect(document.getElementById('card')!.dataset.currentWord).toBe(last);
+  });
+
+  it('takes the offer away once another card is answered', () => {
+    start();
+    retire();
+
+    document.getElementById('show-answer-btn')!.dispatchEvent(new Event('click', { bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true }));
+
+    expect(isVisible('retired-notice')).toBe(false);
+  });
+});
+
 describe('FlashcardManager production cards', () => {
   let document: Document;
   let client: FlashcardClient;

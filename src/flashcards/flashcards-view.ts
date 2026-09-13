@@ -18,8 +18,14 @@ export const ELEMENT_IDS = {
   writingNextBtn: 'writing-next-btn',
   reviewAgainBtn: 'review-again-btn',
   knowBtn: 'know-btn',
-  resultSummary: 'result-summary'
+  resultSummary: 'result-summary',
+  retiredNotice: 'retired-notice',
+  retiredMessage: 'retired-message',
+  undoRetireBtn: 'undo-retire-btn'
 } as const;
+
+/** Every control that leaves the deck for the statistics page. */
+export const STATS_LINK_SELECTOR = '.stats-link';
 
 export const SCREEN_IDS = {
   loading: 'loading',
@@ -61,6 +67,23 @@ export function renderFinished(document: Document, correctCount: number, totalCo
   if (summaryEl) {
     summaryEl.textContent = `${correctCount} / ${totalCount} correct`;
   }
+}
+
+/**
+ * Retiring buries every card a word owns and cannot be guessed at from the
+ * session that carries on without it, so it is said out loud and taken back
+ * with one press.
+ */
+export function showRetiredNotice(document: Document, word: string): void {
+  const notice = document.getElementById(ELEMENT_IDS.retiredNotice);
+  const message = document.getElementById(ELEMENT_IDS.retiredMessage);
+  if (message) message.textContent = `Retired ${word}.`;
+  if (notice) notice.style.display = '';
+}
+
+export function hideRetiredNotice(document: Document): void {
+  const notice = document.getElementById(ELEMENT_IDS.retiredNotice);
+  if (notice) notice.style.display = 'none';
 }
 
 export function updateProgress(document: Document, done: number, total: number): void {

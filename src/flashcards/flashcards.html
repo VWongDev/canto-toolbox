@@ -14,6 +14,7 @@
   <div id="empty-state" class="screen" style="display: none;">
     <div class="empty-icon">字</div>
     <p>No words to review yet.<br>Hover over Chinese words at least twice to unlock flashcard review.</p>
+    <button class="btn btn-secondary stats-link" type="button">Your statistics</button>
   </div>
 
   <div id="review" class="screen" style="display: none;">
@@ -23,6 +24,13 @@
     <div class="counter-row">
       <span id="counter">Card 1 of 1</span>
       <button id="know-btn" class="btn btn-subtle btn-know" title="Stop reviewing this word">I know this<kbd class="key-hint">K</kbd></button>
+    </div>
+
+    <!-- Retiring a word buries every card it owns, so it says so and offers
+         the one press that takes it back. -->
+    <div id="retired-notice" class="retired-notice" role="status" style="display: none;">
+      <span id="retired-message"></span>
+      <button id="undo-retire-btn" class="retired-undo" type="button">Undo</button>
     </div>
 
     <div id="card" class="card">
@@ -50,7 +58,12 @@
     <div class="finished-icon">✓</div>
     <h1>Session Complete</h1>
     <p id="result-summary" class="result-summary"></p>
-    <button id="review-again-btn" class="btn btn-primary">Review Again<kbd class="key-hint">Enter</kbd></button>
+    <div class="finished-actions">
+      <button id="review-again-btn" class="btn btn-primary">Review Again<kbd class="key-hint">Enter</kbd></button>
+      <!-- The page is opened in a tab of its own, so without this the only way
+           on from a finished session is to close it. -->
+      <button class="btn btn-secondary stats-link" type="button">Your statistics</button>
+    </div>
   </div>
 
   <script type="module" src="./flashcards.ts"></script>
