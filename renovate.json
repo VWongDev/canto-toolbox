@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommitsDisabled"
+  ],
+  "commitMessagePrefix": "chore(build):",
+  "prHourlyLimit": 2,
+  "nix": {
+    "enabled": true
+  },
+  "git-submodules": {
+    "enabled": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "commitMessageAction": "Refresh",
+    "commitMessageTopic": "the pnpm lock file"
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "commitMessagePrefix": "ci(build):",
+      "groupName": "GitHub Actions"
+    },
+    {
+      "matchManagers": ["git-submodules"],
+      "commitMessagePrefix": "chore(dict):",
+      "groupName": "dictionary submodules",
+      "schedule": ["before 9am on the first day of the month"]
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "dev dependencies"
+    }
+  ]
+}
