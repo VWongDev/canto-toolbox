@@ -323,6 +323,19 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: t.$space-2;
+
+  .btn {
+    flex-wrap: wrap;
+  }
+}
+
+// What the rating costs, under the word for it: a full-width line of its own,
+// so the label and its key hint stay on one line above.
+.btn-interval {
+  flex-basis: 100%;
+  font-size: t.$text-xs;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
 }
 
 // Anki-style rating row: Again red, Hard orange, Good green, Easy blue.

@@ -258,6 +258,49 @@ export function renderBackError(document: Document): void {
   if (ratingBtns) ratingBtns.style.display = '';
 }
 
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+const MONTH_MS = 30 * DAY_MS;
+
+/**
+ * How far off a review is, in the fewest characters that still say it. This
+ * sits on a button between a word and a keyboard hint, so "10m" earns its
+ * place where "in 10 minutes" would not.
+ */
+export function formatInterval(ms: number): string {
+  const ahead = Math.max(ms, 0);
+
+  if (ahead < HOUR_MS) return `${Math.max(Math.round(ahead / MINUTE_MS), 1)}m`;
+  if (ahead < DAY_MS) return `${Math.round(ahead / HOUR_MS)}h`;
+  if (ahead < MONTH_MS) return `${Math.round(ahead / DAY_MS)}d`;
+  return `${Math.round(ahead / MONTH_MS)}mo`;
+}
+
+/**
+ * What each rating costs, written on the button that charges it. Without this
+ * the four buttons are a self-assessment with no stated consequence, and
+ * "Hard" and "Good" are indistinguishable until the word comes back.
+ */
+export function renderRatingIntervals(
+  document: Document,
+  due: Record<FlashcardRating, number>,
+  now: number,
+): void {
+  const ratingBtns = document.getElementById(ELEMENT_IDS.ratingBtns);
+  if (!ratingBtns) return;
+
+  ratingBtns.querySelectorAll<HTMLElement>('[data-rating]').forEach(button => {
+    const rating = button.dataset.rating as FlashcardRating | undefined;
+    if (!rating || due[rating] === undefined) return;
+
+    const existing = button.querySelector('.btn-interval');
+    const interval = existing ?? createElement({ tag: 'span', className: 'btn-interval' });
+    interval.textContent = formatInterval(due[rating] - now);
+    if (!existing) button.appendChild(interval);
+  });
+}
+
 const RATING_LABELS: Readonly<Record<FlashcardRating, string>> = {
   again: 'Again',
   hard: 'Hard',

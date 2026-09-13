@@ -87,6 +87,30 @@ export function reviewCard(
   };
 }
 
+/**
+ * When each rating would bring the word back, without recording anything. The
+ * reader is being asked to grade their own recall, and the four buttons mean
+ * nothing until they say what they cost.
+ */
+export function previewSchedule(
+  progress: FlashcardProgress | undefined,
+  now: Date = new Date(),
+): Record<FlashcardRating, number> {
+  // FSRS rejects a review dated before the last one. A device whose clock has
+  // gone backwards must not take the answer screen down with it.
+  const last = progress?.lastReviewed;
+  const at = last !== undefined && last > now.getTime() ? new Date(last) : now;
+
+  const card = toCard(progress, at);
+  const preview = {} as Record<FlashcardRating, number>;
+
+  for (const [rating, grade] of Object.entries(GRADES) as Array<[FlashcardRating, Grade]>) {
+    preview[rating] = scheduler.next(card, at, grade).card.due.getTime();
+  }
+
+  return preview;
+}
+
 /** A card that has been forgotten so often that rescheduling it is not the answer. */
 export function isLeech(progress: FlashcardProgress | undefined): boolean {
   return (progress?.srs?.lapses ?? 0) >= LEECH_LAPSES;

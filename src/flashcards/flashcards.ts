@@ -26,8 +26,11 @@ import {
   isScreenVisible,
   isAnswerVisible,
   isWritingAnswerVisible,
-  isAnswerRevealable
+  isAnswerRevealable,
+  renderRatingIntervals
 } from './flashcards-view.js';
+import { previewSchedule } from '../shared/scheduler.js';
+import { progressFor } from '../shared/statistics-utils.js';
 import { ratingForMistakes, startQuiz, type WritingQuiz } from './writing.js';
 
 const NOTHING_TRACKED =
@@ -77,6 +80,8 @@ export class FlashcardManager {
   private readonly client: FlashcardClient;
   private reviewQueue: ReviewCard[] = [];
   private sessionCards: ReviewCard[] = [];
+  /** The record the session was built from, so a card can price its own ratings. */
+  private statistics: Statistics = {};
   private correctCount = 0;
   private totalCount = 0;
   /** Definitions already fetched this session, keyed by word. */
@@ -120,6 +125,7 @@ export class FlashcardManager {
         return;
       }
 
+      this.statistics = response.statistics;
       this.sessionCards = session;
       this.reviewQueue = [...session];
       this.correctCount = 0;
@@ -239,7 +245,17 @@ export class FlashcardManager {
     this.withDefinition(card, definition => {
       if (definition) renderBack(this.document, card, definition);
       else renderBackError(this.document);
+      this.priceRatings(card);
     });
+  }
+
+  /** Write on each rating button when it would bring this card back. */
+  private priceRatings(card: ReviewCard): void {
+    const now = Date.now();
+    const stat = this.statistics[card.word];
+    const progress = stat ? progressFor(stat, card.direction) : undefined;
+
+    renderRatingIntervals(this.document, previewSchedule(progress, new Date(now)), now);
   }
 
   /** The card on screen, rebuilt from the session so its context travels with it. */

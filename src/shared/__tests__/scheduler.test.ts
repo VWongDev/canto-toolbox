@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { dueAt, isDue, isLearning, isMastered, retrievability, reviewCard } from '../scheduler.js';
+import {
+  dueAt,
+  isDue,
+  isLearning,
+  isMastered,
+  previewSchedule,
+  retrievability,
+  reviewCard,
+} from '../scheduler.js';
 import type { FlashcardProgress } from '../types.js';
 
 const NOW = new Date('2026-01-01T00:00:00Z');
@@ -98,5 +106,39 @@ describe('isMastered', () => {
 
     expect(retrievability(progress, longAfter)).toBeLessThan(0.7);
     expect(isMastered(progress, longAfter)).toBe(false);
+  });
+});
+
+describe('previewSchedule', () => {
+  it('prices the four ratings further and further out', () => {
+    const progress = drill(3);
+    const preview = previewSchedule(progress, new Date(progress.srs!.due));
+
+    expect(preview.again).toBeLessThan(preview.hard);
+    expect(preview.hard).toBeLessThan(preview.good);
+    expect(preview.good).toBeLessThan(preview.easy);
+  });
+
+  it('prices a word the deck has never seen', () => {
+    const preview = previewSchedule(undefined, NOW);
+
+    expect(preview.again).toBeGreaterThanOrEqual(NOW.getTime());
+    expect(preview.easy).toBeGreaterThan(preview.again);
+  });
+
+  it('survives a clock that has gone backwards', () => {
+    const progress = drill(3);
+    const before = new Date(progress.lastReviewed! - DAY_MS);
+
+    expect(() => previewSchedule(progress, before)).not.toThrow();
+  });
+
+  it('records nothing', () => {
+    const progress = drill(3);
+    const before = structuredClone(progress);
+
+    previewSchedule(progress, new Date(progress.srs!.due));
+
+    expect(progress).toEqual(before);
   });
 });

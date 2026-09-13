@@ -154,6 +154,32 @@ describe('FlashcardManager keyboard shortcuts', () => {
     );
   });
 
+  // Four buttons asking the reader to grade themselves mean nothing until they
+  // say what each one costs.
+  it('writes on each rating button when it would bring the card back', () => {
+    start();
+    press(' ');
+
+    const intervals = Array.from(
+      document.getElementById('rating-btns')!.querySelectorAll('.btn-interval'),
+      el => el.textContent ?? ''
+    );
+
+    expect(intervals).toHaveLength(4);
+    expect(intervals.every(text => /^\d+(m|h|d|mo)$/.test(text))).toBe(true);
+  });
+
+  it('reprices the buttons rather than stacking a second reading on them', () => {
+    start();
+    press(' ');
+    press('3');
+    press(' ');
+
+    expect(
+      document.getElementById('rating-btns')!.querySelectorAll('.btn-interval')
+    ).toHaveLength(4);
+  });
+
   it('does not rate before the answer is revealed', () => {
     start();
 
