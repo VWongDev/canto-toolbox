@@ -16,7 +16,7 @@
 
     <div class="controls">
       <button id="flashcard-btn" class="btn btn-primary">Review Flashcards</button>
-      <span class="word-count" id="word-count">0 words tracked</span>
+      <span class="word-count" id="word-count" aria-live="polite">0 words tracked</span>
       <button id="clear-btn" class="btn btn-subtle">Clear Statistics</button>
     </div>
 
@@ -44,19 +44,19 @@
     </dl>
 
     <div class="filter-tabs" id="filter-tabs">
-      <button class="filter-tab" data-stage="new">New <span class="tab-count" id="count-new">0</span></button>
-      <button class="filter-tab" data-stage="learning">Learning <span class="tab-count" id="count-learning">0</span></button>
-      <button class="filter-tab" data-stage="familiar">Familiar <span class="tab-count" id="count-familiar">0</span></button>
-      <button class="filter-tab" data-stage="mastered">Mastered <span class="tab-count" id="count-mastered">0</span></button>
+      <button class="filter-tab" type="button" aria-pressed="false" data-stage="new">New <span class="tab-count" id="count-new">0</span></button>
+      <button class="filter-tab" type="button" aria-pressed="false" data-stage="learning">Learning <span class="tab-count" id="count-learning">0</span></button>
+      <button class="filter-tab" type="button" aria-pressed="false" data-stage="familiar">Familiar <span class="tab-count" id="count-familiar">0</span></button>
+      <button class="filter-tab" type="button" aria-pressed="false" data-stage="mastered">Mastered <span class="tab-count" id="count-mastered">0</span></button>
     </div>
 
     <div class="list-controls">
       <div class="filter-tabs filter-tabs--band" id="band-tabs">
-        <button class="filter-tab" data-band="core">Core 1000 <span class="tab-count" id="count-core">0</span></button>
-        <button class="filter-tab" data-band="common">Common <span class="tab-count" id="count-common">0</span></button>
-        <button class="filter-tab" data-band="frequent">Frequent <span class="tab-count" id="count-frequent">0</span></button>
-        <button class="filter-tab" data-band="uncommon">Uncommon <span class="tab-count" id="count-uncommon">0</span></button>
-        <button class="filter-tab" data-band="rare">Rare <span class="tab-count" id="count-rare">0</span></button>
+        <button class="filter-tab" type="button" aria-pressed="false" data-band="core">Core 1000 <span class="tab-count" id="count-core">0</span></button>
+        <button class="filter-tab" type="button" aria-pressed="false" data-band="common">Common <span class="tab-count" id="count-common">0</span></button>
+        <button class="filter-tab" type="button" aria-pressed="false" data-band="frequent">Frequent <span class="tab-count" id="count-frequent">0</span></button>
+        <button class="filter-tab" type="button" aria-pressed="false" data-band="uncommon">Uncommon <span class="tab-count" id="count-uncommon">0</span></button>
+        <button class="filter-tab" type="button" aria-pressed="false" data-band="rare">Rare <span class="tab-count" id="count-rare">0</span></button>
       </div>
 
       <label class="sort-control">
@@ -68,8 +68,8 @@
     </div>
 
     <div class="stats-container">
-      <div id="loading" class="loading">Loading statistics...</div>
-      <div id="empty-state" class="empty-state" style="display: none;">
+      <div id="loading" class="loading" role="status">Loading statistics...</div>
+      <div id="empty-state" class="empty-state" role="status" style="display: none;">
         <div class="empty-state-icon">字</div>
         <p>No statistics yet.<br>Start hovering over Chinese words on web pages to track them.</p>
       </div>

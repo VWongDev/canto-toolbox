@@ -121,3 +121,87 @@ describe('StatsManager overview', () => {
     expect(text('count-frequent')).toBe('1');
   });
 });
+
+describe('StatsManager keyboard reachability', () => {
+  let document: Document;
+
+  function firstRowHeader(): HTMLButtonElement {
+    return document.getElementById('stats-list')!.querySelector('.stat-header') as HTMLButtonElement;
+  }
+
+  beforeEach(() => {
+    document = new DOMParser().parseFromString(HTML, 'text/html');
+    new StatsManager(document, createClient(), storage).init();
+  });
+
+  // The row is the page's main control; as a div it answered neither Tab nor
+  // Enter, which between them is every way to use the page without a mouse.
+  it('makes each row a button that says whether it is open', () => {
+    const header = firstRowHeader();
+    expect(header.tagName).toBe('BUTTON');
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+
+    header.dispatchEvent(new Event('click', { bubbles: true }));
+    expect(header.getAttribute('aria-expanded')).toBe('true');
+
+    header.dispatchEvent(new Event('click', { bubbles: true }));
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('points each row at the panel it opens', () => {
+    const header = firstRowHeader();
+    const panel = header.parentElement!.querySelector('.stat-expanded')!;
+
+    expect(panel.id).toBeTruthy();
+    expect(header.getAttribute('aria-controls')).toBe(panel.id);
+  });
+
+  it('says which filters are on', () => {
+    const core = document.querySelector('[data-band="core"]')!;
+    expect(core.getAttribute('aria-pressed')).toBe('false');
+
+    core.dispatchEvent(new Event('click', { bubbles: true }));
+    expect(core.getAttribute('aria-pressed')).toBe('true');
+  });
+});
+
+describe('StatsManager clearing', () => {
+  let document: Document;
+  let clearBtn: HTMLButtonElement;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document = new DOMParser().parseFromString(HTML, 'text/html');
+    new StatsManager(document, createClient(), storage).init();
+    clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
+  });
+
+  function click(): void {
+    clearBtn.dispatchEvent(new Event('click', { bubbles: true }));
+  }
+
+  it('asks before clearing rather than clearing on the first press', () => {
+    click();
+
+    expect(storage.clearStatistics).not.toHaveBeenCalled();
+    expect(clearBtn.textContent).toBe('Clear everything?');
+    expect(clearBtn.classList.contains('is-armed')).toBe(true);
+  });
+
+  it('clears on the second press', () => {
+    click();
+    click();
+
+    expect(storage.clearStatistics).toHaveBeenCalledTimes(1);
+    expect(clearBtn.textContent).toBe('Clear Statistics');
+  });
+
+  it('stands down when the button loses focus', () => {
+    click();
+    clearBtn.dispatchEvent(new Event('blur', { bubbles: true }));
+    click();
+
+    expect(storage.clearStatistics).not.toHaveBeenCalled();
+    expect(clearBtn.textContent).toBe('Clear everything?');
+  });
+});

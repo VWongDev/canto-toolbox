@@ -1,6 +1,7 @@
 @use '../shared/styles/tokens' as t;
 @use '../shared/styles/dark-mode' as *;
 @use '../shared/styles/theme' as theme;
+@use '../shared/styles/a11y' as a;
 @use '../shared/styles/etymology';
 @use '../shared/styles/definition';
 @use '../shared/styles/context';
@@ -80,9 +81,30 @@ h1 {
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.btn:focus-visible {
-  outline: 2px solid t.$color-primary;
-  outline-offset: 2px;
+.btn {
+  @include a.focus-ring;
+}
+
+// Clearing asks twice through the button itself. Armed, it stops being the
+// quiet tertiary action and looks like what a second press will do.
+#clear-btn.is-armed {
+  background: t.$color-danger;
+  border-color: t.$color-danger;
+  color: #fff;
+
+  &:hover {
+    background: t.$color-danger;
+    color: #fff;
+  }
+
+  // The dark danger is a light coral, so the label has to darken to sit on it.
+  @include dark {
+    color: t.$color-bg;
+
+    &:hover {
+      color: t.$color-bg;
+    }
+  }
 }
 
 // A filled button takes the fill accent rather than the text one, so a white
@@ -173,6 +195,8 @@ h1 {
     font: inherit;
     font-size: t.$text-sm;
     cursor: pointer;
+
+    @include a.focus-ring;
   }
 }
 
@@ -204,6 +228,8 @@ h1 {
   color: t.$color-text-subtle;
   cursor: pointer;
   transition: all 0.15s;
+
+  @include a.focus-ring;
 
   &:hover {
     border-color: t.$color-primary;
@@ -295,6 +321,10 @@ h1 {
   color: t.$color-text-faint;
   padding: t.$space-6;
   font-size: t.$text-body;
+
+  &.is-error {
+    color: t.$color-danger;
+  }
 }
 
 .empty-state {
@@ -338,12 +368,18 @@ h1 {
   border-color: t.$color-control-border;
 }
 
+// A button, so the row can be reached by Tab and opened with Enter; the
+// browser's own button chrome is stripped back off it.
 .stat-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: t.$space-4;
   padding: t.$space-3 t.$space-4;
+  width: 100%;
+
+  @include a.unstyled-button;
+  @include a.focus-ring(-2px);
 }
 
 .stat-item:hover .stat-header,
@@ -420,6 +456,8 @@ h1 {
   font-size: t.$text-sm;
   cursor: pointer;
 
+  @include a.focus-ring;
+
   &:hover {
     border-color: t.$color-primary;
     color: t.$color-primary;
@@ -474,5 +512,14 @@ h1 {
 
   .stat-loading {
     color: t.$color-text-subtle;
+  }
+}
+
+@include a.reduced-motion {
+  .btn,
+  .filter-tab,
+  .stat-item,
+  .stat-expand-icon {
+    @include a.still;
   }
 }

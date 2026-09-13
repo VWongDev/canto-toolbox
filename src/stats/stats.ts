@@ -27,6 +27,13 @@ import {
 import { summarise } from './overview.js';
 import { DEFAULT_SORT, isSortKey } from './ordering.js';
 
+const CLEAR_LABEL = 'Clear Statistics';
+const CLEAR_CONFIRM_LABEL = 'Clear everything?';
+const CLEAR_FAILED_LABEL = 'Could not clear';
+
+/** How long the armed button waits for the second press before standing down. */
+const CLEAR_CONFIRM_MS = 5000;
+
 export class StatsManager {
   private readonly document: Document;
   private readonly client: StatsClient;
@@ -176,6 +183,12 @@ export class StatsManager {
     });
   }
 
+  /**
+   * Clearing is irreversible, so it asks twice — but through the button
+   * itself rather than `confirm()`. The page is the extension's action popup,
+   * and a modal dialog there is unreliable: it can take the popup down with
+   * it, leaving the reader unsure whether anything was cleared.
+   */
   private setupClearButton(): void {
     const clearBtn = this.document.getElementById(ELEMENT_IDS.clearBtn);
     if (!clearBtn) {
@@ -183,18 +196,39 @@ export class StatsManager {
       return;
     }
 
+    let armed = false;
+    let disarm: ReturnType<typeof setTimeout> | undefined;
+
+    const reset = (): void => {
+      armed = false;
+      if (disarm !== undefined) clearTimeout(disarm);
+      disarm = undefined;
+      clearBtn.textContent = CLEAR_LABEL;
+      clearBtn.classList.remove('is-armed');
+    };
+
     clearBtn.addEventListener('click', async () => {
-      if (!confirm('Are you sure you want to clear all statistics? This action cannot be undone.')) {
+      if (!armed) {
+        armed = true;
+        clearBtn.textContent = CLEAR_CONFIRM_LABEL;
+        clearBtn.classList.add('is-armed');
+        disarm = setTimeout(reset, CLEAR_CONFIRM_MS);
         return;
       }
+
+      reset();
 
       try {
         await this.clearStatistics();
       } catch (error) {
         console.error('Error clearing statistics:', error);
-        alert('Failed to clear statistics. Please try again.');
+        clearBtn.textContent = CLEAR_FAILED_LABEL;
+        setTimeout(reset, CLEAR_CONFIRM_MS);
       }
     });
+
+    // Tabbing away is an answer of "no".
+    clearBtn.addEventListener('blur', reset);
   }
 }
 

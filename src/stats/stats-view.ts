@@ -42,6 +42,9 @@ const CHEVRON_SVG =
   '<path d="M3.5 1.5L7 5l-3.5 3.5" stroke="currentColor" stroke-width="1.5" ' +
   'stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+/** Gives each row's panel an id its header can point `aria-controls` at. */
+let panelCount = 0;
+
 const STAGE_LABELS: Record<FlashcardStage, string> = {
   new: 'New',
   learning: 'Learning',
@@ -145,7 +148,9 @@ export function renderOverview(document: Document, overview: StudyOverview): voi
 
 export function showError(loadingEl: HTMLElement, message: string): void {
   loadingEl.textContent = message;
-  loadingEl.style.color = '#dc3545';
+  // A class rather than an inline hex: the hardcoded red stayed red on the
+  // dark canvas, and nothing ever cleared it again.
+  loadingEl.classList.add('is-error');
 }
 
 export function updateFilterCounts(elements: StatsElements, statistics: Statistics): void {
@@ -172,7 +177,11 @@ export function updateFilterCounts(elements: StatsElements, statistics: Statisti
 function updateTabStates(tabsEl: HTMLElement, key: string, active: ReadonlySet<string>): void {
   tabsEl.querySelectorAll('.filter-tab').forEach(tab => {
     const value = (tab as HTMLElement).dataset[key];
-    tab.classList.toggle('active', value !== undefined && active.has(value));
+    const on = value !== undefined && active.has(value);
+    tab.classList.toggle('active', on);
+    // The pills are toggles, not links: without this the state they carry is
+    // colour alone, which a screen reader never sees.
+    tab.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 }
 
@@ -338,9 +347,13 @@ function createStatItem(
     dataset: { word }
   });
 
-  const header = createElement({
+  // A real button: the row is the page's main control, and as a div it could
+  // be reached by neither Tab nor Enter.
+  const panelId = `stat-panel-${++panelCount}`;
+  const header = createElement<HTMLButtonElement>({
+    tag: 'button',
     className: 'stat-header',
-    style: { cursor: 'pointer' }
+    attributes: { type: 'button', 'aria-expanded': 'false', 'aria-controls': panelId },
   });
 
   const wordRow = createElement({
@@ -377,6 +390,7 @@ function createStatItem(
   // cannot take the row's controls with it.
   const definitionEl = createElement({ className: 'stat-definition' });
   const expandedContent = createElement({
+    id: panelId,
     className: 'stat-expanded',
     style: { display: 'none' },
     children: [definitionEl, createStatusControls(word, stat, setStatus)],
@@ -386,7 +400,7 @@ function createStatItem(
   item.appendChild(expandedContent);
 
   header.addEventListener('click', () => {
-    toggleExpansion(item, word, expandedContent, definitionEl, loadDefinition);
+    toggleExpansion(item, header, word, expandedContent, definitionEl, loadDefinition);
   });
 
   return item;
@@ -394,6 +408,7 @@ function createStatItem(
 
 function toggleExpansion(
   item: HTMLElement,
+  header: HTMLElement,
   word: string,
   expandedContent: HTMLElement,
   definitionEl: HTMLElement,
@@ -409,5 +424,7 @@ function toggleExpansion(
     if (!definitionEl.dataset.loaded) loadDefinition(word, definitionEl);
     item.classList.add('expanded');
   }
+
+  header.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
 }
 
