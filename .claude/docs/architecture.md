@@ -291,7 +291,9 @@ flowchart TD
   out of the deck deliberately. The stage and band counts follow it, so a pill
   never promises rows the list will not show; the retired pill's own count
   always reports the whole retired set, because it says what pressing it would
-  reveal.
+  reveal. With the pill pressed, each retired row carries its own **Retired**
+  badge beside the stage badge — retirement is not a stage, and the only other
+  sign of it was a button inside the row's own panel.
 - The **Candidates** stage pill is where words enter the deck by hand: it holds
   every word seen too rarely to have enrolled itself, ranked by the default
   "most studied" sort, so the ones nearest the threshold are the ones offered
