@@ -3,12 +3,10 @@ import { MAX_TRACKED_WORDS, STATISTICS_KEY, statisticsStore } from '../shared/st
 import { createBatchedDebounce } from '../shared/debounce.js';
 import { BoundedMap } from '../shared/bounded-map.js';
 import { applyWordStatus, lastReviewedAt, reconcileStatistics } from '../shared/statistics-utils.js';
+import { MAX_CONTEXT_CHARS } from '../shared/context-sentence.js';
 import type { Statistics } from '../shared/types';
 
 const DEBOUNCE_DELAY = 500;
-
-/** Longest sentence snippet kept per word. */
-const MAX_CONTEXT_LENGTH = 60;
 
 /**
  * Eviction tiers, ordered by what is lost when the entry goes. Each tier is
@@ -77,7 +75,7 @@ export class PopupStorageClient implements PopupStorage {
     if (!this.pendingDetails.has(word)) {
       const context = details.context?.trim();
       this.pendingDetails.set(word, {
-        ...(context && { context: context.slice(0, MAX_CONTEXT_LENGTH) }),
+        ...(context && { context: context.slice(0, MAX_CONTEXT_CHARS) }),
         ...(details.rank !== undefined && { rank: details.rank }),
         ...(details.decomposable !== undefined && { decomposable: details.decomposable }),
         ...(details.writable !== undefined && { writable: details.writable }),

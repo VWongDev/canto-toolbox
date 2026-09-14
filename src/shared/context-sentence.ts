@@ -10,6 +10,14 @@ import { createElement } from './dom-element.js';
 /** Stands in for the hidden word on a cloze prompt. */
 export const CLOZE_BLANK = '⬚';
 
+/**
+ * Longest snippet kept per word. The content script windows the sentence to
+ * this before sending it and the write path clamps it again on the way in, so
+ * the number lives here — beside the component that has to render it — rather
+ * than once per side of the message.
+ */
+export const MAX_CONTEXT_CHARS = 60;
+
 export interface ContextOptions {
   /** Hide the word itself, leaving the sentence as a gap to fill. */
   blank?: boolean;

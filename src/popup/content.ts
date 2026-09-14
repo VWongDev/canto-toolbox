@@ -9,6 +9,7 @@ import { popupClient, type PopupClient } from './popup-client.js';
 import popupStyles from './popup.scss?inline';
 import { createEtymologySection } from '../shared/etymology-section.js';
 import { createDefinitionSections } from '../shared/definition-section.js';
+import { MAX_CONTEXT_CHARS } from '../shared/context-sentence.js';
 import { mediaOcrManager } from '../ocr/media-controller.js';
 
 const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
@@ -19,9 +20,6 @@ const CHINESE_REGEX = /[\u4e00-\u9fff]+/g;
  * word scrolled past rather than the ones actually read.
  */
 const DWELL_MS = 400;
-
-/** Longest sentence snippet sent along with a tracked word. */
-const MAX_CONTEXT_CHARS = 60;
 
 const STUDY_LABEL = '+ Study';
 const STUDY_ADDED_LABEL = 'Added';
