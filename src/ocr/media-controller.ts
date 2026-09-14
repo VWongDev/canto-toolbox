@@ -344,14 +344,22 @@ export class MediaOcrManager {
     const entry = this.attached.get(media);
     if (!entry) return;
 
-    const rect = media.getBoundingClientRect();
-    const replacement = createOverlay(result, { width: rect.width, height: rect.height });
+    entry.result = result;
+    this.redraw(entry, media.getBoundingClientRect());
+    this.position(media);
+  }
+
+  /**
+   * Lay the held result out again at the size the picture is drawn now. Always
+   * from `entry.result` — the boxes are in the frame's own pixels, so a new
+   * size is a new layout rather than a reason to read the picture again.
+   */
+  private redraw(entry: Attached, rendered: { width: number; height: number }): void {
+    const replacement = createOverlay(entry.result, rendered);
     entry.overlay.replaceWith(replacement);
     entry.overlay = replacement;
-    entry.result = result;
-    entry.width = rect.width;
-    entry.height = rect.height;
-    this.position(media);
+    entry.width = rendered.width;
+    entry.height = rendered.height;
   }
 
   /**
@@ -376,16 +384,11 @@ export class MediaOcrManager {
 
     const rect = media.getBoundingClientRect();
 
-    // The boxes are in the frame's own pixels, so what they are worth on screen
-    // changes whenever a responsive page redraws it at a new size. Then and
-    // only then is the text laid out again — from the result already held,
-    // never by reading the picture a second time.
+    // What the boxes are worth on screen changes whenever a responsive page
+    // redraws the picture at a new size. Then and only then is the text laid
+    // out again.
     if (rect.width !== entry.width || rect.height !== entry.height) {
-      const replacement = createOverlay(entry.result, { width: rect.width, height: rect.height });
-      entry.overlay.replaceWith(replacement);
-      entry.overlay = replacement;
-      entry.width = rect.width;
-      entry.height = rect.height;
+      this.redraw(entry, rect);
     }
 
     entry.overlay.style.left = `${rect.left + window.scrollX}px`;
