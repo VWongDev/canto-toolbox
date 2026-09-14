@@ -3,6 +3,7 @@ import type {
   LookupResponse,
   ErrorResponse,
   DefinitionResult,
+  FlashcardRating,
   Statistics,
 } from '../shared/types.js';
 import { flashcardClient, type FlashcardClient } from './flashcard-client.js';
@@ -40,9 +41,7 @@ const NOTHING_TRACKED =
   'No words to review yet.\nPress + Study in the popup to add a word, ' +
   'or keep reading — a word you look up often enough joins the deck on its own.';
 
-type Rating = 'again' | 'hard' | 'good' | 'easy';
-
-const RATING_KEYS: Readonly<Record<string, Rating>> = {
+const RATING_KEYS: Readonly<Record<string, FlashcardRating>> = {
   '1': 'again',
   '2': 'hard',
   '3': 'good',
@@ -50,7 +49,7 @@ const RATING_KEYS: Readonly<Record<string, Rating>> = {
 };
 
 const ADVANCE_KEYS = [' ', 'Enter'];
-const DEFAULT_RATING: Rating = 'good';
+const DEFAULT_RATING: FlashcardRating = 'good';
 
 const STATS_PAGE = 'src/stats/stats.html';
 
@@ -113,7 +112,7 @@ export class FlashcardManager {
   /** The quiz on screen, so a card left behind stops listening for strokes. */
   private quiz: WritingQuiz | undefined;
   /** The grade a finished quiz measured, waiting on the reader to move on. */
-  private pendingRating: Rating | undefined;
+  private pendingRating: FlashcardRating | undefined;
   /** What the last retirement took out of the session, in case it was a slip. */
   private retired: RetiredWord | undefined;
 
@@ -310,7 +309,7 @@ export class FlashcardManager {
     ratingBtns.addEventListener('click', (e: Event) => {
       if (!(e.target instanceof HTMLElement)) return;
       const rating = e.target.closest<HTMLElement>('[data-rating]')?.dataset.rating as
-        | Rating
+        | FlashcardRating
         | undefined;
       if (!rating) return;
       this.rate(rating);
@@ -359,7 +358,7 @@ export class FlashcardManager {
     return true;
   }
 
-  private rate(rating: Rating): void {
+  private rate(rating: FlashcardRating): void {
     const card = this.currentCard();
     if (!card) return;
 
