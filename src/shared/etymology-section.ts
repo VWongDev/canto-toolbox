@@ -1,5 +1,6 @@
 import type { CharacterEtymology } from './types.js';
 import { createElement } from './dom-element.js';
+import { CHEVRON_SVG, createIcon } from './icons.js';
 import { parseComponents } from './decomposition.js';
 
 /** Soft cap for chip gloss text; truncation drops whole portions, never mid-portion. */
@@ -142,12 +143,6 @@ function createCharacterCard(etymology: CharacterEtymology): HTMLElement {
   });
 }
 
-/** Chevron drawn as SVG so it inherits colour; rotation is handled in CSS. */
-const CHEVRON_SVG =
-  '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">' +
-  '<path d="M3.5 1.5L7 5l-3.5 3.5" stroke="currentColor" stroke-width="1.5" ' +
-  'stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
 export interface EtymologySectionOptions {
   /**
    * Open the breakdown on render. Off everywhere but the components card,
@@ -184,9 +179,9 @@ export function createEtymologySection(
     ],
   });
 
-  const chevron = createElement({ tag: 'span', className: 'popup-etymology-chevron' });
-  chevron.innerHTML = CHEVRON_SVG;
-  toggle.appendChild(chevron);
+  toggle.appendChild(
+    createIcon(CHEVRON_SVG, { tag: 'span', className: 'popup-etymology-chevron' }),
+  );
 
   const section = createElement({
     className: expanded ? 'popup-etymology-section' : 'popup-etymology-section is-collapsed',

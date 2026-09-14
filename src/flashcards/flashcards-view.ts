@@ -1,5 +1,5 @@
 import type { DefinitionResult, FlashcardRating, ReviewDirection } from '../shared/types.js';
-import { createElement } from '../shared/dom-element.js';
+import { createElement, setMultilineText } from '../shared/dom-element.js';
 import { createDefinitionElement } from '../shared/definition-section.js';
 import { createContextSentence } from '../shared/context-sentence.js';
 import { primaryGloss } from '../shared/gloss.js';
@@ -52,13 +52,7 @@ export function renderEmptyState(document: Document, message: string): void {
   setScreen(document, SCREEN_IDS.emptyState);
 
   const paragraph = document.getElementById(SCREEN_IDS.emptyState)?.querySelector('p');
-  if (!paragraph) return;
-
-  paragraph.replaceChildren();
-  message.split('\n').forEach((line, index) => {
-    if (index > 0) paragraph.appendChild(document.createElement('br'));
-    paragraph.appendChild(document.createTextNode(line));
-  });
+  if (paragraph) setMultilineText(paragraph, message);
 }
 
 export function renderFinished(document: Document, correctCount: number, totalCount: number): void {

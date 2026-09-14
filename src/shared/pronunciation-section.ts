@@ -1,5 +1,6 @@
 import type { DefinitionResult } from './types.js';
 import { createElement } from './dom-element.js';
+import { SPEAKER_SVG, createIcon } from './icons.js';
 import { createDefinitionTextElement } from './definition-list.js';
 import { toSyllables } from './pinyin.js';
 import { canSpeak, speak, type Reading } from './speech.js';
@@ -16,15 +17,8 @@ export interface PronunciationSectionOptions {
   word?: string;
 }
 
-/** Speaker glyph, drawn as SVG so it inherits colour and scales cleanly. */
-const SPEAKER_SVG =
-  '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
-  '<path d="M8 2.5 4.5 5.5H2v5h2.5L8 13.5v-11Z" fill="currentColor"/>' +
-  '<path d="M10.5 5.8a3 3 0 0 1 0 4.4M12.6 3.7a6 6 0 0 1 0 8.6" stroke="currentColor" ' +
-  'stroke-width="1.4" stroke-linecap="round"/></svg>';
-
 function createSpeakButton(word: string, reading: Reading, label: string): HTMLElement {
-  const button = createElement({
+  return createIcon(SPEAKER_SVG, {
     tag: 'button',
     className: 'pronunciation-speak',
     attributes: {
@@ -42,9 +36,6 @@ function createSpeakButton(word: string, reading: Reading, label: string): HTMLE
       },
     },
   });
-
-  button.innerHTML = SPEAKER_SVG;
-  return button;
 }
 
 /** Each syllable is coloured by tone; the mark or digit still carries it too. */

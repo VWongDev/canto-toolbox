@@ -10,6 +10,24 @@ export interface CreateElementOptions {
   listeners?: Record<string, EventListener>;
 }
 
+/**
+ * Replace an element's content with `text`, turning newlines into `<br>`.
+ *
+ * Both empty screens write their copy this way: the markup gives them a
+ * two-line shape, and the message that replaces it is chosen at runtime from
+ * several that have to keep it. `ownerDocument` rather than the global, since
+ * the page may not be the one this module was loaded into.
+ */
+export function setMultilineText(element: HTMLElement, text: string): void {
+  const { ownerDocument } = element;
+
+  element.replaceChildren();
+  text.split('\n').forEach((line, index) => {
+    if (index > 0) element.appendChild(ownerDocument.createElement('br'));
+    element.appendChild(ownerDocument.createTextNode(line));
+  });
+}
+
 export function createElement<T extends HTMLElement = HTMLElement>(
   options: CreateElementOptions = {}
 ): T {

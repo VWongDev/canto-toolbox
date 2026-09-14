@@ -8,7 +8,8 @@ import type {
   WordStatus,
 } from '../shared/types.js';
 import { getFlashcardStage } from '../shared/statistics-utils.js';
-import { createElement } from '../shared/dom-element.js';
+import { createElement, setMultilineText } from '../shared/dom-element.js';
+import { CHEVRON_SVG, createIcon } from '../shared/icons.js';
 import { createDefinitionElement } from '../shared/definition-section.js';
 import { createContextSentence } from '../shared/context-sentence.js';
 import { BAND_LABELS } from '../shared/frequency.js';
@@ -36,12 +37,6 @@ const OVERVIEW_IDS = {
   reviews: 'overview-reviews',
   retired: 'overview-retired',
 } as const;
-
-/** Chevron drawn as SVG so it scales cleanly; rotation is handled in CSS. */
-const CHEVRON_SVG =
-  '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">' +
-  '<path d="M3.5 1.5L7 5l-3.5 3.5" stroke="currentColor" stroke-width="1.5" ' +
-  'stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 /** Gives each row's panel an id its header can point `aria-controls` at. */
 let panelCount = 0;
@@ -294,14 +289,7 @@ function noMatchMessage(view: ListView): string {
  */
 function setEmptyMessage(emptyStateEl: HTMLElement, message: string): void {
   const paragraph = emptyStateEl.querySelector('p');
-  if (!paragraph) return;
-
-  const { ownerDocument } = paragraph;
-  paragraph.replaceChildren();
-  message.split('\n').forEach((line, index) => {
-    if (index > 0) paragraph.appendChild(ownerDocument.createElement('br'));
-    paragraph.appendChild(ownerDocument.createTextNode(line));
-  });
+  if (paragraph) setMultilineText(paragraph, message);
 }
 
 export function renderStatistics(
@@ -555,8 +543,7 @@ function createStatItem(
     ],
   });
 
-  const expandIcon = createElement({ className: 'stat-expand-icon' });
-  expandIcon.innerHTML = CHEVRON_SVG;
+  const expandIcon = createIcon(CHEVRON_SVG, { className: 'stat-expand-icon' });
 
   const count = stat.count || 0;
   const detailsEl = createElement({
