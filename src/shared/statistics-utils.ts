@@ -111,7 +111,7 @@ export function* schedulesOf(stat: WordStatistics): Generator<FlashcardProgress>
 }
 
 /** The extreme of one property across the word's schedules, or undefined if none has it. */
-export function acrossSchedules(
+function acrossSchedules(
   stat: WordStatistics,
   value: (progress: FlashcardProgress) => number | undefined,
   pick: (a: number, b: number) => number,

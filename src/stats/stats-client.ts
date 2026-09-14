@@ -17,7 +17,7 @@ export interface StatsClient {
   ): void;
 }
 
-export class StatsMessageClient implements StatsClient {
+class StatsMessageClient implements StatsClient {
   getStatistics(callback: (r: StatisticsResponse | ErrorResponse) => void): void {
     sendMessage({ type: 'get_statistics' }, callback);
   }

@@ -3,7 +3,7 @@ import { createElement } from './dom-element.js';
 import { parseComponents } from './decomposition.js';
 
 /** Soft cap for chip gloss text; truncation drops whole portions, never mid-portion. */
-export const MAX_CHIP_GLOSS_CHARS = 14;
+const MAX_CHIP_GLOSS_CHARS = 14;
 
 /**
  * Fit as many `sep`-joined units as will fit under `maxChars`.
@@ -37,7 +37,7 @@ function fitUnits(units: string[], sep: string, maxChars: number): string | null
  * Chip gloss: keep whole `;` / `,` / word portions under the char cap.
  * Overflowing portions are dropped and replaced with a trailing `…`.
  */
-export function firstGloss(definition: string, maxChars = MAX_CHIP_GLOSS_CHARS): string {
+function firstGloss(definition: string, maxChars = MAX_CHIP_GLOSS_CHARS): string {
   const senses = definition.split(';').map(s => s.trim()).filter(Boolean);
   if (senses.length === 0) return '';
 

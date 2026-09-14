@@ -5,7 +5,7 @@ import type { ReviewDirection, Statistics, WordStatistics } from '../shared/type
 export const MAX_CARDS = 20;
 
 /** Cap on cards introduced per session, so due reviews are never crowded out. */
-export const MAX_NEW_CARDS = 10;
+const MAX_NEW_CARDS = 10;
 
 export interface ReviewCard {
   word: string;

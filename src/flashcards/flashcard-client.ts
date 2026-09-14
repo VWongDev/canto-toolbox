@@ -17,7 +17,7 @@ export interface FlashcardClient {
   ): void;
 }
 
-export class FlashcardMessageClient implements FlashcardClient {
+class FlashcardMessageClient implements FlashcardClient {
   getStatistics(callback: (r: StatisticsResponse | ErrorResponse) => void): void {
     sendMessage({ type: 'get_statistics' }, callback);
   }

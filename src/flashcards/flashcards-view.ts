@@ -291,7 +291,7 @@ const MONTH_MS = 30 * DAY_MS;
  * sits on a button between a word and a keyboard hint, so "10m" earns its
  * place where "in 10 minutes" would not.
  */
-export function formatInterval(ms: number): string {
+function formatInterval(ms: number): string {
   const ahead = Math.max(ms, 0);
 
   if (ahead < HOUR_MS) return `${Math.max(Math.round(ahead / MINUTE_MS), 1)}m`;

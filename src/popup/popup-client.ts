@@ -25,7 +25,7 @@ export interface PopupClient {
   ): void;
 }
 
-export class PopupMessageClient implements PopupClient {
+class PopupMessageClient implements PopupClient {
   lookupWord(
     word: string,
     callback: (r: LookupResponse | ErrorResponse) => void,

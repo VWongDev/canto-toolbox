@@ -4,7 +4,7 @@
  * The document outlives the service worker: that is why the dictionaries and
  * the OCR model both live in it rather than in the worker's heap.
  */
-export const OFFSCREEN_PATH = 'src/offscreen/offscreen.html';
+const OFFSCREEN_PATH = 'src/offscreen/offscreen.html';
 
 let creating: Promise<void> | null = null;
 

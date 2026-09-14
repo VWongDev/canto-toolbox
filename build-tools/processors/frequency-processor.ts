@@ -26,7 +26,7 @@ interface FrequencyEntry {
  * between the 45,000th and 60,000th commonest word is "both rare". Capping
  * keeps the shipped file small; an absent word is simply rarer than the cap.
  */
-export const FREQUENCY_LIMIT = 20000;
+const FREQUENCY_LIMIT = 20000;
 
 export function processFrequencyData(): Record<string, number> {
   const { movieWordFrequencies } = require('chinese-lexicon/statistics/movieWordFrequency') as {

@@ -26,7 +26,7 @@ export interface Capture {
 }
 
 /** A frame's own pixel dimensions, which the overlay measures its boxes against. */
-export function naturalSize(media: MediaElement): Size {
+function naturalSize(media: MediaElement): Size {
   return media instanceof HTMLVideoElement
     ? { width: media.videoWidth, height: media.videoHeight }
     : { width: media.naturalWidth, height: media.naturalHeight };
@@ -50,7 +50,7 @@ export function captureSize({ width, height }: Size): Size {
  * player uses — is fed by the page itself and so is *not* tainted, which is why
  * this path works where re-fetching a URL cannot.
  */
-export function drawToDataUrl(media: MediaElement, size: Size): string {
+function drawToDataUrl(media: MediaElement, size: Size): string {
   const canvas = document.createElement('canvas');
   canvas.width = size.width;
   canvas.height = size.height;
@@ -69,7 +69,7 @@ export function drawToDataUrl(media: MediaElement, size: Size): string {
  * shot was actually taken at — derived from the image rather than assumed from
  * `devicePixelRatio`, which lies on a zoomed page.
  */
-export function cropToRect(
+function cropToRect(
   shot: HTMLImageElement,
   rect: Size & { left: number; top: number },
   viewport: Size,
@@ -99,7 +99,7 @@ export function cropToRect(
   return canvas.toDataURL('image/png');
 }
 
-export function loadImage(src: string): Promise<HTMLImageElement> {
+function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
